@@ -1,6 +1,18 @@
 //! Gas mix types and named presets for dive planning.
 
+use std::fmt;
+
 use crate::units::{Bar, Meters, MetersPerBar};
+
+/// Error returned when an O₂ percentage is outside the valid range [10, 100].
+#[derive(Debug, Clone, Copy)]
+pub struct InvalidO2Percent(pub u8);
+
+impl fmt::Display for InvalidO2Percent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "O₂ percentage {} is outside valid range [10, 100]", self.0)
+    }
+}
 
 const SURFACE_PRESSURE: Bar = Bar::new(1.0);
 const SEAWATER: MetersPerBar = MetersPerBar::new(10.0);
@@ -16,12 +28,15 @@ pub struct Ean {
 
 impl Ean {
     /// Construct from whole-percent O₂ value (10–100).
-    pub fn from_percent(o2_pct: u8) -> Self {
-        debug_assert!((10..=100).contains(&o2_pct));
-
-        Self {
-            fraction: o2_pct as f64 / 100.0,
+    ///
+    /// Returns `Err` if `o2_pct` is outside `[10, 100]`.
+    pub fn from_percent(o2_pct: u8) -> Result<Self, InvalidO2Percent> {
+        if !(10..=100).contains(&o2_pct) {
+            return Err(InvalidO2Percent(o2_pct));
         }
+        Ok(Self {
+            fraction: o2_pct as f64 / 100.0,
+        })
     }
 
     /// Returns the O₂ fraction as a whole percentage (10–100).
