@@ -52,6 +52,16 @@ pub struct App {
     pub ppo2_mix_idx: usize,
 }
 
+fn cursor_next(state: &mut TableState, max: usize) {
+    let next = state.selected().map(|i| (i + 1).min(max)).unwrap_or(0);
+    state.select(Some(next));
+}
+
+fn cursor_prev(state: &mut TableState) {
+    let prev = state.selected().map(|i| i.saturating_sub(1)).unwrap_or(0);
+    state.select(Some(prev));
+}
+
 // Returns the first index to show so the cursor stays centred without
 // scrolling past the ends of the list.
 fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
@@ -106,22 +116,12 @@ impl App {
 
     /// Moves the row cursor down by one, clamped to the last mix.
     pub fn move_down(&mut self) {
-        let next = self
-            .table_state
-            .selected()
-            .map(|i| (i + 1).min(self.mixes.len() - 1))
-            .unwrap_or(0);
-        self.table_state.select(Some(next));
+        cursor_next(&mut self.table_state, self.mixes.len() - 1);
     }
 
     /// Moves the row cursor up by one, clamped to the first mix.
     pub fn move_up(&mut self) {
-        let prev = self
-            .table_state
-            .selected()
-            .map(|i| i.saturating_sub(1))
-            .unwrap_or(0);
-        self.table_state.select(Some(prev));
+        cursor_prev(&mut self.table_state);
     }
 
     /// Increments the ppO₂ cursor by 0.1 bar, clamped to 1.6 bar.
@@ -151,22 +151,12 @@ impl App {
 
     /// Moves the ppO₂ table depth cursor down by one.
     pub fn ppo2_table_move_down(&mut self) {
-        let next = self
-            .ppo2_table_state
-            .selected()
-            .map(|i| (i + 1).min(PPO2_TABLE_DEPTH_MAX))
-            .unwrap_or(0);
-        self.ppo2_table_state.select(Some(next));
+        cursor_next(&mut self.ppo2_table_state, PPO2_TABLE_DEPTH_MAX);
     }
 
     /// Moves the ppO₂ table depth cursor up by one.
     pub fn ppo2_table_move_up(&mut self) {
-        let prev = self
-            .ppo2_table_state
-            .selected()
-            .map(|i| i.saturating_sub(1))
-            .unwrap_or(0);
-        self.ppo2_table_state.select(Some(prev));
+        cursor_prev(&mut self.ppo2_table_state);
     }
 
     /// Advances the ppO₂ table mix column cursor right.
