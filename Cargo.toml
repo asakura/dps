@@ -6,6 +6,11 @@ edition = "2024"
 [dependencies]
 ratatui = "0.29"
 crossterm = "0.28"
+color-eyre = "0.6"
+directories = "5"
+tracing = "0.1"
+tracing-error = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 approx = "0.5.1"

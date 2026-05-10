@@ -3,5 +3,6 @@ pub mod action;
 pub mod app;
 pub mod components;
 pub mod gas;
+pub mod logging;
 pub mod ui;
 pub mod units;
