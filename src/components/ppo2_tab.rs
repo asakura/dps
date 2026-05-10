@@ -22,6 +22,7 @@ const PPO2_TABLE_MIX_COUNT: usize = PPO2_TABLE_MIX_PERCENTS.len();
 const PPO2_TABLE_DEPTH_MAX: usize = 80;
 const PPO2_MIX_DEFAULT_IDX: usize = 5; // EAN21 (Air)
 
+const FIXED_COL_COUNT: usize = 1;
 const COL_DEPTH_W: u16 = 7;
 const COL_PPO2_MIX_W: u16 = 7;
 const PPO2_TABLE_OVERHEAD_W: u16 = 2 + 2 + COL_DEPTH_W + 1;
@@ -124,7 +125,7 @@ impl Component for PpO2Tab {
             area.width, PPO2_TABLE_OVERHEAD_W, COL_PPO2_MIX_W, PPO2_TABLE_MIX_COUNT,
         );
         let col_in_window = self.mix_window_col(window_size);
-        self.table_state.select_column(Some(col_in_window + 1));
+        self.table_state.select_column(Some(col_in_window + FIXED_COL_COUNT));
         let mixes = self.visible_cols(window_size);
         let mix = self.selected_mix();
         let title = format!(" DPS — ppO\u{2082} by Depth   {}% ", mix.o2_percent());
