@@ -52,6 +52,14 @@ pub struct App {
     pub ppo2_mix_idx: usize,
 }
 
+fn idx_next(idx: usize, max: usize) -> usize {
+    (idx + 1).min(max)
+}
+
+fn idx_prev(idx: usize) -> usize {
+    idx.saturating_sub(1)
+}
+
 fn cursor_next(state: &mut TableState, max: usize) {
     let next = state.selected().map(|i| (i + 1).min(max)).unwrap_or(0);
     state.select(Some(next));
@@ -126,12 +134,12 @@ impl App {
 
     /// Increments the ppO₂ cursor by 0.1 bar, clamped to 1.6 bar.
     pub fn ppo2_next(&mut self) {
-        self.ppo2_idx = (self.ppo2_idx + 1).min(PPO2_MAX_IDX);
+        self.ppo2_idx = idx_next(self.ppo2_idx, PPO2_MAX_IDX);
     }
 
     /// Decrements the ppO₂ cursor by 0.1 bar, clamped to 0.8 bar.
     pub fn ppo2_prev(&mut self) {
-        self.ppo2_idx = self.ppo2_idx.saturating_sub(1);
+        self.ppo2_idx = idx_prev(self.ppo2_idx);
     }
 
     /// Stores the currently highlighted mix and ppO₂ as the active selection.
@@ -161,12 +169,12 @@ impl App {
 
     /// Advances the ppO₂ table mix column cursor right.
     pub fn ppo2_mix_next(&mut self) {
-        self.ppo2_mix_idx = (self.ppo2_mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1);
+        self.ppo2_mix_idx = idx_next(self.ppo2_mix_idx, PPO2_TABLE_MIX_COUNT - 1);
     }
 
     /// Retreats the ppO₂ table mix column cursor left.
     pub fn ppo2_mix_prev(&mut self) {
-        self.ppo2_mix_idx = self.ppo2_mix_idx.saturating_sub(1);
+        self.ppo2_mix_idx = idx_prev(self.ppo2_mix_idx);
     }
 
     /// The EAN mixes to show as columns for the given window size.
