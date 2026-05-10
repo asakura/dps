@@ -11,7 +11,7 @@ use ratatui::{
 use crate::{
     action::Action,
     gas::Ean,
-    ui::{build_header_row, col_window_size, styled_table, trailing_constraints},
+    ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Bar,
 };
 
@@ -77,12 +77,6 @@ impl ModTab {
     fn ppo2_window_col(&self, window_size: usize) -> usize {
         self.ppo2_idx - window_start(self.ppo2_idx, PPO2_COUNT, window_size)
     }
-}
-
-fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
-    let half = window_size / 2;
-    let max_start = total.saturating_sub(window_size);
-    idx.saturating_sub(half).min(max_start)
 }
 
 fn mod_color(depth_m: f64) -> Color {

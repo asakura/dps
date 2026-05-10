@@ -11,7 +11,7 @@ use ratatui::{
 use crate::{
     action::Action,
     gas::Ean,
-    ui::{build_header_row, col_window_size, styled_table, trailing_constraints},
+    ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Meters,
 };
 
@@ -64,12 +64,6 @@ impl PpO2Tab {
     fn mix_window_col(&self, window_size: usize) -> usize {
         self.mix_idx - window_start(self.mix_idx, PPO2_TABLE_MIX_COUNT, window_size)
     }
-}
-
-fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
-    let half = window_size / 2;
-    let max_start = total.saturating_sub(window_size);
-    idx.saturating_sub(half).min(max_start)
 }
 
 fn ppo2_cell_color(ppo2: f64) -> Color {
