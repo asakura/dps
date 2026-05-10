@@ -3,7 +3,7 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-/// Generates `new`, `value`, `Display`, `From<f64>`, and `From<T> for f64` for a newtype unit struct.
+/// Generates `new`, `value`, `max`, `Display`, `From<f64>`, and `From<T> for f64` for a newtype unit struct.
 macro_rules! unit_newtype {
     ($ty:ident, $suffix:literal) => {
         impl $ty {
@@ -12,6 +12,9 @@ macro_rules! unit_newtype {
             }
             pub fn value(self) -> f64 {
                 self.0
+            }
+            pub fn max(self, other: Self) -> Self {
+                Self(self.0.max(other.0))
             }
         }
         impl fmt::Display for $ty {
@@ -37,13 +40,6 @@ macro_rules! unit_newtype {
 pub struct Meters(f64);
 
 unit_newtype!(Meters, "m");
-
-impl Meters {
-    /// Returns the greater of two depths.
-    pub fn max(self, other: Self) -> Self {
-        Self(self.0.max(other.0))
-    }
-}
 
 /// Meters + Meters → Meters
 impl Add for Meters {
@@ -114,13 +110,6 @@ impl Div<MetersPerBar> for Meters {
 pub struct Bar(f64);
 
 unit_newtype!(Bar, "bar");
-
-impl Bar {
-    /// Returns the greater of two pressures.
-    pub fn max(self, other: Self) -> Self {
-        Self(self.0.max(other.0))
-    }
-}
 
 /// Bar + Bar → Bar
 impl Add for Bar {
