@@ -52,10 +52,20 @@ pub struct App {
     pub ppo2_mix_idx: usize,
 }
 
+// Returns the first index to show so the cursor stays centred without
+// scrolling past the ends of the list.
+fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
+    let half = window_size / 2;
+    let max_start = total.saturating_sub(window_size);
+    idx.saturating_sub(half).min(max_start)
+}
+
 impl App {
     /// Creates a new `App` pre-selected on EAN32 at 1.4 bar ppO₂.
     pub fn new() -> Self {
-        let mixes: Vec<Ean> = (O2_PCT_MIN..=O2_PCT_MAX).map(Ean::from_percent).collect();
+        let mixes: Vec<Ean> = (O2_PCT_MIN..=O2_PCT_MAX)
+            .map(|p| Ean::from_percent(p).expect("10..=100 is always valid"))
+            .collect();
         let start_idx = mixes
             .iter()
             .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
@@ -80,17 +90,9 @@ impl App {
         Bar::new(PPO2_MIN + self.ppo2_idx as f64 * PPO2_STEP)
     }
 
-    // Returns the first ppO₂ index to show so the cursor stays centred without
-    // scrolling past the ends of the ppO₂ range.
-    fn window_start(&self, window_size: usize) -> usize {
-        let half = window_size / 2;
-        let max_start = PPO2_COUNT.saturating_sub(window_size);
-        self.ppo2_idx.saturating_sub(half).min(max_start)
-    }
-
     /// The ppO₂ values to show as columns for the given window size.
     pub fn visible_columns(&self, window_size: usize) -> Vec<Bar> {
-        let start = self.window_start(window_size);
+        let start = window_start(self.ppo2_idx, PPO2_COUNT, window_size);
         let count = window_size.min(PPO2_COUNT);
         (0..count)
             .map(|i| Bar::new(PPO2_MIN + (start + i) as f64 * PPO2_STEP))
@@ -99,7 +101,7 @@ impl App {
 
     /// Position of the ppO₂ cursor within the visible window (for column highlighting).
     pub fn ppo2_window_col(&self, window_size: usize) -> usize {
-        self.ppo2_idx - self.window_start(window_size)
+        self.ppo2_idx - window_start(self.ppo2_idx, PPO2_COUNT, window_size)
     }
 
     /// Moves the row cursor down by one, clamped to the last mix.
@@ -177,30 +179,22 @@ impl App {
         self.ppo2_mix_idx = self.ppo2_mix_idx.saturating_sub(1);
     }
 
-    // Returns the first mix index to show so the cursor stays centred without
-    // scrolling past the ends of the mix list.
-    fn ppo2_mix_window_start(&self, window_size: usize) -> usize {
-        let half = window_size / 2;
-        let max_start = PPO2_TABLE_MIX_COUNT.saturating_sub(window_size);
-        self.ppo2_mix_idx.saturating_sub(half).min(max_start)
-    }
-
     /// The EAN mixes to show as columns for the given window size.
     pub fn ppo2_mix_visible_cols(&self, window_size: usize) -> Vec<Ean> {
-        let start = self.ppo2_mix_window_start(window_size);
+        let start = window_start(self.ppo2_mix_idx, PPO2_TABLE_MIX_COUNT, window_size);
         let count = window_size.min(PPO2_TABLE_MIX_COUNT);
         (0..count)
-            .map(|i| Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[start + i]))
+            .map(|i| Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[start + i]).expect("PPO2_TABLE_MIX_PERCENTS values are valid"))
             .collect()
     }
 
     /// Position of the mix column cursor within the visible window.
     pub fn ppo2_mix_window_col(&self, window_size: usize) -> usize {
-        self.ppo2_mix_idx - self.ppo2_mix_window_start(window_size)
+        self.ppo2_mix_idx - window_start(self.ppo2_mix_idx, PPO2_TABLE_MIX_COUNT, window_size)
     }
 
     /// Returns the currently selected mix in the ppO₂ table.
     pub fn ppo2_selected_mix(&self) -> Ean {
-        Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[self.ppo2_mix_idx])
+        Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[self.ppo2_mix_idx]).expect("PPO2_TABLE_MIX_PERCENTS values are valid")
     }
 }
