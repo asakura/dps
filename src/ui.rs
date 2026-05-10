@@ -163,15 +163,18 @@ fn help_bar(active_tab: &ActiveTab) -> Paragraph<'static> {
     Paragraph::new(text).style(Style::default().fg(Color::DarkGray))
 }
 
-/// How many ppO₂ columns fit in `width` terminal columns.
-/// Each ppO₂ column is COL_MOD_W wide; each adds COL_MOD_W+1 beyond the first (extra spacing).
+/// How many data columns of `col_w` fit in `width` given fixed `overhead` columns already consumed.
 ///
-/// WARNING: TABLE_OVERHEAD_W must reflect the exact fixed-column layout in `build_table`
-/// (borders, highlight symbol, Name, O₂%, and their spacings). If that layout changes,
-/// update TABLE_OVERHEAD_W or this function will silently return the wrong count.
+/// WARNING: `overhead` must exactly match the fixed-column layout of the corresponding table
+/// (borders, highlight symbol, fixed columns, and their spacings). If that layout changes,
+/// update the relevant overhead constant or this function will silently return the wrong count.
+fn col_window_size(width: u16, overhead: u16, col_w: u16, max: usize) -> usize {
+    let n = 1 + width.saturating_sub(overhead + col_w) / (col_w + 1);
+    (n as usize).min(max)
+}
+
 fn ppo2_window_size(width: u16) -> usize {
-    let n = 1 + width.saturating_sub(TABLE_OVERHEAD_W + COL_MOD_W) / (COL_MOD_W + 1);
-    (n as usize).min(PPO2_COUNT)
+    col_window_size(width, TABLE_OVERHEAD_W, COL_MOD_W, PPO2_COUNT)
 }
 
 fn mod_color(depth_m: f64) -> Color {
@@ -184,10 +187,8 @@ fn mod_color(depth_m: f64) -> Color {
     }
 }
 
-/// How many EAN mix columns fit in `width` terminal columns for the ppO₂ table.
 fn ppo2_mix_window_size(width: u16) -> usize {
-    let n = 1 + width.saturating_sub(PPO2_TABLE_OVERHEAD_W + COL_PPO2_MIX_W) / (COL_PPO2_MIX_W + 1);
-    (n as usize).min(PPO2_TABLE_MIX_COUNT)
+    col_window_size(width, PPO2_TABLE_OVERHEAD_W, COL_PPO2_MIX_W, PPO2_TABLE_MIX_COUNT)
 }
 
 fn build_ppo2_table(mixes: &[Ean], highlighted: Option<usize>, title: String) -> Table<'static> {
