@@ -115,6 +115,13 @@ pub struct Bar(f64);
 
 unit_newtype!(Bar, "bar");
 
+impl Bar {
+    /// Returns the greater of two pressures.
+    pub fn max(self, other: Self) -> Self {
+        Self(self.0.max(other.0))
+    }
+}
+
 /// Bar + Bar → Bar
 impl Add for Bar {
     type Output = Self;
@@ -144,6 +151,22 @@ impl Div<f64> for Bar {
     type Output = Self;
     fn div(self, rhs: f64) -> Self {
         Self(self.0 / rhs)
+    }
+}
+
+/// scalar × Bar → Bar
+impl Mul<Bar> for f64 {
+    type Output = Bar;
+    fn mul(self, rhs: Bar) -> Bar {
+        Bar(self * rhs.0)
+    }
+}
+
+/// Bar / Bar → dimensionless ratio
+impl Div for Bar {
+    type Output = f64;
+    fn div(self, rhs: Self) -> f64 {
+        self.0 / rhs.0
     }
 }
 
