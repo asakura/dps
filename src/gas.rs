@@ -46,25 +46,25 @@ impl Ean {
     pub fn ppo2_at(self, depth: Meters) -> Bar {
         (depth / SEAWATER + SURFACE_PRESSURE) * self.fo2
     }
-}
 
-/// Named mixes that appear as labels in the UI.
-pub fn label(o2_pct: u8) -> Option<&'static str> {
-    match o2_pct {
-        10 => Some("Hypoxic 10"),
-        12 => Some("Hypoxic 12"),
-        14 => Some("Hypoxic 14"),
-        16 => Some("Hypoxic 16"),
-        18 => Some("Hypoxic 18"),
-        21 => Some("Air"),
-        28 => Some("EANx 28"),
-        30 => Some("EANx 30"),
-        32 => Some("EANx 32"),
-        36 => Some("EANx 36"),
-        40 => Some("EANx 40"),
-        50 => Some("O₂ 50%"),
-        80 => Some("O₂ 80%"),
-        100 => Some("Pure O₂"),
-        _ => None,
+    /// Named label for this mix, if one exists.
+    pub fn label(self) -> Option<&'static str> {
+        match self.o2_percent() {
+            10 => Some("Hypoxic 10"),
+            12 => Some("Hypoxic 12"),
+            14 => Some("Hypoxic 14"),
+            16 => Some("Hypoxic 16"),
+            18 => Some("Hypoxic 18"),
+            21 => Some("Air"),
+            28 => Some("EANx 28"),
+            30 => Some("EANx 30"),
+            32 => Some("EANx 32"),
+            36 => Some("EANx 36"),
+            40 => Some("EANx 40"),
+            50 => Some("O₂ 50%"),
+            80 => Some("O₂ 80%"),
+            100 => Some("Pure O₂"),
+            _ => None,
+        }
     }
 }

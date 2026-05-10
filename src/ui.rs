@@ -9,7 +9,6 @@ use ratatui::{
 
 use crate::{
     app::{ActiveTab, App, PPO2_COUNT, PPO2_TABLE_DEPTH_MAX, PPO2_TABLE_MIX_COUNT},
-    gas,
     gas::Ean,
     units::{Bar, Meters},
 };
@@ -110,7 +109,7 @@ fn build_rows(mixes: &[Ean], cols: &[Bar]) -> Vec<Row<'static>> {
         .iter()
         .map(|mix| {
             let mut cells = vec![
-                Cell::from(gas::label(mix.o2_percent()).unwrap_or("")),
+                Cell::from(mix.label().unwrap_or("")),
                 Cell::from(format!("{:>4}%", mix.o2_percent())),
             ];
             for &col in cols.iter() {
@@ -129,7 +128,7 @@ fn selection_bar(selection: Option<(Ean, Bar)>) -> Paragraph<'static> {
     match selection {
         Some((mix, ppo2)) => {
             let depth = mix.mod_at(ppo2);
-            let name = gas::label(mix.o2_percent())
+            let name = mix.label()
                 .map(|s| format!("{} ", s))
                 .unwrap_or_default();
             let text = format!(
@@ -234,7 +233,7 @@ fn build_ppo2_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
 fn ppo2_status_bar(depth_m: usize, mix: Ean) -> Paragraph<'static> {
     let depth = Meters::new(depth_m as f64);
     let ppo2 = mix.ppo2_at(depth);
-    let name = gas::label(mix.o2_percent())
+    let name = mix.label()
         .map(|s| format!("{} ", s))
         .unwrap_or_default();
     let text = format!(
