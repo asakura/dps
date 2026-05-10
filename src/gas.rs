@@ -44,7 +44,7 @@ impl Ean {
 
     /// ppO₂ for this mix at the given depth.
     pub fn ppo2_at(self, depth: Meters) -> Bar {
-        Bar::new(self.fo2 * depth.abs_pressure_bar())
+        depth.abs_pressure_bar() * self.fo2
     }
 }
 

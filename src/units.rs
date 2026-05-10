@@ -24,8 +24,8 @@ impl Meters {
     }
 
     /// Absolute pressure in bar using the 10 m/bar seawater approximation.
-    pub fn abs_pressure_bar(self) -> f64 {
-        self.0 / 10.0 + 1.0
+    pub fn abs_pressure_bar(self) -> Bar {
+        Bar(self.0 / 10.0 + 1.0)
     }
 }
 
@@ -134,6 +134,14 @@ impl Div<f64> for Bar {
     type Output = Self;
     fn div(self, rhs: f64) -> Self {
         Self(self.0 / rhs)
+    }
+}
+
+/// Bar × dimensionless fraction → Bar
+impl Mul<f64> for Bar {
+    type Output = Self;
+    fn mul(self, rhs: f64) -> Self {
+        Self(self.0 * rhs)
     }
 }
 
