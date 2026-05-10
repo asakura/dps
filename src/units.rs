@@ -3,42 +3,44 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
+macro_rules! unit_newtype {
+    ($ty:ident, $suffix:literal) => {
+        impl $ty {
+            pub const fn new(val: f64) -> Self {
+                Self(val)
+            }
+            pub fn value(self) -> f64 {
+                self.0
+            }
+        }
+        impl fmt::Display for $ty {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{:.1} {}", self.0, $suffix)
+            }
+        }
+        impl From<f64> for $ty {
+            fn from(v: f64) -> Self {
+                Self(v)
+            }
+        }
+        impl From<$ty> for f64 {
+            fn from(v: $ty) -> Self {
+                v.0
+            }
+        }
+    };
+}
+
 /// Depth in metres. Backed by f64 so mul/div never truncate.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Meters(f64);
 
+unit_newtype!(Meters, "m");
+
 impl Meters {
-    /// Constructs a depth value from a raw metre value.
-    pub const fn new(val: f64) -> Self {
-        Self(val)
-    }
-
-    /// Returns the raw metre value.
-    pub fn value(self) -> f64 {
-        self.0
-    }
-
     /// Returns the greater of two depths.
     pub fn max(self, other: Self) -> Self {
         Self(self.0.max(other.0))
-    }
-}
-
-impl fmt::Display for Meters {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:.1} m", self.0)
-    }
-}
-
-impl From<f64> for Meters {
-    fn from(v: f64) -> Self {
-        Self(v)
-    }
-}
-
-impl From<Meters> for f64 {
-    fn from(m: Meters) -> Self {
-        m.0
     }
 }
 
@@ -95,26 +97,19 @@ impl Div for Meters {
     }
 }
 
+/// Meters / MetersPerBar → Bar  (depth → gauge pressure)
+impl Div<MetersPerBar> for Meters {
+    type Output = Bar;
+    fn div(self, rhs: MetersPerBar) -> Bar {
+        Bar(self.0 / rhs.0)
+    }
+}
+
 /// Pressure in bar.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Bar(f64);
 
-impl Bar {
-    /// Constructs a pressure value from a raw bar value.
-    pub const fn new(val: f64) -> Self {
-        Self(val)
-    }
-
-    pub fn value(self) -> f64 {
-        self.0
-    }
-}
-
-impl fmt::Display for Bar {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:.1} bar", self.0)
-    }
-}
+unit_newtype!(Bar, "bar");
 
 /// Bar + Bar → Bar
 impl Add for Bar {
@@ -132,14 +127,6 @@ impl Sub for Bar {
     }
 }
 
-/// Bar / dimensionless FO₂ fraction → Bar
-impl Div<f64> for Bar {
-    type Output = Self;
-    fn div(self, rhs: f64) -> Self {
-        Self(self.0 / rhs)
-    }
-}
-
 /// Bar × dimensionless fraction → Bar
 impl Mul<f64> for Bar {
     type Output = Self;
@@ -148,14 +135,11 @@ impl Mul<f64> for Bar {
     }
 }
 
-/// Depth-to-pressure conversion factor for seawater (metres per bar).
-#[derive(Debug, Clone, Copy)]
-pub struct MetersPerBar(f64);
-
-impl MetersPerBar {
-    /// Constructs a conversion factor from a raw m/bar value.
-    pub const fn new(val: f64) -> Self {
-        Self(val)
+/// Bar / dimensionless fraction → Bar
+impl Div<f64> for Bar {
+    type Output = Self;
+    fn div(self, rhs: f64) -> Self {
+        Self(self.0 / rhs)
     }
 }
 
@@ -167,10 +151,8 @@ impl Mul<MetersPerBar> for Bar {
     }
 }
 
-/// Meters / MetersPerBar → Bar  (depth → gauge pressure)
-impl Div<MetersPerBar> for Meters {
-    type Output = Bar;
-    fn div(self, rhs: MetersPerBar) -> Bar {
-        Bar(self.0 / rhs.0)
-    }
-}
+/// Depth-to-pressure conversion factor for seawater (metres per bar).
+#[derive(Debug, Clone, Copy)]
+pub struct MetersPerBar(f64);
+
+unit_newtype!(MetersPerBar, "m/bar");
