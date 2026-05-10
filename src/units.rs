@@ -3,6 +3,7 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
+/// Generates `new`, `value`, `Display`, `From<f64>`, and `From<T> for f64` for a newtype unit struct.
 macro_rules! unit_newtype {
     ($ty:ident, $suffix:literal) => {
         impl $ty {
@@ -44,6 +45,7 @@ impl Meters {
     }
 }
 
+/// Meters + Meters → Meters
 impl Add for Meters {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
@@ -51,6 +53,7 @@ impl Add for Meters {
     }
 }
 
+/// Meters − Meters → Meters
 impl Sub for Meters {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self {
@@ -58,6 +61,7 @@ impl Sub for Meters {
     }
 }
 
+/// −Meters → Meters
 impl Neg for Meters {
     type Output = Self;
     fn neg(self) -> Self {

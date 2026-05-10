@@ -4,25 +4,33 @@ use ratatui::widgets::TableState;
 
 use crate::{gas::Ean, units::Bar};
 
-// ppO₂ cursor step size and range.
+/// Minimum selectable ppO₂ limit (bar).
 pub const PPO2_MIN: f64 = 0.8;
+/// Step size between adjacent ppO₂ cursor positions (bar).
 pub const PPO2_STEP: f64 = 0.1;
 const PPO2_MAX_IDX: usize = 8;        // 8 steps × 0.1 from 0.8 → 1.6 bar
 const PPO2_DEFAULT_IDX: usize = 6;    // → 1.4 bar
+/// Number of selectable ppO₂ steps (0.8 to 1.6 bar inclusive).
 pub const PPO2_COUNT: usize = PPO2_MAX_IDX + 1;
 
 const O2_PCT_MIN: u8 = 10;
 const O2_PCT_MAX: u8 = 100;
 const DEFAULT_MIX_O2_PCT: u8 = 32; // EAN32
 
+/// Preset O₂ percentages shown as columns in the ppO₂ table.
 pub const PPO2_TABLE_MIX_PERCENTS: &[u8] = &[10, 12, 14, 16, 18, 21, 28, 30, 32, 36, 40, 50, 80, 100];
+/// Number of preset mixes in [`PPO2_TABLE_MIX_PERCENTS`].
 pub const PPO2_TABLE_MIX_COUNT: usize = 14;
+/// Maximum depth in metres shown as rows in the ppO₂ table.
 pub const PPO2_TABLE_DEPTH_MAX: usize = 80;
 const PPO2_MIX_DEFAULT_IDX: usize = 5; // EAN21 (Air)
 
+/// Identifies which of the two tables is currently displayed.
 #[derive(PartialEq)]
 pub enum ActiveTab {
+    /// MOD-by-ppO₂ table.
     Mod,
+    /// ppO₂-by-depth table.
     PpO2,
 }
 
@@ -72,6 +80,8 @@ impl App {
         Bar::new(PPO2_MIN + self.ppo2_idx as f64 * PPO2_STEP)
     }
 
+    // Returns the first ppO₂ index to show so the cursor stays centred without
+    // scrolling past the ends of the ppO₂ range.
     fn window_start(&self, window_size: usize) -> usize {
         let half = window_size / 2;
         let max_start = PPO2_COUNT.saturating_sub(window_size);
@@ -167,6 +177,8 @@ impl App {
         self.ppo2_mix_idx = self.ppo2_mix_idx.saturating_sub(1);
     }
 
+    // Returns the first mix index to show so the cursor stays centred without
+    // scrolling past the ends of the mix list.
     fn ppo2_mix_window_start(&self, window_size: usize) -> usize {
         let half = window_size / 2;
         let max_start = PPO2_TABLE_MIX_COUNT.saturating_sub(window_size);
