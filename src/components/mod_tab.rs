@@ -17,11 +17,11 @@ use crate::{
 
 use super::Component;
 
-pub const PPO2_MIN: f64 = 0.8;
-pub const PPO2_STEP: f64 = 0.1;
+const PPO2_MIN: f64 = 0.8;
+const PPO2_STEP: f64 = 0.1;
 const PPO2_MAX_IDX: usize = 8;
 const PPO2_DEFAULT_IDX: usize = 6;
-pub const PPO2_COUNT: usize = PPO2_MAX_IDX + 1;
+const PPO2_COUNT: usize = PPO2_MAX_IDX + 1;
 
 const O2_PCT_MIN: u8 = 10;
 const O2_PCT_MAX: u8 = 100;
