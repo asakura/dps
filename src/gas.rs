@@ -2,6 +2,9 @@
 
 use crate::units::{Bar, Meters, MetersPerBar};
 
+const SURFACE_PRESSURE: Bar = Bar::new(1.0);
+const SEAWATER: MetersPerBar = MetersPerBar::new(10.0);
+
 /// Enriched Air Nitrox: modelled by oxygen fraction in [0.10, 1.0].
 ///
 /// The remainder (1 − FO₂) is treated as inert diluent. In practice this is
@@ -35,16 +38,13 @@ impl Ean {
     ///
     /// Formula: MOD = (ppO₂_max / FO₂ − 1 atm) × 10 m/bar  (seawater approximation)
     pub fn mod_at(self, ppo2_max: Bar) -> Meters {
-        const SURFACE_PRESSURE: Bar = Bar::new(1.0);
-        const SEAWATER: MetersPerBar = MetersPerBar::new(10.0);
-
         let gauge = ppo2_max / self.fo2() - SURFACE_PRESSURE;
         (gauge * SEAWATER).max(Meters::new(0.0))
     }
 
     /// ppO₂ for this mix at the given depth.
     pub fn ppo2_at(self, depth: Meters) -> Bar {
-        depth.abs_pressure_bar() * self.fo2
+        (depth / SEAWATER + SURFACE_PRESSURE) * self.fo2
     }
 }
 

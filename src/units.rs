@@ -22,11 +22,6 @@ impl Meters {
     pub fn max(self, other: Self) -> Self {
         Self(self.0.max(other.0))
     }
-
-    /// Absolute pressure in bar using the 10 m/bar seawater approximation.
-    pub fn abs_pressure_bar(self) -> Bar {
-        Bar(self.0 / 10.0 + 1.0)
-    }
 }
 
 impl fmt::Display for Meters {
@@ -121,6 +116,14 @@ impl fmt::Display for Bar {
     }
 }
 
+/// Bar + Bar → Bar
+impl Add for Bar {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self {
+        Self(self.0 + rhs.0)
+    }
+}
+
 /// Bar − Bar → Bar
 impl Sub for Bar {
     type Output = Self;
@@ -161,5 +164,13 @@ impl Mul<MetersPerBar> for Bar {
     type Output = Meters;
     fn mul(self, rhs: MetersPerBar) -> Meters {
         Meters(self.0 * rhs.0)
+    }
+}
+
+/// Meters / MetersPerBar → Bar  (depth → gauge pressure)
+impl Div<MetersPerBar> for Meters {
+    type Output = Bar;
+    fn div(self, rhs: MetersPerBar) -> Bar {
+        Bar(self.0 / rhs.0)
     }
 }
