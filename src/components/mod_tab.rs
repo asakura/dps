@@ -154,7 +154,7 @@ impl Component for ModTab {
         let bold = Style::default().add_modifier(Modifier::BOLD);
         let header = build_header_row(
             vec![Cell::from("Name").style(bold), Cell::from("O\u{2082}%").style(bold)],
-            cols.iter().map(|c| format!("{}", c)),
+            cols.iter().map(|c| c.to_string()),
             Some(col_in_window),
         );
         let table = styled_table(build_rows(&self.mixes, &cols), constraints, header, title);
