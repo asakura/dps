@@ -3,6 +3,7 @@
 use ratatui::{
     layout::Constraint,
     style::{Modifier, Style},
+    text::Span,
     widgets::{Block, Borders, Cell, Row, Table},
 };
 
@@ -45,7 +46,7 @@ pub(crate) fn styled_table(
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(THEME.surface0))
-                .title(title),
+                .title(Span::styled(title, Style::default().fg(THEME.lavender))),
         )
         .row_highlight_style(
             Style::default().bg(THEME.mauve).fg(THEME.base).add_modifier(Modifier::BOLD),

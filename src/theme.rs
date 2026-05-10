@@ -16,6 +16,7 @@
 //! |------|-----------|--------|------|
 //! | `surface0` | fg (border) | table `Block` | border / frame colour; subtle, not loud |
 //! | `surface0` | bg | status bar | lifts the bar off the terminal background |
+//! | `lavender` | fg (title) | table `Block` | block title text colour |
 //! | `base` | fg (text on selection) | selected row | text colour when `mauve` is the bg |
 //!
 //! `mantle` and `crust` are available for "sunken" elements (e.g. an input
