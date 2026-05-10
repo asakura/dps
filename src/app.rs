@@ -13,12 +13,15 @@ use crate::{
     components::{Component, mod_tab::ModTab, ppo2_tab::PpO2Tab},
 };
 
+/// Top-level coordinator: owns the tab list, tracks the active tab, and routes
+/// key events and render calls to the appropriate component.
 pub struct App {
     tabs: Vec<Box<dyn Component>>,
     active: usize,
 }
 
 impl App {
+    /// Creates an `App` pre-loaded with all tabs in their default state.
     pub fn new() -> Self {
         Self {
             tabs: vec![Box::new(ModTab::new()), Box::new(PpO2Tab::new())],
@@ -26,6 +29,8 @@ impl App {
         }
     }
 
+    /// Intercepts `q`/Esc (quit) and Tab (cycle tabs) globally; delegates all
+    /// other keys to the active component.
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => Action::Quit,
@@ -37,6 +42,7 @@ impl App {
         }
     }
 
+    /// Draws the active component, status bar, and help line.
     pub fn render(&mut self, f: &mut Frame) {
         let area = f.area();
         let chunks = Layout::default()

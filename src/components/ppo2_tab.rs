@@ -31,12 +31,14 @@ const PPO2_HYPOXIC_BELOW: f64 = 0.18;
 const PPO2_CAUTION_FROM: f64 = 1.4;
 const PPO2_DANGER_FROM: f64 = 1.6;
 
+/// ppO₂-by-depth table: partial pressure of oxygen for each mix at each depth.
 pub struct PpO2Tab {
     table_state: TableState,
     mix_idx: usize,
 }
 
 impl PpO2Tab {
+    /// Creates a `PpO2Tab` pre-selected on Air (21%) at 0 m depth.
     pub fn new() -> Self {
         let mut table_state = TableState::default();
         table_state.select(Some(0));

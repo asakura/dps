@@ -36,6 +36,7 @@ const TABLE_OVERHEAD_W: u16 = 2 + 2 + COL_NAME_W + 1 + COL_O2_W + 1;
 const MOD_RED_BELOW_M: f64 = 10.0;
 const MOD_YELLOW_BELOW_M: f64 = 20.0;
 
+/// MOD-by-ppO₂ table: maximum operating depth for each nitrox mix at the selected ppO₂ limit.
 pub struct ModTab {
     mixes: Vec<Ean>,
     table_state: TableState,
@@ -44,6 +45,7 @@ pub struct ModTab {
 }
 
 impl ModTab {
+    /// Creates a `ModTab` pre-selected on EAN32 at 1.4 bar ppO₂.
     pub fn new() -> Self {
         let mixes: Vec<Ean> = (O2_PCT_MIN..=O2_PCT_MAX)
             .map(|p| Ean::from_percent(p).expect("10..=100 is always valid"))
