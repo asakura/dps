@@ -18,7 +18,7 @@ use crate::{
 use super::Component;
 
 const PPO2_TABLE_MIX_PERCENTS: &[u8] = &[10, 12, 14, 16, 18, 21, 28, 30, 32, 36, 40, 50, 80, 100];
-const PPO2_TABLE_MIX_COUNT: usize = 14;
+const PPO2_TABLE_MIX_COUNT: usize = PPO2_TABLE_MIX_PERCENTS.len();
 const PPO2_TABLE_DEPTH_MAX: usize = 80;
 const PPO2_MIX_DEFAULT_IDX: usize = 5; // EAN21 (Air)
 
