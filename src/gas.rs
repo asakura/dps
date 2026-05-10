@@ -83,3 +83,157 @@ impl Ean {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use crate::units::{Bar, Meters};
+
+    // --- from_percent ---
+
+    #[test]
+    fn from_percent_accepts_boundary_values() {
+        assert!(Ean::from_percent(10).is_ok());
+        assert!(Ean::from_percent(100).is_ok());
+    }
+
+    #[test]
+    fn from_percent_accepts_typical_mixes() {
+        assert!(Ean::from_percent(21).is_ok());
+        assert!(Ean::from_percent(32).is_ok());
+        assert!(Ean::from_percent(40).is_ok());
+    }
+
+    #[test]
+    fn from_percent_rejects_zero() {
+        assert!(Ean::from_percent(0).is_err());
+    }
+
+    #[test]
+    fn from_percent_rejects_below_minimum() {
+        assert!(Ean::from_percent(9).is_err());
+    }
+
+    #[test]
+    fn from_percent_rejects_above_maximum() {
+        assert!(Ean::from_percent(101).is_err());
+    }
+
+    #[test]
+    fn from_percent_error_carries_the_bad_value() {
+        let err = Ean::from_percent(5).unwrap_err();
+        assert_eq!(err.0, 5);
+    }
+
+    // --- o2_percent / fo2 ---
+
+    #[test]
+    fn o2_percent_roundtrips() {
+        for pct in [10u8, 21, 32, 36, 40, 80, 100] {
+            assert_eq!(Ean::from_percent(pct).unwrap().o2_percent(), pct);
+        }
+    }
+
+    #[test]
+    fn fo2_matches_fraction() {
+        assert_relative_eq!(Ean::from_percent(21).unwrap().fo2(), 0.21);
+        assert_relative_eq!(Ean::from_percent(32).unwrap().fo2(), 0.32);
+        assert_relative_eq!(Ean::from_percent(100).unwrap().fo2(), 1.0);
+    }
+
+    // --- mod_at ---
+    // Formula: MOD = (ppO2_max / FO2 − 1 bar) × 10 m/bar
+
+    #[test]
+    fn mod_at_eanx32_1_4_bar() {
+        let ean32 = Ean::from_percent(32).unwrap();
+        let expected = (1.4_f64 / 0.32 - 1.0) * 10.0; // ≈ 33.75 m
+        assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).value(), expected);
+    }
+
+    #[test]
+    fn mod_at_eanx40_1_4_bar() {
+        let ean40 = Ean::from_percent(40).unwrap();
+        let expected = (1.4_f64 / 0.40 - 1.0) * 10.0; // 25.0 m
+        assert_relative_eq!(ean40.mod_at(Bar::new(1.4)).value(), expected);
+    }
+
+    #[test]
+    fn mod_at_pure_o2_1_6_bar() {
+        let o2 = Ean::from_percent(100).unwrap();
+        let expected = (1.6_f64 / 1.0 - 1.0) * 10.0; // 6.0 m
+        assert_relative_eq!(o2.mod_at(Bar::new(1.6)).value(), expected);
+    }
+
+    #[test]
+    fn mod_at_clamps_to_zero_when_negative() {
+        // Pure O2 at 0.5 bar ppO2 limit: (0.5/1.0 - 1) * 10 = -5.0 m → 0.0
+        let o2 = Ean::from_percent(100).unwrap();
+        assert_relative_eq!(o2.mod_at(Bar::new(0.5)).value(), 0.0, epsilon = 1e-9);
+    }
+
+    // --- ppo2_at ---
+    // Formula: ppO2 = (depth_m / 10 + 1) × FO2
+
+    #[test]
+    fn ppo2_at_surface_equals_fo2() {
+        let ean32 = Ean::from_percent(32).unwrap();
+        assert_relative_eq!(ean32.ppo2_at(Meters::new(0.0)).value(), 0.32);
+    }
+
+    #[test]
+    fn ppo2_at_air_30m() {
+        let air = Ean::from_percent(21).unwrap();
+        let expected = (30.0_f64 / 10.0 + 1.0) * 0.21; // 0.84 bar
+        assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).value(), expected);
+    }
+
+    #[test]
+    fn ppo2_at_eanx40_10m() {
+        let ean40 = Ean::from_percent(40).unwrap();
+        let expected = (10.0_f64 / 10.0 + 1.0) * 0.40; // 0.80 bar
+        assert_relative_eq!(ean40.ppo2_at(Meters::new(10.0)).value(), expected);
+    }
+
+    // --- label ---
+
+    #[test]
+    fn label_air() {
+        assert_eq!(Ean::from_percent(21).unwrap().label(), Some("Air"));
+    }
+
+    #[test]
+    fn label_named_nitrox_mixes() {
+        assert_eq!(Ean::from_percent(32).unwrap().label(), Some("EANx 32"));
+        assert_eq!(Ean::from_percent(36).unwrap().label(), Some("EANx 36"));
+        assert_eq!(Ean::from_percent(40).unwrap().label(), Some("EANx 40"));
+    }
+
+    #[test]
+    fn label_hypoxic_mixes() {
+        assert_eq!(Ean::from_percent(10).unwrap().label(), Some("Hypoxic 10"));
+        assert_eq!(Ean::from_percent(16).unwrap().label(), Some("Hypoxic 16"));
+    }
+
+    #[test]
+    fn label_pure_o2() {
+        assert_eq!(Ean::from_percent(100).unwrap().label(), Some("Pure O₂"));
+    }
+
+    #[test]
+    fn label_unlabelled_mix_returns_none() {
+        assert_eq!(Ean::from_percent(25).unwrap().label(), None);
+        assert_eq!(Ean::from_percent(33).unwrap().label(), None);
+    }
+
+    // --- Display for InvalidO2Percent ---
+
+    #[test]
+    fn invalid_o2_percent_display() {
+        let msg = format!("{}", InvalidO2Percent(5));
+        assert!(msg.contains("5"));
+        assert!(msg.contains("10"));
+        assert!(msg.contains("100"));
+    }
+}
