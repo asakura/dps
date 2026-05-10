@@ -1,198 +1,54 @@
-//! Application state and input logic.
+//! Application state and tab routing.
 
-use ratatui::widgets::TableState;
+use crossterm::event::{KeyCode, KeyEvent};
+use ratatui::{
+    Frame,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Style},
+    widgets::Paragraph,
+};
 
-use crate::{gas::Ean, units::Bar};
+use crate::{
+    action::Action,
+    components::{Component, mod_tab::ModTab, ppo2_tab::PpO2Tab},
+};
 
-/// Minimum selectable ppO₂ limit (bar).
-pub const PPO2_MIN: f64 = 0.8;
-/// Step size between adjacent ppO₂ cursor positions (bar).
-pub const PPO2_STEP: f64 = 0.1;
-const PPO2_MAX_IDX: usize = 8;        // 8 steps × 0.1 from 0.8 → 1.6 bar
-const PPO2_DEFAULT_IDX: usize = 6;    // → 1.4 bar
-/// Number of selectable ppO₂ steps (0.8 to 1.6 bar inclusive).
-pub const PPO2_COUNT: usize = PPO2_MAX_IDX + 1;
-
-const O2_PCT_MIN: u8 = 10;
-const O2_PCT_MAX: u8 = 100;
-const DEFAULT_MIX_O2_PCT: u8 = 32; // EAN32
-
-/// Preset O₂ percentages shown as columns in the ppO₂ table.
-pub const PPO2_TABLE_MIX_PERCENTS: &[u8] = &[10, 12, 14, 16, 18, 21, 28, 30, 32, 36, 40, 50, 80, 100];
-/// Number of preset mixes in [`PPO2_TABLE_MIX_PERCENTS`].
-pub const PPO2_TABLE_MIX_COUNT: usize = 14;
-/// Maximum depth in metres shown as rows in the ppO₂ table.
-pub const PPO2_TABLE_DEPTH_MAX: usize = 80;
-const PPO2_MIX_DEFAULT_IDX: usize = 5; // EAN21 (Air)
-
-/// Identifies which of the two tables is currently displayed.
-#[derive(PartialEq)]
-pub enum ActiveTab {
-    /// MOD-by-ppO₂ table.
-    Mod,
-    /// ppO₂-by-depth table.
-    PpO2,
-}
-
-/// Top-level application state.
 pub struct App {
-    /// All nitrox mixes from EAN10 to pure O₂, one per percent.
-    pub mixes: Vec<Ean>,
-    /// Ratatui cursor tracking which mix row is highlighted.
-    pub table_state: TableState,
-    /// Index into the ppO₂ range 0.8–1.6 bar (step 0.1); see `ppo2()`.
-    pub ppo2_idx: usize,
-    /// Gas and ppO₂ limit confirmed by the user via Enter, if any.
-    pub selection: Option<(Ean, Bar)>,
-    /// Which table is currently displayed.
-    pub active_tab: ActiveTab,
-    /// Ratatui cursor tracking which depth row is highlighted in the ppO₂ table.
-    pub ppo2_table_state: TableState,
-    /// Index into PPO2_TABLE_MIX_PERCENTS (column cursor for the ppO₂ table).
-    pub ppo2_mix_idx: usize,
-}
-
-fn idx_next(idx: usize, max: usize) -> usize {
-    (idx + 1).min(max)
-}
-
-fn idx_prev(idx: usize) -> usize {
-    idx.saturating_sub(1)
-}
-
-fn cursor_next(state: &mut TableState, max: usize) {
-    let next = state.selected().map(|i| (i + 1).min(max)).unwrap_or(0);
-    state.select(Some(next));
-}
-
-fn cursor_prev(state: &mut TableState) {
-    let prev = state.selected().map(|i| i.saturating_sub(1)).unwrap_or(0);
-    state.select(Some(prev));
-}
-
-// Returns the first index to show so the cursor stays centred without
-// scrolling past the ends of the list.
-fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
-    let half = window_size / 2;
-    let max_start = total.saturating_sub(window_size);
-    idx.saturating_sub(half).min(max_start)
+    tabs: Vec<Box<dyn Component>>,
+    active: usize,
 }
 
 impl App {
-    /// Creates a new `App` pre-selected on EAN32 at 1.4 bar ppO₂.
     pub fn new() -> Self {
-        let mixes: Vec<Ean> = (O2_PCT_MIN..=O2_PCT_MAX)
-            .map(|p| Ean::from_percent(p).expect("10..=100 is always valid"))
-            .collect();
-        let start_idx = mixes
-            .iter()
-            .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
-            .unwrap_or(0);
-        let mut table_state = TableState::default();
-        table_state.select(Some(start_idx));
-        let mut ppo2_table_state = TableState::default();
-        ppo2_table_state.select(Some(0));
         Self {
-            mixes,
-            table_state,
-            ppo2_idx: PPO2_DEFAULT_IDX,
-            selection: None,
-            active_tab: ActiveTab::Mod,
-            ppo2_table_state,
-            ppo2_mix_idx: PPO2_MIX_DEFAULT_IDX,
+            tabs: vec![Box::new(ModTab::new()), Box::new(PpO2Tab::new())],
+            active: 0,
         }
     }
 
-    /// Returns the currently selected ppO₂ limit.
-    pub fn ppo2(&self) -> Bar {
-        Bar::new(PPO2_MIN + self.ppo2_idx as f64 * PPO2_STEP)
-    }
-
-    /// The ppO₂ values to show as columns for the given window size.
-    pub fn visible_columns(&self, window_size: usize) -> Vec<Bar> {
-        let start = window_start(self.ppo2_idx, PPO2_COUNT, window_size);
-        let count = window_size.min(PPO2_COUNT);
-        (0..count)
-            .map(|i| Bar::new(PPO2_MIN + (start + i) as f64 * PPO2_STEP))
-            .collect()
-    }
-
-    /// Position of the ppO₂ cursor within the visible window (for column highlighting).
-    pub fn ppo2_window_col(&self, window_size: usize) -> usize {
-        self.ppo2_idx - window_start(self.ppo2_idx, PPO2_COUNT, window_size)
-    }
-
-    /// Moves the row cursor down by one, clamped to the last mix.
-    pub fn move_down(&mut self) {
-        cursor_next(&mut self.table_state, self.mixes.len() - 1);
-    }
-
-    /// Moves the row cursor up by one, clamped to the first mix.
-    pub fn move_up(&mut self) {
-        cursor_prev(&mut self.table_state);
-    }
-
-    /// Increments the ppO₂ cursor by 0.1 bar, clamped to 1.6 bar.
-    pub fn ppo2_next(&mut self) {
-        self.ppo2_idx = idx_next(self.ppo2_idx, PPO2_MAX_IDX);
-    }
-
-    /// Decrements the ppO₂ cursor by 0.1 bar, clamped to 0.8 bar.
-    pub fn ppo2_prev(&mut self) {
-        self.ppo2_idx = idx_prev(self.ppo2_idx);
-    }
-
-    /// Stores the currently highlighted mix and ppO₂ as the active selection.
-    pub fn select(&mut self) {
-        if let Some(row) = self.table_state.selected() {
-            self.selection = Some((self.mixes[row], self.ppo2()));
+    pub fn handle_key(&mut self, key: KeyEvent) -> Action {
+        match key.code {
+            KeyCode::Char('q') | KeyCode::Esc => Action::Quit,
+            KeyCode::Tab => {
+                self.active = (self.active + 1) % self.tabs.len();
+                Action::None
+            }
+            _ => self.tabs[self.active].handle_key(key),
         }
     }
 
-    /// Switches to the other table.
-    pub fn switch_tab(&mut self) {
-        self.active_tab = match self.active_tab {
-            ActiveTab::Mod => ActiveTab::PpO2,
-            ActiveTab::PpO2 => ActiveTab::Mod,
-        };
-    }
-
-    /// Moves the ppO₂ table depth cursor down by one.
-    pub fn ppo2_table_move_down(&mut self) {
-        cursor_next(&mut self.ppo2_table_state, PPO2_TABLE_DEPTH_MAX);
-    }
-
-    /// Moves the ppO₂ table depth cursor up by one.
-    pub fn ppo2_table_move_up(&mut self) {
-        cursor_prev(&mut self.ppo2_table_state);
-    }
-
-    /// Advances the ppO₂ table mix column cursor right.
-    pub fn ppo2_mix_next(&mut self) {
-        self.ppo2_mix_idx = idx_next(self.ppo2_mix_idx, PPO2_TABLE_MIX_COUNT - 1);
-    }
-
-    /// Retreats the ppO₂ table mix column cursor left.
-    pub fn ppo2_mix_prev(&mut self) {
-        self.ppo2_mix_idx = idx_prev(self.ppo2_mix_idx);
-    }
-
-    /// The EAN mixes to show as columns for the given window size.
-    pub fn ppo2_mix_visible_cols(&self, window_size: usize) -> Vec<Ean> {
-        let start = window_start(self.ppo2_mix_idx, PPO2_TABLE_MIX_COUNT, window_size);
-        let count = window_size.min(PPO2_TABLE_MIX_COUNT);
-        (0..count)
-            .map(|i| Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[start + i]).expect("PPO2_TABLE_MIX_PERCENTS values are valid"))
-            .collect()
-    }
-
-    /// Position of the mix column cursor within the visible window.
-    pub fn ppo2_mix_window_col(&self, window_size: usize) -> usize {
-        self.ppo2_mix_idx - window_start(self.ppo2_mix_idx, PPO2_TABLE_MIX_COUNT, window_size)
-    }
-
-    /// Returns the currently selected mix in the ppO₂ table.
-    pub fn ppo2_selected_mix(&self) -> Ean {
-        Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[self.ppo2_mix_idx]).expect("PPO2_TABLE_MIX_PERCENTS values are valid")
+    pub fn render(&mut self, f: &mut Frame) {
+        let area = f.area();
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Fill(1), Constraint::Length(1), Constraint::Length(1)])
+            .split(area);
+        self.tabs[self.active].render(f, chunks[0]);
+        f.render_widget(self.tabs[self.active].status_bar(), chunks[1]);
+        f.render_widget(
+            Paragraph::new(self.tabs[self.active].help_text())
+                .style(Style::default().fg(Color::DarkGray)),
+            chunks[2],
+        );
     }
 }

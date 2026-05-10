@@ -1,5 +1,7 @@
 //! DPS — interactive terminal MOD table for nitrox dive planning.
+mod action;
 mod app;
+mod components;
 mod gas;
 mod ui;
 mod units;
@@ -7,13 +9,14 @@ mod units;
 use std::{io, time::Duration};
 
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
+    event::{self, Event, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 
-use app::{ActiveTab, App};
+use action::Action;
+use app::App;
 
 /// How long to block waiting for a terminal event before redrawing.
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
@@ -47,7 +50,7 @@ fn main() -> io::Result<()> {
     let mut app = App::new();
 
     loop {
-        tui.terminal.draw(|f| ui::render(f, &mut app))?;
+        tui.terminal.draw(|f| app.render(f))?;
 
         if !event::poll(POLL_INTERVAL)? {
             continue;
@@ -61,31 +64,8 @@ fn main() -> io::Result<()> {
             continue;
         }
 
-        match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => break,
-            KeyCode::Tab => app.switch_tab(),
-            KeyCode::Down | KeyCode::Char('j') => match app.active_tab {
-                ActiveTab::Mod => app.move_down(),
-                ActiveTab::PpO2 => app.ppo2_table_move_down(),
-            },
-            KeyCode::Up | KeyCode::Char('k') => match app.active_tab {
-                ActiveTab::Mod => app.move_up(),
-                ActiveTab::PpO2 => app.ppo2_table_move_up(),
-            },
-            KeyCode::Right | KeyCode::Char('l') => match app.active_tab {
-                ActiveTab::Mod => app.ppo2_next(),
-                ActiveTab::PpO2 => app.ppo2_mix_next(),
-            },
-            KeyCode::Left | KeyCode::Char('h') => match app.active_tab {
-                ActiveTab::Mod => app.ppo2_prev(),
-                ActiveTab::PpO2 => app.ppo2_mix_prev(),
-            },
-            KeyCode::Enter => {
-                if app.active_tab == ActiveTab::Mod {
-                    app.select();
-                }
-            }
-            _ => {}
+        if matches!(app.handle_key(key), Action::Quit) {
+            break;
         }
     }
 
