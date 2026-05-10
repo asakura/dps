@@ -1,7 +1,8 @@
-use std::{io, time::Duration};
+use std::{io, panic, time::Duration};
 
 use color_eyre::Result;
 use crossterm::{
+    cursor::Show,
     event::{self, Event, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -15,6 +16,12 @@ use dps::logging::initialize_logging;
 /// How long to block waiting for a terminal event before redrawing.
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
+fn restore_terminal() -> io::Result<()> {
+    disable_raw_mode()?;
+    execute!(io::stdout(), LeaveAlternateScreen, Show)?;
+    Ok(())
+}
+
 /// RAII guard that owns the terminal and restores it on drop.
 struct Tui {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
@@ -27,7 +34,17 @@ impl Tui {
         let mut stdout = io::stdout();
         execute!(stdout, EnterAlternateScreen)?;
         let terminal = Terminal::new(CrosstermBackend::new(stdout))?;
+        Self::install_panic_hook();
         Ok(Self { terminal })
+    }
+
+    /// Wraps the existing panic hook (color-eyre's) so the terminal is restored before it runs.
+    fn install_panic_hook() {
+        let hook = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            let _ = restore_terminal();
+            hook(info);
+        }));
     }
 }
 
