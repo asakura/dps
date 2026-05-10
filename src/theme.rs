@@ -42,14 +42,15 @@
 //!
 //! ### Selection
 //!
-//! Selected rows use **`mauve` bg + `base` fg** (the Catppuccin "Selection
-//! Rule": a soft accent background with the deepest base as foreground for
-//! maximum legibility without harshness).
+//! The same **`mauve` bg + `base` fg** rule applies to every "active" element
+//! (the Catppuccin Selection Rule): a soft accent background with the deepest
+//! base as foreground for maximum legibility without harshness.
 //!
 //! | Slot | Attribute | Widget | Role |
 //! |------|-----------|--------|------|
+//! | `mauve` | bg + BOLD | active tab | active tab indicator in the tab bar |
 //! | `mauve` | bg + BOLD | selected table row | active row highlight |
-//! | `base` | fg | selected table row | text on the mauve highlight |
+//! | `base` | fg | active tab + selected row | text on any mauve background |
 //!
 //! `sapphire` is a recommended alternative if `mauve` feels too purple for a
 //! particular context.
@@ -58,6 +59,8 @@
 //!
 //! | Slot | Attribute | Widget | Role |
 //! |------|-----------|--------|------|
+//! | `surface0` | bg | tab bar | background shared with inactive tabs and status bar |
+//! | `subtext0` | fg | inactive tabs | muted tab labels; same slot as the help line |
 //! | `blue` | fg | table header row | column labels; info-level chrome |
 //! | `lavender` | fg + BOLD | focused column cells | softer accent than `mauve`; same hue family |
 //!

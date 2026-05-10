@@ -104,6 +104,8 @@ fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
 }
 
 impl Component for PpO2Tab {
+    fn title(&self) -> &'static str { "ppO₂ by Depth" }
+
     fn handle_key(&mut self, key: KeyEvent) -> Action {
         match key.code {
             KeyCode::Down | KeyCode::Char('j') => {

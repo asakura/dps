@@ -4,8 +4,8 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
-    style::Style,
-    widgets::Paragraph,
+    style::{Modifier, Style},
+    widgets::{Paragraph, Tabs},
 };
 
 use crate::{
@@ -49,19 +49,39 @@ impl App {
         }
     }
 
-    /// Draws the active component, status bar, and help line.
+    /// Draws the tab bar, active component, status bar, and help line.
     pub fn render(&mut self, f: &mut Frame) {
         let area = f.area();
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(1), Constraint::Length(1)])
+            .constraints([
+                Constraint::Length(1),
+                Constraint::Fill(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+            ])
             .split(area);
-        self.tabs[self.active].render(f, chunks[0]);
-        f.render_widget(self.tabs[self.active].status_bar(), chunks[1]);
+
+        let titles: Vec<&str> = self.tabs.iter().map(|t| t.title()).collect();
+        f.render_widget(
+            Tabs::new(titles)
+                .select(self.active)
+                .style(Style::default().bg(THEME.surface0).fg(THEME.subtext0))
+                .highlight_style(
+                    Style::default()
+                        .bg(THEME.mauve)
+                        .fg(THEME.base)
+                        .add_modifier(Modifier::BOLD),
+                )
+                .divider("│"),
+            chunks[0],
+        );
+        self.tabs[self.active].render(f, chunks[1]);
+        f.render_widget(self.tabs[self.active].status_bar(), chunks[2]);
         f.render_widget(
             Paragraph::new(self.tabs[self.active].help_text())
                 .style(Style::default().fg(THEME.subtext0)),
-            chunks[2],
+            chunks[3],
         );
     }
 }

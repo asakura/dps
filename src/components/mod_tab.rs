@@ -119,6 +119,8 @@ fn build_rows(mixes: &[Ean], cols: &[Bar]) -> Vec<Row<'static>> {
 }
 
 impl Component for ModTab {
+    fn title(&self) -> &'static str { "MOD Table" }
+
     fn handle_key(&mut self, key: KeyEvent) -> Action {
         match key.code {
             KeyCode::Down | KeyCode::Char('j') => {

@@ -11,6 +11,8 @@ use crate::action::Action;
 /// Interface that every screen must implement to participate in the event loop
 /// and render pipeline.
 pub trait Component {
+    /// Short display name shown in the tab bar.
+    fn title(&self) -> &'static str;
     /// Process a key press and return the resulting action.
     fn handle_key(&mut self, key: KeyEvent) -> Action;
     /// Draw the component's content into `area`.
