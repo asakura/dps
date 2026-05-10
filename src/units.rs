@@ -170,3 +170,39 @@ impl Mul<MetersPerBar> for Bar {
 pub struct MetersPerBar(f64);
 
 unit_newtype!(MetersPerBar, "m/bar");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_meters() {
+        assert_eq!(Meters::new(10.0).to_string(), "10.0 m");
+    }
+
+    #[test]
+    fn from_f64_meters() {
+        assert_eq!(Meters::from(5.0_f64).value(), 5.0);
+    }
+
+    #[test]
+    fn f64_from_meters() {
+        assert_eq!(f64::from(Meters::new(5.0)), 5.0);
+    }
+
+    #[test]
+    fn f64_mul_meters() {
+        assert_eq!((2.0_f64 * Meters::new(5.0)).value(), 10.0);
+    }
+
+    #[test]
+    fn meters_ratio_div() {
+        let ratio: f64 = Meters::new(10.0) / Meters::new(2.0);
+        assert_eq!(ratio, 5.0);
+    }
+
+    #[test]
+    fn neg_meters() {
+        assert_eq!((-Meters::new(5.0)).value(), -5.0);
+    }
+}
