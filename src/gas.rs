@@ -11,7 +11,7 @@ const SEAWATER: MetersPerBar = MetersPerBar::new(10.0);
 /// mostly N₂ with ~1 % Ar and trace CO₂, none of which affect MOD calculations.
 #[derive(Debug, Clone, Copy)]
 pub struct Ean {
-    fo2: f64,
+    fraction: f64,
 }
 
 impl Ean {
@@ -20,18 +20,18 @@ impl Ean {
         debug_assert!((10..=100).contains(&o2_pct));
 
         Self {
-            fo2: o2_pct as f64 / 100.0,
+            fraction: o2_pct as f64 / 100.0,
         }
     }
 
     /// Returns the O₂ fraction as a whole percentage (10–100).
     pub fn o2_percent(self) -> u8 {
-        (self.fo2 * 100.0).round() as u8
+        (self.fraction * 100.0).round() as u8
     }
 
     /// Returns the O₂ fraction as a decimal in [0.10, 1.0].
     pub fn fo2(self) -> f64 {
-        self.fo2
+        self.fraction
     }
 
     /// Maximum Operating Depth for a given ppO₂ limit.
@@ -44,7 +44,7 @@ impl Ean {
 
     /// ppO₂ for this mix at the given depth.
     pub fn ppo2_at(self, depth: Meters) -> Bar {
-        (depth / SEAWATER + SURFACE_PRESSURE) * self.fo2
+        (depth / SEAWATER + SURFACE_PRESSURE) * self.fraction
     }
 
     /// Named label for this mix, if one exists.
