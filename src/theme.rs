@@ -58,6 +58,7 @@
 //! | Slot | Attribute | Widget | Role |
 //! |------|-----------|--------|------|
 //! | `blue` | fg | table header row | column labels; info-level chrome |
+//! | `lavender` | fg + BOLD | focused column cells | softer accent than `mauve`; same hue family |
 //!
 //! ### Data-cell safety levels
 //!
@@ -73,7 +74,8 @@
 //! The remaining accent slots (`rosewater`, `flamingo`, `pink`, `maroon`,
 //! `peach`, `teal`, `sky`, `sapphire`, `lavender`) are defined but unassigned.
 //! Candidates: `peach` for secondary highlights, `lavender` for inactive-tab
-//! indicators, `maroon` for soft-error states distinct from hard `red`.
+//! indicators (already used for column highlight), `maroon` for soft-error
+//! states distinct from hard `red`.
 
 use ratatui::style::Color;
 

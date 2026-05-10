@@ -50,7 +50,7 @@ pub(crate) fn styled_table(
         .row_highlight_style(
             Style::default().bg(THEME.mauve).fg(THEME.base).add_modifier(Modifier::BOLD),
         )
-        .column_highlight_style(Style::default().add_modifier(Modifier::BOLD))
+        .column_highlight_style(Style::default().fg(THEME.lavender).add_modifier(Modifier::BOLD))
         .highlight_symbol("▶ ")
 }
 
