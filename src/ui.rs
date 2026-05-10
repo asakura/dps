@@ -71,15 +71,20 @@ pub fn render(f: &mut Frame, app: &mut App) {
     f.render_widget(help_bar(&app.active_tab), chunks[2]);
 }
 
-fn build_table(mixes: &[Ean], cols: &[Bar], highlighted: Option<usize>, title: String) -> Table<'static> {
-    let mut constraints = vec![Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)];
-    for i in 0..cols.len() {
-        if i + 1 < cols.len() {
-            constraints.push(Constraint::Length(COL_MOD_W));
-        } else {
-            constraints.push(Constraint::Fill(1));
-        }
+fn trailing_constraints(fixed: &[Constraint], n: usize, col_w: u16) -> Vec<Constraint> {
+    let mut c = fixed.to_vec();
+    for i in 0..n {
+        c.push(if i + 1 < n { Constraint::Length(col_w) } else { Constraint::Fill(1) });
     }
+    c
+}
+
+fn build_table(mixes: &[Ean], cols: &[Bar], highlighted: Option<usize>, title: String) -> Table<'static> {
+    let constraints = trailing_constraints(
+        &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
+        cols.len(),
+        COL_MOD_W,
+    );
 
     Table::new(build_rows(mixes, cols), constraints)
         .header(build_header(cols, highlighted))
@@ -186,14 +191,11 @@ fn ppo2_mix_window_size(width: u16) -> usize {
 }
 
 fn build_ppo2_table(mixes: &[Ean], highlighted: Option<usize>, title: String) -> Table<'static> {
-    let mut constraints = vec![Constraint::Length(COL_DEPTH_W)];
-    for i in 0..mixes.len() {
-        if i + 1 < mixes.len() {
-            constraints.push(Constraint::Length(COL_PPO2_MIX_W));
-        } else {
-            constraints.push(Constraint::Fill(1));
-        }
-    }
+    let constraints = trailing_constraints(
+        &[Constraint::Length(COL_DEPTH_W)],
+        mixes.len(),
+        COL_PPO2_MIX_W,
+    );
     Table::new(build_ppo2_rows(mixes), constraints)
         .header(build_ppo2_header(mixes, highlighted))
         .block(Block::default().borders(Borders::ALL).title(title))
