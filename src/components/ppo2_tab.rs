@@ -166,7 +166,7 @@ impl Component for PpO2Tab {
             name, mix.o2_percent(), depth_m, ppo2.value()
         );
         Paragraph::new(text)
-            .style(Style::default().fg(THEME.text).add_modifier(Modifier::BOLD))
+            .style(Style::default().bg(THEME.surface0).fg(THEME.text).add_modifier(Modifier::BOLD))
     }
 
     fn help_text(&self) -> &'static str {

@@ -182,10 +182,10 @@ impl Component for ModTab {
                     name, mix.o2_percent(), depth, ppo2
                 );
                 Paragraph::new(text)
-                    .style(Style::default().fg(THEME.text).add_modifier(Modifier::BOLD))
+                    .style(Style::default().bg(THEME.surface0).fg(THEME.text).add_modifier(Modifier::BOLD))
             }
             None => Paragraph::new(" No gas selected — press Enter to select")
-                .style(Style::default().fg(THEME.overlay0)),
+                .style(Style::default().bg(THEME.surface0).fg(THEME.overlay0)),
         }
     }
 
