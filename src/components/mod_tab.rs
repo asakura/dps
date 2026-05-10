@@ -44,6 +44,12 @@ pub struct ModTab {
     selection: Option<(Ean, Bar)>,
 }
 
+impl Default for ModTab {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModTab {
     /// Creates a `ModTab` pre-selected on EAN32 at 1.4 bar ppO₂.
     pub fn new() -> Self {

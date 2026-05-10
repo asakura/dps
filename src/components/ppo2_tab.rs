@@ -37,6 +37,12 @@ pub struct PpO2Tab {
     mix_idx: usize,
 }
 
+impl Default for PpO2Tab {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PpO2Tab {
     /// Creates a `PpO2Tab` pre-selected on Air (21%) at 0 m depth.
     pub fn new() -> Self {

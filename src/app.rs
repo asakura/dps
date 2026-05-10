@@ -20,6 +20,12 @@ pub struct App {
     active: usize,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     /// Creates an `App` pre-loaded with all tabs in their default state.
     pub fn new() -> Self {
