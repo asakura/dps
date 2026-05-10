@@ -11,6 +11,7 @@ use ratatui::{
 use crate::{
     action::Action,
     gas::Ean,
+    theme::THEME,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Bar,
 };
@@ -89,11 +90,11 @@ impl ModTab {
 
 fn mod_color(depth_m: f64) -> Color {
     if depth_m < MOD_RED_BELOW_M {
-        Color::Red
+        THEME.red
     } else if depth_m < MOD_YELLOW_BELOW_M {
-        Color::Yellow
+        THEME.yellow
     } else {
-        Color::Green
+        THEME.green
     }
 }
 
@@ -181,10 +182,10 @@ impl Component for ModTab {
                     name, mix.o2_percent(), depth, ppo2
                 );
                 Paragraph::new(text)
-                    .style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD))
+                    .style(Style::default().fg(THEME.text).add_modifier(Modifier::BOLD))
             }
             None => Paragraph::new(" No gas selected — press Enter to select")
-                .style(Style::default().fg(Color::DarkGray)),
+                .style(Style::default().fg(THEME.overlay0)),
         }
     }
 

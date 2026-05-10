@@ -4,13 +4,14 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::Style,
     widgets::Paragraph,
 };
 
 use crate::{
     action::Action,
     components::{Component, mod_tab::ModTab, ppo2_tab::PpO2Tab},
+    theme::THEME,
 };
 
 /// Top-level coordinator: owns the tab list, tracks the active tab, and routes
@@ -59,7 +60,7 @@ impl App {
         f.render_widget(self.tabs[self.active].status_bar(), chunks[1]);
         f.render_widget(
             Paragraph::new(self.tabs[self.active].help_text())
-                .style(Style::default().fg(Color::DarkGray)),
+                .style(Style::default().fg(THEME.subtext0)),
             chunks[2],
         );
     }

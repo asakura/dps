@@ -2,9 +2,11 @@
 
 use ratatui::{
     layout::Constraint,
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::{Block, Borders, Cell, Row, Table},
 };
+
+use crate::theme::THEME;
 
 /// First visible index that keeps `idx` centred in the window without scrolling past either end.
 pub(crate) fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
@@ -39,8 +41,15 @@ pub(crate) fn styled_table(
 ) -> Table<'static> {
     Table::new(rows, constraints)
         .header(header)
-        .block(Block::default().borders(Borders::ALL).title(title))
-        .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(THEME.surface0))
+                .title(title),
+        )
+        .row_highlight_style(
+            Style::default().bg(THEME.mauve).fg(THEME.base).add_modifier(Modifier::BOLD),
+        )
         .column_highlight_style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_symbol("▶ ")
 }
@@ -57,5 +66,5 @@ pub(crate) fn build_header_row(
     for (i, label) in labels.enumerate() {
         cells.push(Cell::from(label).style(if highlighted == Some(i) { bold_ul } else { bold }));
     }
-    Row::new(cells).style(Style::default().fg(Color::Cyan))
+    Row::new(cells).style(Style::default().fg(THEME.blue))
 }

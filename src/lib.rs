@@ -4,5 +4,6 @@ pub mod app;
 pub mod components;
 pub mod gas;
 pub mod logging;
+pub mod theme;
 pub mod ui;
 pub mod units;

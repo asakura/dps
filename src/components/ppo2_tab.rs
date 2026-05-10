@@ -11,6 +11,7 @@ use ratatui::{
 use crate::{
     action::Action,
     gas::Ean,
+    theme::THEME,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Meters,
 };
@@ -77,11 +78,11 @@ impl PpO2Tab {
 
 fn ppo2_cell_color(ppo2: f64) -> Color {
     if !(PPO2_HYPOXIC_BELOW..PPO2_DANGER_FROM).contains(&ppo2) {
-        Color::Red
+        THEME.red
     } else if ppo2 >= PPO2_CAUTION_FROM {
-        Color::Yellow
+        THEME.yellow
     } else {
-        Color::Green
+        THEME.green
     }
 }
 
@@ -165,7 +166,7 @@ impl Component for PpO2Tab {
             name, mix.o2_percent(), depth_m, ppo2.value()
         );
         Paragraph::new(text)
-            .style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD))
+            .style(Style::default().fg(THEME.text).add_modifier(Modifier::BOLD))
     }
 
     fn help_text(&self) -> &'static str {
