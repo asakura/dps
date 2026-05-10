@@ -15,19 +15,39 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 
 use app::{ActiveTab, App};
 
+/// How long to block waiting for a terminal event before redrawing.
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
-fn main() -> io::Result<()> {
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+/// RAII guard that owns the terminal and restores it on drop.
+struct Tui {
+    terminal: Terminal<CrosstermBackend<io::Stdout>>,
+}
 
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+impl Tui {
+    /// Switches the terminal into raw mode and the alternate screen, then creates the backend.
+    fn new() -> io::Result<Self> {
+        enable_raw_mode()?;
+        let mut stdout = io::stdout();
+        execute!(stdout, EnterAlternateScreen)?;
+        let terminal = Terminal::new(CrosstermBackend::new(stdout))?;
+        Ok(Self { terminal })
+    }
+}
+
+impl Drop for Tui {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
+        let _ = execute!(self.terminal.backend_mut(), LeaveAlternateScreen);
+        let _ = self.terminal.show_cursor();
+    }
+}
+
+fn main() -> io::Result<()> {
+    let mut tui = Tui::new()?;
     let mut app = App::new();
 
     loop {
-        terminal.draw(|f| ui::render(f, &mut app))?;
+        tui.terminal.draw(|f| ui::render(f, &mut app))?;
 
         if !event::poll(POLL_INTERVAL)? {
             continue;
@@ -69,8 +89,5 @@ fn main() -> io::Result<()> {
         }
     }
 
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
     Ok(())
 }
