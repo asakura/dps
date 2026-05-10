@@ -79,34 +79,38 @@ fn trailing_constraints(fixed: &[Constraint], n: usize, col_w: u16) -> Vec<Const
     c
 }
 
-fn build_table(mixes: &[Ean], cols: &[Bar], highlighted: Option<usize>, title: String) -> Table<'static> {
-    let constraints = trailing_constraints(
-        &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
-        cols.len(),
-        COL_MOD_W,
-    );
-
-    Table::new(build_rows(mixes, cols), constraints)
-        .header(build_header(cols, highlighted))
+fn styled_table(rows: Vec<Row<'static>>, constraints: Vec<Constraint>, header: Row<'static>, title: String) -> Table<'static> {
+    Table::new(rows, constraints)
+        .header(header)
         .block(Block::default().borders(Borders::ALL).title(title))
         .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
         .column_highlight_style(Style::default().add_modifier(Modifier::BOLD))
         .highlight_symbol("▶ ")
 }
 
-fn build_header(cols: &[Bar], highlighted: Option<usize>) -> Row<'static> {
+fn build_header_row(fixed: Vec<Cell<'static>>, labels: impl Iterator<Item = String>, highlighted: Option<usize>) -> Row<'static> {
     let bold = Style::default().add_modifier(Modifier::BOLD);
     let bold_ul = Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
-
-    let mut cells = vec![
-        Cell::from("Name").style(bold),
-        Cell::from("O\u{2082}%").style(bold),
-    ];
-    for (i, col) in cols.iter().enumerate() {
-        let style = if highlighted == Some(i) { bold_ul } else { bold };
-        cells.push(Cell::from(format!("{}", col)).style(style));
+    let mut cells = fixed;
+    for (i, label) in labels.enumerate() {
+        cells.push(Cell::from(label).style(if highlighted == Some(i) { bold_ul } else { bold }));
     }
     Row::new(cells).style(Style::default().fg(Color::Cyan))
+}
+
+fn build_table(mixes: &[Ean], cols: &[Bar], highlighted: Option<usize>, title: String) -> Table<'static> {
+    let constraints = trailing_constraints(
+        &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
+        cols.len(),
+        COL_MOD_W,
+    );
+    let bold = Style::default().add_modifier(Modifier::BOLD);
+    let header = build_header_row(
+        vec![Cell::from("Name").style(bold), Cell::from("O\u{2082}%").style(bold)],
+        cols.iter().map(|c| format!("{}", c)),
+        highlighted,
+    );
+    styled_table(build_rows(mixes, cols), constraints, header, title)
 }
 
 fn build_rows(mixes: &[Ean], cols: &[Bar]) -> Vec<Row<'static>> {
@@ -197,23 +201,13 @@ fn build_ppo2_table(mixes: &[Ean], highlighted: Option<usize>, title: String) ->
         mixes.len(),
         COL_PPO2_MIX_W,
     );
-    Table::new(build_ppo2_rows(mixes), constraints)
-        .header(build_ppo2_header(mixes, highlighted))
-        .block(Block::default().borders(Borders::ALL).title(title))
-        .row_highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
-        .column_highlight_style(Style::default().add_modifier(Modifier::BOLD))
-        .highlight_symbol("▶ ")
-}
-
-fn build_ppo2_header(mixes: &[Ean], highlighted: Option<usize>) -> Row<'static> {
     let bold = Style::default().add_modifier(Modifier::BOLD);
-    let bold_ul = Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
-    let mut cells = vec![Cell::from("Depth").style(bold)];
-    for (i, mix) in mixes.iter().enumerate() {
-        let style = if highlighted == Some(i) { bold_ul } else { bold };
-        cells.push(Cell::from(format!("{:>3}%", mix.o2_percent())).style(style));
-    }
-    Row::new(cells).style(Style::default().fg(Color::Cyan))
+    let header = build_header_row(
+        vec![Cell::from("Depth").style(bold)],
+        mixes.iter().map(|m| format!("{:>3}%", m.o2_percent())),
+        highlighted,
+    );
+    styled_table(build_ppo2_rows(mixes), constraints, header, title)
 }
 
 fn build_ppo2_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
