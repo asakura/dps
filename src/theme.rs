@@ -34,9 +34,10 @@
 //! | `subtext0` | fg | help line (bottom row) | keyboard shortcuts and hints |
 //! | `overlay0` | fg | status bar (empty state) | dimmed secondary / placeholder text |
 //!
-//! `subtext1` and `overlay1`/`overlay2` are available for additional
-//! intermediate levels (e.g. column labels, secondary metadata) but are not
-//! currently used.
+//! `subtext1` is the next step down from `text` — use it for secondary
+//! metadata alongside a primary value (e.g. a unit label next to a number).
+//! `overlay1`/`overlay2` sit between `overlay0` and `surface2` and suit
+//! deeply-dimmed decorative elements. None of these are currently used.
 //!
 //! ## Accents
 //!
@@ -75,11 +76,15 @@
 //! | `yellow` | caution | depth ∈ \[10, 20) m | ppO₂ ∈ \[1.4, 1.6) |
 //! | `red` | danger | depth < 10 m | ppO₂ < 0.18 or ≥ 1.6 |
 //!
-//! The remaining accent slots (`rosewater`, `flamingo`, `pink`, `maroon`,
-//! `peach`, `teal`, `sky`, `sapphire`, `lavender`) are defined but unassigned.
-//! Candidates: `peach` for secondary highlights, `lavender` for inactive-tab
-//! indicators (already used for column highlight), `maroon` for soft-error
-//! states distinct from hard `red`.
+//! **Unassigned neutrals:** `surface1` (between `surface0` and `surface2`;
+//! natural fit for a focused-but-not-active panel border or a secondary
+//! status row), `surface2`, `subtext1`, `overlay1`, `overlay2`, `mantle`,
+//! `crust`.
+//!
+//! **Unassigned accents:** `rosewater`, `flamingo`, `pink`, `maroon`, `peach`,
+//! `teal`, `sky`, `sapphire`. Candidates: `peach` for secondary highlights,
+//! `maroon` for soft-error states distinct from hard `red`, `sapphire` as an
+//! alternative selection colour to `mauve`.
 
 use ratatui::style::Color;
 
