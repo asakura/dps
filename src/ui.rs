@@ -6,17 +6,13 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Row, Table},
 };
 
-/// How many data columns of `col_w` fit in `width` given fixed `overhead` already consumed.
-///
-/// WARNING: `overhead` must exactly match the fixed-column layout of the corresponding table
-/// (borders, highlight symbol, fixed columns, and their spacings). If that layout changes,
-/// update the relevant overhead constant or this function will silently return the wrong count.
 pub(crate) fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
     let half = window_size / 2;
     let max_start = total.saturating_sub(window_size);
     idx.saturating_sub(half).min(max_start)
 }
 
+/// How many data columns of `col_w` fit in `width` given fixed `overhead` already consumed.
 pub(crate) fn col_window_size(width: u16, overhead: u16, col_w: u16, max: usize) -> usize {
     let n = 1 + width.saturating_sub(overhead + col_w) / (col_w + 1);
     (n as usize).min(max)
