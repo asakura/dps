@@ -258,15 +258,26 @@ mod tests {
 
     #[test]
     fn label_named_nitrox_mixes() {
+        assert_eq!(Ean::from_percent(28).unwrap().label(), Some("EANx 28"));
+        assert_eq!(Ean::from_percent(30).unwrap().label(), Some("EANx 30"));
         assert_eq!(Ean::from_percent(32).unwrap().label(), Some("EANx 32"));
         assert_eq!(Ean::from_percent(36).unwrap().label(), Some("EANx 36"));
         assert_eq!(Ean::from_percent(40).unwrap().label(), Some("EANx 40"));
     }
 
     #[test]
+    fn label_high_o2_mixes() {
+        assert_eq!(Ean::from_percent(50).unwrap().label(), Some("O₂ 50%"));
+        assert_eq!(Ean::from_percent(80).unwrap().label(), Some("O₂ 80%"));
+    }
+
+    #[test]
     fn label_hypoxic_mixes() {
         assert_eq!(Ean::from_percent(10).unwrap().label(), Some("Hypoxic 10"));
+        assert_eq!(Ean::from_percent(12).unwrap().label(), Some("Hypoxic 12"));
+        assert_eq!(Ean::from_percent(14).unwrap().label(), Some("Hypoxic 14"));
         assert_eq!(Ean::from_percent(16).unwrap().label(), Some("Hypoxic 16"));
+        assert_eq!(Ean::from_percent(18).unwrap().label(), Some("Hypoxic 18"));
     }
 
     #[test]
