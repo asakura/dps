@@ -1,11 +1,3 @@
-//! DPS — interactive terminal MOD table for nitrox dive planning.
-mod action;
-mod app;
-mod components;
-mod gas;
-mod ui;
-mod units;
-
 use std::{io, time::Duration};
 
 use crossterm::{
@@ -15,8 +7,8 @@ use crossterm::{
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 
-use action::Action;
-use app::App;
+use dps::action::Action;
+use dps::app::App;
 
 /// How long to block waiting for a terminal event before redrawing.
 const POLL_INTERVAL: Duration = Duration::from_millis(50);

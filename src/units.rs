@@ -84,12 +84,36 @@ macro_rules! unit_newtype {
 }
 
 /// Depth in metres. Backed by f64 so mul/div never truncate.
+///
+/// ```
+/// use dps::units::Meters;
+///
+/// let a = Meters::new(30.0);
+/// assert_eq!(a.value(), 30.0);
+/// assert_eq!(a.to_string(), "30.0 m");
+///
+/// assert_eq!((a + Meters::new(10.0)).value(), 40.0);
+/// assert_eq!((a - Meters::new(10.0)).value(), 20.0);
+/// assert_eq!((-a).value(), -30.0);
+/// assert_eq!((a * 2.0).value(), 60.0);
+/// assert_eq!((a / 2.0).value(), 15.0);
+/// assert_eq!(a.max(Meters::new(50.0)).value(), 50.0);
+///
+/// let b: Meters = 30.0_f64.into();
+/// assert_eq!(f64::from(b), 30.0);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Meters(f64);
 
 unit_newtype!(Meters, "m");
 
 /// Meters / MetersPerBar → Bar  (depth → gauge pressure)
+///
+/// ```
+/// use dps::units::{Bar, Meters, MetersPerBar};
+/// let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
+/// assert_eq!(gauge.value(), 3.0);
+/// ```
 impl Div<MetersPerBar> for Meters {
     type Output = Bar;
     fn div(self, rhs: MetersPerBar) -> Bar {
@@ -98,12 +122,35 @@ impl Div<MetersPerBar> for Meters {
 }
 
 /// Pressure in bar.
+///
+/// ```
+/// use dps::units::Bar;
+///
+/// let p = Bar::new(1.5);
+/// assert_eq!(p.value(), 1.5);
+/// assert_eq!(p.to_string(), "1.5 bar");
+///
+/// assert_eq!((p + Bar::new(0.5)).value(), 2.0);
+/// assert_eq!((p - Bar::new(0.5)).value(), 1.0);
+/// assert_eq!((p * 2.0).value(), 3.0);
+/// assert_eq!((p / 2.0).value(), 0.75);
+///
+/// // Ratio between two Bar values is dimensionless.
+/// let ratio: f64 = Bar::new(3.0) / Bar::new(1.5);
+/// assert_eq!(ratio, 2.0);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Bar(f64);
 
 unit_newtype!(Bar, "bar");
 
 /// Bar × MetersPerBar → Meters  (gauge pressure → depth)
+///
+/// ```
+/// use dps::units::{Bar, Meters, MetersPerBar};
+/// let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
+/// assert_eq!(depth.value(), 30.0);
+/// ```
 impl Mul<MetersPerBar> for Bar {
     type Output = Meters;
     fn mul(self, rhs: MetersPerBar) -> Meters {
@@ -112,6 +159,13 @@ impl Mul<MetersPerBar> for Bar {
 }
 
 /// Depth-to-pressure conversion factor for seawater (metres per bar).
+///
+/// ```
+/// use dps::units::MetersPerBar;
+/// let seawater = MetersPerBar::new(10.0);
+/// assert_eq!(seawater.value(), 10.0);
+/// assert_eq!(seawater.to_string(), "10.0 m/bar");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct MetersPerBar(f64);
 

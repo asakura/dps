@@ -5,6 +5,12 @@ use std::fmt;
 use crate::units::{Bar, Meters, MetersPerBar};
 
 /// Error returned when an O₂ percentage is outside the valid range [10, 100].
+///
+/// ```
+/// use dps::gas::InvalidO2Percent;
+/// let msg = InvalidO2Percent(5).to_string();
+/// assert!(msg.contains("5") && msg.contains("10") && msg.contains("100"));
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct InvalidO2Percent(pub u8);
 
@@ -30,6 +36,14 @@ impl Ean {
     /// Construct from whole-percent O₂ value (10–100).
     ///
     /// Returns `Err` if `o2_pct` is outside `[10, 100]`.
+    ///
+    /// ```
+    /// use dps::gas::Ean;
+    /// assert!(Ean::from_percent(32).is_ok());
+    /// assert!(Ean::from_percent(21).is_ok()); // air
+    /// assert!(Ean::from_percent(9).is_err());
+    /// assert!(Ean::from_percent(101).is_err());
+    /// ```
     pub fn from_percent(o2_pct: u8) -> Result<Self, InvalidO2Percent> {
         if !(10..=100).contains(&o2_pct) {
             return Err(InvalidO2Percent(o2_pct));
@@ -40,11 +54,22 @@ impl Ean {
     }
 
     /// Returns the O₂ fraction as a whole percentage (10–100).
+    ///
+    /// ```
+    /// use dps::gas::Ean;
+    /// assert_eq!(Ean::from_percent(32).unwrap().o2_percent(), 32);
+    /// ```
     pub fn o2_percent(self) -> u8 {
         (self.fraction * 100.0).round() as u8
     }
 
     /// Returns the O₂ fraction as a decimal in [0.10, 1.0].
+    ///
+    /// ```
+    /// # use approx::assert_relative_eq;
+    /// use dps::gas::Ean;
+    /// assert_relative_eq!(Ean::from_percent(32).unwrap().fo2(), 0.32);
+    /// ```
     pub fn fo2(self) -> f64 {
         self.fraction
     }
@@ -52,17 +77,45 @@ impl Ean {
     /// Maximum Operating Depth for a given ppO₂ limit.
     ///
     /// Formula: MOD = (ppO₂_max / FO₂ − 1 atm) × 10 m/bar  (seawater approximation)
+    ///
+    /// ```
+    /// # use approx::assert_relative_eq;
+    /// use dps::gas::Ean;
+    /// use dps::units::Bar;
+    /// let ean32 = Ean::from_percent(32).unwrap();
+    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).value(), 33.75, epsilon = 1e-6);
+    ///
+    /// // Clamps to 0.0 when the ppO₂ limit is below the surface partial pressure.
+    /// let o2 = Ean::from_percent(100).unwrap();
+    /// assert_relative_eq!(o2.mod_at(Bar::new(0.5)).value(), 0.0, epsilon = 1e-9);
+    /// ```
     pub fn mod_at(self, ppo2_max: Bar) -> Meters {
         let gauge = ppo2_max / self.fo2() - SURFACE_PRESSURE;
         (gauge * SEAWATER).max(Meters::new(0.0))
     }
 
     /// ppO₂ for this mix at the given depth.
+    ///
+    /// ```
+    /// # use approx::assert_relative_eq;
+    /// use dps::gas::Ean;
+    /// use dps::units::Meters;
+    /// let air = Ean::from_percent(21).unwrap();
+    /// // Air at 30 m: (30/10 + 1) × 0.21 = 0.84 bar
+    /// assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).value(), 0.84, epsilon = 1e-9);
+    /// ```
     pub fn ppo2_at(self, depth: Meters) -> Bar {
         (depth / SEAWATER + SURFACE_PRESSURE) * self.fraction
     }
 
     /// Named label for this mix, if one exists.
+    ///
+    /// ```
+    /// use dps::gas::Ean;
+    /// assert_eq!(Ean::from_percent(21).unwrap().label(), Some("Air"));
+    /// assert_eq!(Ean::from_percent(32).unwrap().label(), Some("EANx 32"));
+    /// assert_eq!(Ean::from_percent(25).unwrap().label(), None);
+    /// ```
     pub fn label(self) -> Option<&'static str> {
         match self.o2_percent() {
             10 => Some("Hypoxic 10"),
