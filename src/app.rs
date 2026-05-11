@@ -4,7 +4,6 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
-    style::{Modifier, Style},
     widgets::{Paragraph, Tabs},
 };
 
@@ -78,13 +77,8 @@ impl App {
         f.render_widget(
             Tabs::new(titles)
                 .select(self.active)
-                .style(Style::default().bg(THEME.surface0).fg(THEME.subtext0))
-                .highlight_style(
-                    Style::default()
-                        .bg(THEME.mauve)
-                        .fg(THEME.base)
-                        .add_modifier(Modifier::BOLD),
-                )
+                .style(THEME.nav_bar())
+                .highlight_style(THEME.selection())
                 .divider("│"),
             chunks[0],
         );
@@ -98,7 +92,7 @@ impl App {
             .collect::<Vec<_>>()
             .join("   ");
         f.render_widget(
-            Paragraph::new(format!(" {hint}")).style(Style::default().fg(THEME.subtext0)),
+            Paragraph::new(format!(" {hint}")).style(THEME.hint()),
             chunks[3],
         );
         if self.show_which_key {

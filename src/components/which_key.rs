@@ -17,7 +17,6 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{Modifier, Style},
     widgets::{Clear, Paragraph, Widget},
 };
 
@@ -71,7 +70,7 @@ impl Widget for WhichKey {
         let popup = bottom_rect(popup_h, area);
 
         Clear.render(popup, buf);
-        buf.set_style(popup, Style::from((THEME.text, THEME.mantle)));
+        buf.set_style(popup, THEME.popup_surface());
 
         let col_rects = Layout::horizontal(vec![Constraint::Fill(1); cols])
             .spacing(COL_GAP)
@@ -99,11 +98,11 @@ fn render_entry(b: &KeyBinding, area: Rect, buf: &mut Buffer) {
     .areas(area);
 
     Paragraph::new(b.key)
-        .style(Style::from((THEME.peach, Modifier::BOLD)))
+        .style(THEME.key_label())
         .render(key_area, buf);
 
     Paragraph::new(b.desc)
-        .style(Style::from(THEME.text))
+        .style(THEME.body_text())
         .render(desc_area, buf);
 }
 

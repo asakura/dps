@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Rect},
-    style::{Color, Modifier, Style},
+    style::Color,
     widgets::{Cell, Paragraph, Row, TableState},
 };
 
@@ -112,7 +112,7 @@ fn build_rows(mixes: &[Ean], cols: &[Bar]) -> Vec<Row<'static>> {
                 let depth = mix.mod_at(col);
                 cells.push(
                     Cell::from(format!("{}", depth))
-                        .style(Style::default().fg(mod_color(depth.value()))),
+                        .style(mod_color(depth.value())),
                 );
             }
             Row::new(cells)
@@ -164,9 +164,8 @@ impl Component for ModTab {
             cols.len(),
             COL_MOD_W,
         );
-        let bold = Style::default().add_modifier(Modifier::BOLD);
         let header = build_header_row(
-            vec![Cell::from("Name").style(bold), Cell::from("O\u{2082}%").style(bold)],
+            vec![Cell::from("Name").style(THEME.header_cell()), Cell::from("O\u{2082}%").style(THEME.header_cell())],
             cols.iter().map(|c| c.to_string()),
             Some(col_in_window),
         );
@@ -185,11 +184,10 @@ impl Component for ModTab {
                     " \u{25c6} {}({}%)  MOD {}  @ ppO\u{2082} {}",
                     name, mix.o2_percent(), depth, ppo2
                 );
-                Paragraph::new(text)
-                    .style(Style::default().bg(THEME.surface0).fg(THEME.text).add_modifier(Modifier::BOLD))
+                Paragraph::new(text).style(THEME.status_active())
             }
             None => Paragraph::new(" No gas selected — press Enter to select")
-                .style(Style::default().bg(THEME.surface0).fg(THEME.overlay0)),
+                .style(THEME.status_empty()),
         }
     }
 

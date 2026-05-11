@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Rect},
-    style::{Color, Modifier, Style},
+    style::Color,
     widgets::{Cell, Paragraph, Row, TableState},
 };
 
@@ -97,7 +97,7 @@ fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
                 let ppo2 = mix.ppo2_at(depth);
                 cells.push(
                     Cell::from(format!("{:.2}", ppo2.value()))
-                        .style(Style::default().fg(ppo2_cell_color(ppo2.value()))),
+                        .style(ppo2_cell_color(ppo2.value())),
                 );
             }
             Row::new(cells)
@@ -147,9 +147,8 @@ impl Component for PpO2Tab {
             mixes.len(),
             COL_PPO2_MIX_W,
         );
-        let bold = Style::default().add_modifier(Modifier::BOLD);
         let header = build_header_row(
-            vec![Cell::from("Depth").style(bold)],
+            vec![Cell::from("Depth").style(THEME.header_cell())],
             mixes.iter().map(|m| format!("{:>3}%", m.o2_percent())),
             Some(col_in_window),
         );
@@ -169,8 +168,7 @@ impl Component for PpO2Tab {
             " \u{25c6} {}({}%)  @ {} m  \u{2192}  ppO\u{2082} {:.2} bar",
             name, mix.o2_percent(), depth_m, ppo2.value()
         );
-        Paragraph::new(text)
-            .style(Style::default().bg(THEME.surface0).fg(THEME.text).add_modifier(Modifier::BOLD))
+        Paragraph::new(text).style(THEME.status_active())
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {

@@ -86,7 +86,7 @@
 //! `maroon` for soft-error states distinct from hard `red`, `sapphire` as an
 //! alternative selection colour to `mauve`.
 
-use ratatui::style::Color;
+use ratatui::style::{Color, Modifier, Style};
 
 /// Full Catppuccin palette with all 26 named colour slots.
 ///
@@ -257,6 +257,44 @@ impl Theme {
             crust:     Color::Rgb( 17,  17,  27), // #11111b
         }
     }
+
+    // ── Which-key popup ──────────────────────────────────────────────────────
+    /// Popup surface: text-on-mantle background.
+    pub fn popup_surface(&self) -> Style { Style::from((self.text, self.mantle)) }
+    /// Key label: bold peach.
+    pub fn key_label(&self) -> Style { Style::from((self.peach, Modifier::BOLD)) }
+
+    // ── Table chrome ─────────────────────────────────────────────────────────
+    /// Table border.
+    pub fn border(&self) -> Style { Style::from(self.surface0) }
+    /// Block title above a table.
+    pub fn title(&self) -> Style { Style::from(self.lavender) }
+    /// Header row text.
+    pub fn header(&self) -> Style { Style::from(self.blue) }
+    /// Non-highlighted header cell.
+    pub fn header_cell(&self) -> Style { Style::from(Modifier::BOLD) }
+    /// Highlighted (selected column) header cell.
+    pub fn header_cell_active(&self) -> Style { Style::from(Modifier::BOLD | Modifier::UNDERLINED) }
+    /// Selected row / active element (Catppuccin Selection Rule: mauve bg + base fg).
+    pub fn selection(&self) -> Style { Style::from((self.base, self.mauve, Modifier::BOLD)) }
+    /// Focused column highlight.
+    pub fn column_focus(&self) -> Style { Style::from((self.lavender, Modifier::BOLD)) }
+
+    // ── Tab bar ───────────────────────────────────────────────────────────────
+    /// Inactive tab bar background.
+    pub fn nav_bar(&self) -> Style { Style::from((self.subtext0, self.surface0)) }
+
+    // ── Status bar ────────────────────────────────────────────────────────────
+    /// Status bar with an active selection.
+    pub fn status_active(&self) -> Style { Style::from((self.text, self.surface0, Modifier::BOLD)) }
+    /// Status bar empty / placeholder state.
+    pub fn status_empty(&self) -> Style { Style::from((self.overlay0, self.surface0)) }
+
+    // ── Text ──────────────────────────────────────────────────────────────────
+    /// Body text: plain text fg.
+    pub fn body_text(&self) -> Style { Style::from(self.text) }
+    /// Hint / help line text.
+    pub fn hint(&self) -> Style { Style::from(self.subtext0) }
 
     /// The 14 accent colours in canonical order (rosewater → lavender).
     ///

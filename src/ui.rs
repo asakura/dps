@@ -2,7 +2,6 @@
 
 use ratatui::{
     layout::Constraint,
-    style::{Modifier, Style},
     text::Span,
     widgets::{Block, Borders, Cell, Row, Table},
 };
@@ -45,13 +44,11 @@ pub(crate) fn styled_table(
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(THEME.surface0))
-                .title(Span::styled(title, Style::default().fg(THEME.lavender))),
+                .border_style(THEME.border())
+                .title(Span::styled(title, THEME.title())),
         )
-        .row_highlight_style(
-            Style::default().bg(THEME.mauve).fg(THEME.base).add_modifier(Modifier::BOLD),
-        )
-        .column_highlight_style(Style::default().fg(THEME.lavender).add_modifier(Modifier::BOLD))
+        .row_highlight_style(THEME.selection())
+        .column_highlight_style(THEME.column_focus())
         .highlight_symbol("▶ ")
 }
 
@@ -61,11 +58,10 @@ pub(crate) fn build_header_row(
     labels: impl Iterator<Item = String>,
     highlighted: Option<usize>,
 ) -> Row<'static> {
-    let bold = Style::default().add_modifier(Modifier::BOLD);
-    let bold_ul = Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
     let mut cells = fixed;
     for (i, label) in labels.enumerate() {
-        cells.push(Cell::from(label).style(if highlighted == Some(i) { bold_ul } else { bold }));
+        let style = if highlighted == Some(i) { THEME.header_cell_active() } else { THEME.header_cell() };
+        cells.push(Cell::from(label).style(style));
     }
-    Row::new(cells).style(Style::default().fg(THEME.blue))
+    Row::new(cells).style(THEME.header())
 }
