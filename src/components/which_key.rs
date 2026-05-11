@@ -5,13 +5,22 @@
 //! 10 description). The panel spans the full terminal width and is anchored to the
 //! bottom edge.
 //!
+//! Each binding is rendered by the private [`Entry`] widget, which lays out a
+//! single row as `LEAD | KEY_W | ENTRY_GAP | desc`.
+//!
 //! # Example
 //!
-//! ```rust,ignore
-//! frame.render_widget(
-//!     WhichKey::new(GLOBAL_BINDINGS, component_bindings),
-//!     frame.area(),
-//! );
+//! ```no_run
+//! use ratatui::{Terminal, backend::TestBackend};
+//! use dps::components::{KeyBinding, which_key::WhichKey};
+//!
+//! static BINDINGS: [KeyBinding; 1] = [KeyBinding { key: "?", desc: "help" }];
+//!
+//! let backend = TestBackend::new(80, 24);
+//! let mut terminal = Terminal::new(backend).unwrap();
+//! terminal.draw(|f| {
+//!     f.render_widget(WhichKey::new(&BINDINGS, &[]), f.area());
+//! }).unwrap();
 //! ```
 
 use ratatui::{
@@ -47,6 +56,17 @@ pub struct WhichKey {
 
 impl WhichKey {
     /// Creates a new `WhichKey` popup combining global and component bindings.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use dps::components::{KeyBinding, which_key::WhichKey};
+    ///
+    /// static GLOBAL: [KeyBinding; 1] = [KeyBinding { key: "?", desc: "help" }];
+    /// static COMP: [KeyBinding; 1] = [KeyBinding { key: "q", desc: "quit" }];
+    ///
+    /// let _ = WhichKey::new(&GLOBAL, &COMP);
+    /// ```
     pub fn new(global: &'static [KeyBinding], component: &'static [KeyBinding]) -> Self {
         Self { global, component }
     }
@@ -81,30 +101,34 @@ impl Widget for WhichKey {
 
             for row in 0..rows {
                 if let Some(b) = all.get(col_idx * rows + row) {
-                    render_entry(b, row_rects[row], buf);
+                    Entry(b).render(row_rects[row], buf);
                 }
             }
         }
     }
 }
 
-/// Renders a single binding into `area` using a [`LEAD` | `KEY_W` | `ENTRY_GAP` | desc] horizontal layout.
-fn render_entry(b: &KeyBinding, area: Rect, buf: &mut Buffer) {
-    let [_lead, key_area, _gap, desc_area] = Layout::horizontal([
-        Constraint::Length(LEAD),
-        Constraint::Length(KEY_W),
-        Constraint::Length(ENTRY_GAP),
-        Constraint::Fill(1),
-    ])
-    .areas(area);
+/// [`Widget`] that renders one [`KeyBinding`] as a `LEAD | KEY_W | ENTRY_GAP | desc` row.
+struct Entry<'a>(&'a KeyBinding);
 
-    Paragraph::new(b.key)
-        .style(THEME.key_label())
-        .render(key_area, buf);
+impl Widget for Entry<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let [_lead, key_area, _gap, desc_area] = Layout::horizontal([
+            Constraint::Length(LEAD),
+            Constraint::Length(KEY_W),
+            Constraint::Length(ENTRY_GAP),
+            Constraint::Fill(1),
+        ])
+        .areas(area);
 
-    Paragraph::new(b.desc)
-        .style(THEME.body_text())
-        .render(desc_area, buf);
+        Paragraph::new(self.0.key)
+            .style(THEME.key_label())
+            .render(key_area, buf);
+
+        Paragraph::new(self.0.desc)
+            .style(THEME.body_text())
+            .render(desc_area, buf);
+    }
 }
 
 /// A `Rect` spanning the full width of `area`, `height` rows tall, anchored to the bottom edge.
@@ -151,7 +175,60 @@ mod tests {
         }
     }
 
-    mod render {
+    mod entry {
+        use super::*;
+
+        static BINDING: KeyBinding = KeyBinding {
+            key: "?",
+            desc: "zig",
+        };
+        static LONG_KEY: KeyBinding = KeyBinding {
+            key: "toolongkey",
+            desc: "d",
+        };
+
+        fn render_entry(b: &'static KeyBinding, width: u16) -> ratatui::buffer::Buffer {
+            let backend = TestBackend::new(width, 1);
+            let mut terminal = Terminal::new(backend).unwrap();
+
+            terminal
+                .draw(|f| f.render_widget(Entry(b), f.area()))
+                .unwrap();
+            terminal.backend().buffer().clone()
+        }
+
+        #[test]
+        fn key_placed_after_lead() {
+            let buf = render_entry(&BINDING, 30);
+            assert_eq!(buf.cell(Position::new(LEAD, 0)).unwrap().symbol(), "?");
+        }
+
+        #[test]
+        fn desc_placed_after_lead_key_gap() {
+            let buf = render_entry(&BINDING, 30);
+            let x = LEAD + KEY_W + ENTRY_GAP;
+
+            assert_eq!(buf.cell(Position::new(x, 0)).unwrap().symbol(), "z");
+            assert_eq!(buf.cell(Position::new(x + 1, 0)).unwrap().symbol(), "i");
+            assert_eq!(buf.cell(Position::new(x + 2, 0)).unwrap().symbol(), "g");
+        }
+
+        #[test]
+        fn long_key_clipped_to_key_width() {
+            // Key longer than KEY_W is clipped by the layout rect; desc starts at the correct offset.
+            let buf = render_entry(&LONG_KEY, 30);
+
+            assert_eq!(buf.cell(Position::new(LEAD, 0)).unwrap().symbol(), "t");
+            assert_eq!(
+                buf.cell(Position::new(LEAD + KEY_W + ENTRY_GAP, 0))
+                    .unwrap()
+                    .symbol(),
+                "d"
+            );
+        }
+    }
+
+    mod which_key {
         use super::*;
 
         mod empty {
@@ -170,57 +247,6 @@ mod tests {
 
                 let buf = terminal.backend().buffer().clone();
                 assert!(buf.content.iter().all(|c| c.symbol() == " "));
-            }
-        }
-
-        mod single {
-            use super::*;
-
-            static SINGLE: [KeyBinding; 1] = [KeyBinding {
-                key: "?",
-                desc: "zig",
-            }];
-
-            #[test]
-            fn key_placed_after_lead() {
-                // area 30×3: 1 col, 1 row → popup occupies the bottom row (y=2).
-                let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend).unwrap();
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&SINGLE, &[]), f.area());
-                    })
-                    .unwrap();
-
-                let buf = terminal.backend().buffer();
-                assert_eq!(buf.cell(Position::new(LEAD, 2)).unwrap().symbol(), "?");
-            }
-
-            #[test]
-            fn desc_placed_after_lead_key_gap() {
-                // area 30×3: desc starts at x = LEAD + KEY_W + ENTRY_GAP.
-                let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend).unwrap();
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&SINGLE, &[]), f.area());
-                    })
-                    .unwrap();
-
-                let buf = terminal.backend().buffer();
-                let desc_x = LEAD + KEY_W + ENTRY_GAP;
-
-                assert_eq!(buf.cell(Position::new(desc_x, 2)).unwrap().symbol(), "z");
-                assert_eq!(
-                    buf.cell(Position::new(desc_x + 1, 2)).unwrap().symbol(),
-                    "i"
-                );
-                assert_eq!(
-                    buf.cell(Position::new(desc_x + 2, 2)).unwrap().symbol(),
-                    "g"
-                );
             }
         }
 
@@ -422,37 +448,10 @@ mod tests {
         mod clipping {
             use super::*;
 
-            static LONG_KEY: [KeyBinding; 1] = [KeyBinding {
-                key: "toolongkey",
-                desc: "d",
-            }];
             static LONG_DESC: [KeyBinding; 1] = [KeyBinding {
                 key: "k",
                 desc: "averylongdescriptionthatwontfit",
             }];
-
-            #[test]
-            fn long_key_clipped_to_key_width() {
-                // Key longer than KEY_W is clipped by the layout rect; desc starts at the correct offset.
-                let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend).unwrap();
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&LONG_KEY, &[]), f.area());
-                    })
-                    .unwrap();
-
-                let buf = terminal.backend().buffer();
-
-                assert_eq!(buf.cell(Position::new(LEAD, 2)).unwrap().symbol(), "t");
-                assert_eq!(
-                    buf.cell(Position::new(LEAD + KEY_W + ENTRY_GAP, 2))
-                        .unwrap()
-                        .symbol(),
-                    "d"
-                );
-            }
 
             #[test]
             fn long_desc_clipped_to_column_width() {
@@ -465,6 +464,7 @@ mod tests {
                         f.render_widget(WhichKey::new(&LONG_DESC, &[]), f.area());
                     })
                     .unwrap();
+
                 let buf = terminal.backend().buffer();
                 let desc_x = LEAD + KEY_W + ENTRY_GAP;
 
