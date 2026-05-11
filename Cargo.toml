@@ -2,6 +2,7 @@
 name = "dps"
 version = "0.1.0"
 edition = "2024"
+authors = ["Mikalai Seva"]
 
 [build-dependencies]
 vergen = { version = "9", features = ["build"] }
