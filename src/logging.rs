@@ -1,28 +1,9 @@
 //! File-based tracing initialisation.
 
-use std::path::PathBuf;
-
-use directories::ProjectDirs;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
-fn project_directory() -> Option<ProjectDirs> {
-    ProjectDirs::from("", "", env!("CARGO_PKG_NAME"))
-}
-
-/// Returns the path to the application's local data directory.
-///
-/// Priority: `DPS_DATA` env var → platform data dir (`directories` crate) → `.data` fallback.
-pub fn get_data_dir() -> PathBuf {
-    let data_env = format!("{}_DATA", env!("CARGO_PKG_NAME").to_uppercase());
-    if let Ok(s) = std::env::var(data_env) {
-        PathBuf::from(s)
-    } else if let Some(proj_dirs) = project_directory() {
-        proj_dirs.data_local_dir().to_path_buf()
-    } else {
-        PathBuf::from(".data")
-    }
-}
+use crate::config::get_data_dir;
 
 /// Initialises a file-based `tracing` subscriber and registers it globally.
 ///

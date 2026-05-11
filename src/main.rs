@@ -1,5 +1,6 @@
 use std::{io, panic, time::Duration};
 
+use clap::Parser;
 use color_eyre::Result;
 use crossterm::{
     cursor::Show,
@@ -11,10 +12,8 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 
 use dps::action::Action;
 use dps::app::App;
+use dps::cli::Cli;
 use dps::logging::initialize_logging;
-
-/// How long to block waiting for a terminal event before redrawing.
-const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 fn restore_terminal() -> io::Result<()> {
     disable_raw_mode()?;
@@ -59,13 +58,15 @@ impl Drop for Tui {
 fn main() -> Result<()> {
     color_eyre::install()?;
     initialize_logging()?;
+    let cli = Cli::parse();
+    let poll_interval = Duration::from_secs_f64(1.0 / cli.frame_rate);
     let mut tui = Tui::new()?;
     let mut app = App::new();
 
     loop {
         tui.terminal.draw(|f| app.render(f))?;
 
-        if !event::poll(POLL_INTERVAL)? {
+        if !event::poll(poll_interval)? {
             continue;
         }
 
