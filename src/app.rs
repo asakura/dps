@@ -10,7 +10,7 @@ use ratatui::{
 
 use crate::{
     action::Action,
-    components::{Component, KeyBinding, mod_tab::ModTab, ppo2_tab::PpO2Tab, which_key},
+    components::{Component, KeyBinding, mod_tab::ModTab, ppo2_tab::PpO2Tab, which_key::WhichKey},
     theme::THEME,
 };
 
@@ -102,7 +102,10 @@ impl App {
             chunks[3],
         );
         if self.show_which_key {
-            which_key::render(f, GLOBAL_BINDINGS, self.tabs[self.active].key_bindings());
+            f.render_widget(
+                WhichKey::new(GLOBAL_BINDINGS, self.tabs[self.active].key_bindings()),
+                area,
+            );
         }
     }
 }

@@ -2,13 +2,22 @@
 //!
 //! Bindings are shown in a 2-column grid (column-major order). The panel spans
 //! the full terminal width and is anchored to the bottom edge.
+//!
+//! # Example
+//!
+//! ```rust,ignore
+//! frame.render_widget(
+//!     WhichKey::new(GLOBAL_BINDINGS, component_bindings),
+//!     frame.area(),
+//! );
+//! ```
 
 use ratatui::{
-    Frame,
+    buffer::Buffer,
     layout::Rect,
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Clear, Paragraph},
+    widgets::{Clear, Widget},
 };
 
 use crate::theme::THEME;
@@ -24,44 +33,54 @@ const LEAD: usize = 1;
 /// Gap between the two columns.
 const COL_GAP: usize = 4;
 
-/// Renders the which-key popup, merging `global` and `component` bindings into a 2-column grid
-/// anchored to the bottom of the frame.
-pub fn render(
-    f: &mut Frame,
+/// Which-key popup widget.
+///
+/// Merges `global` and `component` bindings into a 2-column grid anchored to
+/// the bottom of the area it is rendered into. Pass the full terminal area so
+/// the popup is positioned at the screen bottom.
+pub struct WhichKey {
     global: &'static [KeyBinding],
     component: &'static [KeyBinding],
-) {
-    let area = f.area();
+}
 
-    let all: Vec<&KeyBinding> = global.iter().chain(component.iter()).collect();
+impl WhichKey {
+    /// Creates a new `WhichKey` popup combining global and component bindings.
+    pub fn new(global: &'static [KeyBinding], component: &'static [KeyBinding]) -> Self {
+        Self { global, component }
+    }
+}
 
-    let n = all.len();
-    let rows = (n + 1) / 2;
+impl Widget for WhichKey {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let all: Vec<&KeyBinding> = self.global.iter().chain(self.component.iter()).collect();
 
-    let inner_w = area.width as usize;
-    let col_w = inner_w.saturating_sub(COL_GAP) / 2;
-    let desc_w = col_w.saturating_sub(LEAD + KEY_W + ENTRY_GAP);
+        let n = all.len();
+        let rows = (n + 1) / 2;
 
-    let lines: Vec<Line<'static>> = (0..rows)
-        .map(|row| {
-            let mut spans = entry_spans(all.get(row), KEY_W, ENTRY_GAP, LEAD, col_w, desc_w);
-            spans.push(Span::raw(format!("{:COL_GAP$}", "")));
-            spans.extend(entry_spans(
-                all.get(row + rows),
-                KEY_W, ENTRY_GAP, 0, col_w, desc_w,
-            ));
-            Line::from(spans)
-        })
-        .collect();
+        let inner_w = area.width as usize;
+        let col_w = inner_w.saturating_sub(COL_GAP) / 2;
+        let desc_w = col_w.saturating_sub(LEAD + KEY_W + ENTRY_GAP);
 
-    let popup_h = (rows as u16).min(area.height);
-    let popup = bottom_rect(popup_h, area);
+        let lines: Vec<Line<'static>> = (0..rows)
+            .map(|row| {
+                let mut spans = entry_spans(all.get(row), KEY_W, ENTRY_GAP, LEAD, col_w, desc_w);
+                spans.push(Span::raw(format!("{:COL_GAP$}", "")));
+                spans.extend(entry_spans(
+                    all.get(row + rows),
+                    KEY_W, ENTRY_GAP, 0, col_w, desc_w,
+                ));
+                Line::from(spans)
+            })
+            .collect();
 
-    f.render_widget(Clear, popup);
-    f.render_widget(
-        Paragraph::new(lines).style(Style::default().bg(THEME.mantle)),
-        popup,
-    );
+        let popup_h = (rows as u16).min(area.height);
+        let popup = bottom_rect(popup_h, area);
+
+        Clear.render(popup, buf);
+        ratatui::widgets::Paragraph::new(lines)
+            .style(Style::default().bg(THEME.mantle))
+            .render(popup, buf);
+    }
 }
 
 /// Spans for a single binding entry, or blank padding if the slot is empty.
