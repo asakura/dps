@@ -1,7 +1,9 @@
 //! Which-key popup: Magit-style transient panel at the bottom of the screen.
 //!
-//! Bindings are shown in a 2-column grid (column-major order). The panel spans
-//! the full terminal width and is anchored to the bottom edge.
+//! Bindings are shown in a column-major grid. The column count grows with the
+//! terminal width; each column is at least 20 cells wide (1 lead + 7 key + 2 gap +
+//! 10 description). The panel spans the full terminal width and is anchored to the
+//! bottom edge.
 //!
 //! # Example
 //!
@@ -14,29 +16,30 @@
 
 use ratatui::{
     buffer::Buffer,
-    layout::Rect,
+    layout::{Constraint, Layout, Rect},
     style::{Modifier, Style},
-    text::{Line, Span},
-    widgets::{Clear, Widget},
+    widgets::{Clear, Paragraph, Widget},
 };
 
 use crate::theme::THEME;
 
 use super::KeyBinding;
 
-/// Key column width (all keys are ASCII so byte == display width).
-const KEY_W: usize = 7;
+/// Key column width.
+const KEY_W: u16 = 7;
 /// Gap between key and description within one entry.
-const ENTRY_GAP: usize = 2;
+const ENTRY_GAP: u16 = 2;
 /// Leading space before each entry.
-const LEAD: usize = 1;
-/// Gap between the two columns.
-const COL_GAP: usize = 4;
+const LEAD: u16 = 1;
+/// Gap between columns.
+const COL_GAP: u16 = 4;
+/// Minimum description width used to calculate how many columns fit.
+const MIN_DESC_W: u16 = 10;
 
 /// Which-key popup widget.
 ///
-/// Merges `global` and `component` bindings into a 2-column grid anchored to
-/// the bottom of the area it is rendered into. Pass the full terminal area so
+/// Merges `global` and `component` bindings into a dynamic column grid anchored
+/// to the bottom of the area it is rendered into. Pass the full terminal area so
 /// the popup is positioned at the screen bottom.
 pub struct WhichKey {
     global: &'static [KeyBinding],
@@ -53,63 +56,55 @@ impl WhichKey {
 impl Widget for WhichKey {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let all: Vec<&KeyBinding> = self.global.iter().chain(self.component.iter()).collect();
-
         let n = all.len();
-        let rows = (n + 1) / 2;
+        if n == 0 {
+            return;
+        }
 
-        let inner_w = area.width as usize;
-        let col_w = inner_w.saturating_sub(COL_GAP) / 2;
-        let desc_w = col_w.saturating_sub(LEAD + KEY_W + ENTRY_GAP);
-
-        let lines: Vec<Line<'static>> = (0..rows)
-            .map(|row| {
-                let mut spans = entry_spans(all.get(row), KEY_W, ENTRY_GAP, LEAD, col_w, desc_w);
-                spans.push(Span::raw(format!("{:COL_GAP$}", "")));
-                spans.extend(entry_spans(
-                    all.get(row + rows),
-                    KEY_W, ENTRY_GAP, 0, col_w, desc_w,
-                ));
-                Line::from(spans)
-            })
-            .collect();
+        // How many columns fit? Each column needs at least min_col_w cells; columns
+        // after the first each cost an additional COL_GAP.
+        let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
+        let cols = ((area.width + COL_GAP) / (min_col_w + COL_GAP)).max(1) as usize;
+        let rows = n.div_ceil(cols);
 
         let popup_h = (rows as u16).min(area.height);
         let popup = bottom_rect(popup_h, area);
 
         Clear.render(popup, buf);
-        ratatui::widgets::Paragraph::new(lines)
-            .style(Style::default().bg(THEME.mantle))
-            .render(popup, buf);
+        buf.set_style(popup, Style::default().bg(THEME.mantle));
+
+        let col_rects = Layout::horizontal(vec![Constraint::Fill(1); cols])
+            .spacing(COL_GAP)
+            .split(popup);
+
+        for (col_idx, col_rect) in col_rects.iter().enumerate() {
+            let row_rects = Layout::vertical(vec![Constraint::Length(1); rows]).split(*col_rect);
+            for row in 0..rows {
+                if let Some(b) = all.get(col_idx * rows + row) {
+                    render_entry(b, row_rects[row], buf);
+                }
+            }
+        }
     }
 }
 
-/// Spans for a single binding entry, or blank padding if the slot is empty.
-fn entry_spans(
-    binding: Option<&&KeyBinding>,
-    key_w: usize,
-    gap: usize,
-    lead: usize,
-    col_w: usize,
-    desc_w: usize,
-) -> Vec<Span<'static>> {
-    match binding {
-        Some(b) => {
-            // Pad by char count, not bytes, so multi-byte chars like ₂ don't
-            // shift the right column.
-            let desc_pad = desc_w.saturating_sub(b.desc.chars().count());
-            vec![
-                Span::raw(format!("{:lead$}", "")),
-                Span::styled(
-                    format!("{:<key_w$}", b.key),
-                    Style::default().fg(THEME.peach).add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(format!("{:gap$}", "")),
-                Span::styled(b.desc, Style::default().fg(THEME.text)),
-                Span::raw(" ".repeat(desc_pad)),
-            ]
-        }
-        None => vec![Span::raw(format!("{:col_w$}", ""))],
-    }
+/// Renders a single binding into `area` using a [`LEAD` | `KEY_W` | `ENTRY_GAP` | desc] horizontal layout.
+fn render_entry(b: &KeyBinding, area: Rect, buf: &mut Buffer) {
+    let [_lead, key_area, _gap, desc_area] = Layout::horizontal([
+        Constraint::Length(LEAD),
+        Constraint::Length(KEY_W),
+        Constraint::Length(ENTRY_GAP),
+        Constraint::Fill(1),
+    ])
+    .areas(area);
+
+    Paragraph::new(b.key)
+        .style(Style::default().fg(THEME.peach).add_modifier(Modifier::BOLD))
+        .render(key_area, buf);
+
+    Paragraph::new(b.desc)
+        .style(Style::default().fg(THEME.text))
+        .render(desc_area, buf);
 }
 
 /// A `Rect` spanning the full width of `area`, `height` rows tall, anchored to the bottom edge.
