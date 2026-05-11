@@ -16,7 +16,7 @@ use crate::{
     units::Bar,
 };
 
-use super::Component;
+use super::{Component, KeyBinding};
 
 const PPO2_MIN: f64 = 0.8;
 const PPO2_STEP: f64 = 0.1;
@@ -191,7 +191,12 @@ impl Component for ModTab {
         }
     }
 
-    fn help_text(&self) -> &'static str {
-        " \u{2191}\u{2193}/jk navigate   \u{2190}\u{2192}/hl ppO\u{2082}   Enter select   Tab next table   q quit"
+    fn key_bindings(&self) -> &'static [KeyBinding] {
+        static BINDINGS: &[KeyBinding] = &[
+            KeyBinding { key: "j/k",   desc: "navigate rows"    },
+            KeyBinding { key: "h/l",   desc: "change ppO\u{2082} limit" },
+            KeyBinding { key: "Enter", desc: "select gas"        },
+        ];
+        BINDINGS
     }
 }

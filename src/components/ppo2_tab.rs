@@ -16,7 +16,7 @@ use crate::{
     units::Meters,
 };
 
-use super::Component;
+use super::{Component, KeyBinding};
 
 const PPO2_TABLE_MIX_PERCENTS: &[u8] = &[10, 12, 14, 16, 18, 21, 28, 30, 32, 36, 40, 50, 80, 100];
 const PPO2_TABLE_MIX_COUNT: usize = PPO2_TABLE_MIX_PERCENTS.len();
@@ -171,7 +171,11 @@ impl Component for PpO2Tab {
             .style(Style::default().bg(THEME.surface0).fg(THEME.text).add_modifier(Modifier::BOLD))
     }
 
-    fn help_text(&self) -> &'static str {
-        " \u{2191}\u{2193}/jk depth   \u{2190}\u{2192}/hl mix   Tab next table   q quit"
+    fn key_bindings(&self) -> &'static [KeyBinding] {
+        static BINDINGS: &[KeyBinding] = &[
+            KeyBinding { key: "j/k", desc: "navigate depth" },
+            KeyBinding { key: "h/l", desc: "change mix"     },
+        ];
+        BINDINGS
     }
 }

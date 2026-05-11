@@ -10,15 +10,22 @@ use ratatui::{
 
 use crate::{
     action::Action,
-    components::{Component, mod_tab::ModTab, ppo2_tab::PpO2Tab},
+    components::{Component, KeyBinding, mod_tab::ModTab, ppo2_tab::PpO2Tab, which_key},
     theme::THEME,
 };
+
+static GLOBAL_BINDINGS: &[KeyBinding] = &[
+    KeyBinding { key: "Tab",   desc: "next table"      },
+    KeyBinding { key: "q/Esc", desc: "quit"            },
+    KeyBinding { key: "?",     desc: "toggle bindings" },
+];
 
 /// Top-level coordinator: owns the tab list, tracks the active tab, and routes
 /// key events and render calls to the appropriate component.
 pub struct App {
     tabs: Vec<Box<dyn Component>>,
     active: usize,
+    show_which_key: bool,
 }
 
 impl Default for App {
@@ -33,12 +40,17 @@ impl App {
         Self {
             tabs: vec![Box::new(ModTab::new()), Box::new(PpO2Tab::new())],
             active: 0,
+            show_which_key: false,
         }
     }
 
-    /// Intercepts `q`/Esc (quit) and Tab (cycle tabs) globally; delegates all
-    /// other keys to the active component.
+    /// Intercepts `?` (which-key toggle), `q`/Esc (quit), and Tab (cycle tabs)
+    /// globally; delegates all other keys to the active component.
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
+        if key.code == KeyCode::Char('?') {
+            self.show_which_key = !self.show_which_key;
+            return Action::None;
+        }
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => Action::Quit,
             KeyCode::Tab => {
@@ -78,10 +90,19 @@ impl App {
         );
         self.tabs[self.active].render(f, chunks[1]);
         f.render_widget(self.tabs[self.active].status_bar(), chunks[2]);
+        let hint = self.tabs[self.active]
+            .key_bindings()
+            .iter()
+            .chain(GLOBAL_BINDINGS.iter())
+            .map(|b| format!("{} {}", b.key, b.desc))
+            .collect::<Vec<_>>()
+            .join("   ");
         f.render_widget(
-            Paragraph::new(self.tabs[self.active].help_text())
-                .style(Style::default().fg(THEME.subtext0)),
+            Paragraph::new(format!(" {hint}")).style(Style::default().fg(THEME.subtext0)),
             chunks[3],
         );
+        if self.show_which_key {
+            which_key::render(f, GLOBAL_BINDINGS, self.tabs[self.active].key_bindings());
+        }
     }
 }

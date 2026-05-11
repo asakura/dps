@@ -2,11 +2,18 @@
 
 pub mod mod_tab;
 pub mod ppo2_tab;
+pub mod which_key;
 
 use crossterm::event::KeyEvent;
 use ratatui::{Frame, layout::Rect, widgets::Paragraph};
 
 use crate::action::Action;
+
+/// A single key→action entry for the which-key popup and help line.
+pub struct KeyBinding {
+    pub key: &'static str,
+    pub desc: &'static str,
+}
 
 /// Interface that every screen must implement to participate in the event loop
 /// and render pipeline.
@@ -19,6 +26,6 @@ pub trait Component {
     fn render(&mut self, f: &mut Frame, area: Rect);
     /// One-line status paragraph rendered below the main content area.
     fn status_bar(&self) -> Paragraph<'static>;
-    /// Keybinding hint line rendered at the very bottom of the screen.
-    fn help_text(&self) -> &'static str;
+    /// Structured key bindings for the which-key popup and hint line.
+    fn key_bindings(&self) -> &'static [KeyBinding] { &[] }
 }
