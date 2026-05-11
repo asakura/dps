@@ -1,4 +1,4 @@
-//! DPS — interactive terminal MOD table for nitrox dive planning.
+//! DPS — interactive terminal MOD and ppO₂ tables for nitrox dive planning.
 pub mod action;
 pub mod app;
 pub mod components;

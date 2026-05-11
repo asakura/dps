@@ -259,6 +259,14 @@ impl Theme {
     }
 
     /// The 14 accent colours in canonical order (rosewater → lavender).
+    ///
+    /// ```
+    /// use dps::theme::THEME;
+    /// let accents = THEME.accents();
+    /// assert_eq!(accents.len(), 14);
+    /// assert_eq!(accents[0], THEME.rosewater);
+    /// assert_eq!(accents[13], THEME.lavender);
+    /// ```
     pub fn accents(&self) -> [Color; 14] {
         [
             self.rosewater, self.flamingo, self.pink,     self.mauve,

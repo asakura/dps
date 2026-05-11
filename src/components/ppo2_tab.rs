@@ -60,6 +60,7 @@ impl PpO2Tab {
             .expect("PPO2_TABLE_MIX_PERCENTS values are valid")
     }
 
+    /// Mix columns for a sliding window of `window_size` columns centred on the selected index.
     fn visible_cols(&self, window_size: usize) -> Vec<Ean> {
         let start = window_start(self.mix_idx, PPO2_TABLE_MIX_COUNT, window_size);
         let count = window_size.min(PPO2_TABLE_MIX_COUNT);
@@ -71,6 +72,7 @@ impl PpO2Tab {
             .collect()
     }
 
+    /// Column index of the selected mix within the visible window (0-based).
     fn mix_window_col(&self, window_size: usize) -> usize {
         self.mix_idx - window_start(self.mix_idx, PPO2_TABLE_MIX_COUNT, window_size)
     }

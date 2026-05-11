@@ -101,6 +101,12 @@ macro_rules! unit_newtype {
 ///
 /// let b: Meters = 30.0_f64.into();
 /// assert_eq!(f64::from(b), 30.0);
+///
+/// // f64 × Meters (scalar-on-right is symmetric)
+/// assert_eq!((2.0_f64 * a).value(), 60.0);
+/// // Meters ÷ Meters → dimensionless ratio
+/// let ratio: f64 = a / Meters::new(10.0);
+/// assert_eq!(ratio, 3.0);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Meters(f64);
@@ -138,6 +144,10 @@ impl Div<MetersPerBar> for Meters {
 /// // Ratio between two Bar values is dimensionless.
 /// let ratio: f64 = Bar::new(3.0) / Bar::new(1.5);
 /// assert_eq!(ratio, 2.0);
+///
+/// assert_eq!((-p).value(), -1.5);
+/// assert_eq!((2.0_f64 * p).value(), 3.0);
+/// assert_eq!(p.max(Bar::new(2.0)).value(), 2.0);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Bar(f64);

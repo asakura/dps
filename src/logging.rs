@@ -1,3 +1,5 @@
+//! File-based tracing initialisation.
+
 use std::path::PathBuf;
 
 use directories::ProjectDirs;
@@ -8,6 +10,9 @@ fn project_directory() -> Option<ProjectDirs> {
     ProjectDirs::from("", "", env!("CARGO_PKG_NAME"))
 }
 
+/// Returns the path to the application's local data directory.
+///
+/// Priority: `DPS_DATA` env var → platform data dir (`directories` crate) → `.data` fallback.
 pub fn get_data_dir() -> PathBuf {
     let data_env = format!("{}_DATA", env!("CARGO_PKG_NAME").to_uppercase());
     if let Ok(s) = std::env::var(data_env) {
@@ -19,6 +24,10 @@ pub fn get_data_dir() -> PathBuf {
     }
 }
 
+/// Initialises a file-based `tracing` subscriber and registers it globally.
+///
+/// Creates the data directory if absent, opens `dps.log` inside it, and sets
+/// the default log level to `INFO`. Override with the `DPS_LOGLEVEL` env var.
 pub fn initialize_logging() -> color_eyre::Result<()> {
     let directory = get_data_dir();
     std::fs::create_dir_all(&directory)?;

@@ -24,6 +24,8 @@ const LEAD: usize = 1;
 /// Gap between the two columns.
 const COL_GAP: usize = 4;
 
+/// Renders the which-key popup, merging `global` and `component` bindings into a 2-column grid
+/// anchored to the bottom of the frame.
 pub fn render(
     f: &mut Frame,
     global: &'static [KeyBinding],
@@ -91,6 +93,7 @@ fn entry_spans(
     }
 }
 
+/// A `Rect` spanning the full width of `area`, `height` rows tall, anchored to the bottom edge.
 fn bottom_rect(height: u16, area: Rect) -> Rect {
     Rect {
         x: area.x,
