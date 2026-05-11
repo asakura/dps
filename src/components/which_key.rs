@@ -71,7 +71,7 @@ impl Widget for WhichKey {
         let popup = bottom_rect(popup_h, area);
 
         Clear.render(popup, buf);
-        buf.set_style(popup, Style::default().bg(THEME.mantle));
+        buf.set_style(popup, Style::from((THEME.text, THEME.mantle)));
 
         let col_rects = Layout::horizontal(vec![Constraint::Fill(1); cols])
             .spacing(COL_GAP)
@@ -99,11 +99,11 @@ fn render_entry(b: &KeyBinding, area: Rect, buf: &mut Buffer) {
     .areas(area);
 
     Paragraph::new(b.key)
-        .style(Style::default().fg(THEME.peach).add_modifier(Modifier::BOLD))
+        .style(Style::from((THEME.peach, Modifier::BOLD)))
         .render(key_area, buf);
 
     Paragraph::new(b.desc)
-        .style(Style::default().fg(THEME.text))
+        .style(Style::from(THEME.text))
         .render(desc_area, buf);
 }
 
