@@ -48,12 +48,18 @@ pub fn get_data_dir() -> PathBuf {
 mod tests {
     use super::*;
     use std::env;
+    use std::sync::Mutex;
+
+    // env::set_var / remove_var are process-global; serialize all env-touching
+    // tests through this lock so parallel test threads don't race each other.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     mod get_config_dir_fn {
         use super::*;
 
         #[test]
         fn env_var_overrides_platform_dir() {
+            let _guard = ENV_LOCK.lock().unwrap();
             unsafe { env::set_var("DPS_CONFIG", "/tmp/dps-test-config") };
             let dir = get_config_dir();
             unsafe { env::remove_var("DPS_CONFIG") };
@@ -62,6 +68,7 @@ mod tests {
 
         #[test]
         fn returns_nonempty_path_without_env_var() {
+            let _guard = ENV_LOCK.lock().unwrap();
             unsafe { env::remove_var("DPS_CONFIG") };
             assert!(!get_config_dir().as_os_str().is_empty());
         }
@@ -72,6 +79,7 @@ mod tests {
 
         #[test]
         fn env_var_overrides_platform_dir() {
+            let _guard = ENV_LOCK.lock().unwrap();
             unsafe { env::set_var("DPS_DATA", "/tmp/dps-test-data") };
             let dir = get_data_dir();
             unsafe { env::remove_var("DPS_DATA") };
@@ -80,6 +88,7 @@ mod tests {
 
         #[test]
         fn returns_nonempty_path_without_env_var() {
+            let _guard = ENV_LOCK.lock().unwrap();
             unsafe { env::remove_var("DPS_DATA") };
             assert!(!get_data_dir().as_os_str().is_empty());
         }
