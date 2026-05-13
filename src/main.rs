@@ -1,4 +1,4 @@
-use std::{io, panic, time::Duration};
+use std::{io, panic, time::{Duration, Instant}};
 
 use clap::Parser;
 use color_eyre::Result;
@@ -57,27 +57,24 @@ fn main() -> Result<()> {
     color_eyre::install()?;
     initialize_logging()?;
     let cli = Cli::parse();
-    let poll_interval = Duration::from_secs_f64(1.0 / cli.frame_rate);
+    let tick_interval = Duration::from_secs_f64(1.0 / cli.tick_rate);
+    let frame_interval = Duration::from_secs_f64(1.0 / cli.frame_rate);
+    let mut last_frame = Instant::now();
     let mut tui = Tui::new()?;
     let mut app = App::new();
 
     loop {
-        tui.terminal.draw(|f| app.render(f))?;
-
-        if !event::poll(poll_interval)? {
-            continue;
+        if last_frame.elapsed() >= frame_interval {
+            tui.terminal.draw(|f| app.render(f))?;
+            last_frame = Instant::now();
         }
 
-        let Event::Key(key) = event::read()? else {
-            continue;
-        };
+        let timeout = tick_interval.min(frame_interval.saturating_sub(last_frame.elapsed()));
 
-        if key.kind != KeyEventKind::Press {
-            continue;
-        }
-
-        if matches!(app.handle_key(key), Action::Quit) {
-            break;
+        if event::poll(timeout)? {
+            let Event::Key(key) = event::read()? else { continue; };
+            if key.kind != KeyEventKind::Press { continue; }
+            if matches!(app.handle_key(key), Action::Quit) { break; }
         }
     }
 
