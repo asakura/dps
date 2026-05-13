@@ -83,6 +83,23 @@ impl PpO2Tab {
             .unwrap_or(0);
         self.table_state.select(Some(next));
     }
+
+    fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
+        (0..=PPO2_TABLE_DEPTH_MAX)
+            .map(|d| {
+                let depth = Meters::new(d as f64);
+                let mut cells = vec![Cell::from(format!("{:>3} m", d))];
+                for mix in mixes {
+                    let ppo2 = mix.ppo2_at(depth);
+                    cells.push(
+                        Cell::from(format!("{:.2}", ppo2.value()))
+                            .style(ppo2_cell_color(ppo2.value())),
+                    );
+                }
+                Row::new(cells)
+            })
+            .collect()
+    }
 }
 
 fn ppo2_cell_color(ppo2: f64) -> Color {
@@ -93,23 +110,6 @@ fn ppo2_cell_color(ppo2: f64) -> Color {
     } else {
         THEME.green
     }
-}
-
-fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
-    (0..=PPO2_TABLE_DEPTH_MAX)
-        .map(|d| {
-            let depth = Meters::new(d as f64);
-            let mut cells = vec![Cell::from(format!("{:>3} m", d))];
-            for mix in mixes {
-                let ppo2 = mix.ppo2_at(depth);
-                cells.push(
-                    Cell::from(format!("{:.2}", ppo2.value()))
-                        .style(ppo2_cell_color(ppo2.value())),
-                );
-            }
-            Row::new(cells)
-        })
-        .collect()
 }
 
 impl Component for PpO2Tab {
@@ -149,7 +149,7 @@ impl Component for PpO2Tab {
             mixes.iter().map(|m| format!("{:>3}%", m.o2_percent())),
             Some(col_in_window),
         );
-        let table = styled_table(build_rows(&mixes), constraints, header, title);
+        let table = styled_table(PpO2Tab::build_rows(&mixes), constraints, header, title);
         f.render_stateful_widget(table, area, &mut self.table_state);
     }
 
