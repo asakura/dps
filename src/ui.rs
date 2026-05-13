@@ -24,11 +24,10 @@ pub(crate) fn col_window_size(width: u16, overhead: u16, col_w: u16, max: usize)
 /// Constraint list for `fixed` columns followed by `n` data columns of `col_w`;
 /// the last data column uses `Fill(1)` to absorb leftover terminal width.
 pub(crate) fn trailing_constraints(fixed: &[Constraint], n: usize, col_w: u16) -> Vec<Constraint> {
-    let mut c = fixed.to_vec();
-    for i in 0..n {
-        c.push(if i + 1 < n { Constraint::Length(col_w) } else { Constraint::Fill(1) });
-    }
-    c
+    fixed.iter().copied()
+        .chain(std::iter::repeat_n(Constraint::Length(col_w), n.saturating_sub(1)))
+        .chain((n > 0).then_some(Constraint::Fill(1)))
+        .collect()
 }
 
 /// Wraps `rows` in the application's standard table style: bordered block, bold/dark-gray
