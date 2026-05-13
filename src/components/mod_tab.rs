@@ -3,9 +3,10 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
+    buffer::Buffer,
     layout::{Constraint, Rect},
     style::Color,
-    widgets::{Cell, Paragraph, Row, TableState},
+    widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
 };
 
 use crate::{
@@ -125,6 +126,28 @@ fn mod_color(depth_m: f64) -> Color {
     }
 }
 
+impl Widget for &mut ModTab {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let window_size = col_window_size(area.width, TABLE_OVERHEAD_W, COL_MOD_W, PPO2_COUNT);
+        let col_in_window = self.ppo2_window_col(window_size);
+        self.table_state.select_column(Some(col_in_window + FIXED_COL_COUNT));
+        let cols = self.visible_columns(window_size);
+        let title = format!(" DPS — MOD Table   ppO\u{2082} {} ", self.ppo2());
+        let constraints = trailing_constraints(
+            &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
+            cols.len(),
+            COL_MOD_W,
+        );
+        let header = build_header_row(
+            vec![Cell::from("Name").style(THEME.header_cell()), Cell::from("O\u{2082}%").style(THEME.header_cell())],
+            cols.iter().map(|c| c.to_string()),
+            Some(col_in_window),
+        );
+        let table = styled_table(self.build_rows(&cols), constraints, header, title);
+        StatefulWidget::render(table, area, buf, &mut self.table_state);
+    }
+}
+
 impl Component for ModTab {
     fn title(&self) -> &'static str { "MOD Table" }
 
@@ -149,23 +172,7 @@ impl Component for ModTab {
     }
 
     fn render(&mut self, f: &mut Frame, area: Rect) {
-        let window_size = col_window_size(area.width, TABLE_OVERHEAD_W, COL_MOD_W, PPO2_COUNT);
-        let col_in_window = self.ppo2_window_col(window_size);
-        self.table_state.select_column(Some(col_in_window + FIXED_COL_COUNT));
-        let cols = self.visible_columns(window_size);
-        let title = format!(" DPS — MOD Table   ppO\u{2082} {} ", self.ppo2());
-        let constraints = trailing_constraints(
-            &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
-            cols.len(),
-            COL_MOD_W,
-        );
-        let header = build_header_row(
-            vec![Cell::from("Name").style(THEME.header_cell()), Cell::from("O\u{2082}%").style(THEME.header_cell())],
-            cols.iter().map(|c| c.to_string()),
-            Some(col_in_window),
-        );
-        let table = styled_table(self.build_rows(&cols), constraints, header, title);
-        f.render_stateful_widget(table, area, &mut self.table_state);
+        f.render_widget(self, area);
     }
 
     fn status_bar(&self) -> Paragraph<'static> {

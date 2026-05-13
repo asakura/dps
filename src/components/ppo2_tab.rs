@@ -3,9 +3,10 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
+    buffer::Buffer,
     layout::{Constraint, Rect},
     style::Color,
-    widgets::{Cell, Paragraph, Row, TableState},
+    widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
 };
 
 use crate::{
@@ -112,25 +113,8 @@ fn ppo2_cell_color(ppo2: f64) -> Color {
     }
 }
 
-impl Component for PpO2Tab {
-    fn title(&self) -> &'static str { "ppO₂ by Depth" }
-
-    fn handle_key(&mut self, key: KeyEvent) -> Action {
-        match key.code {
-            KeyCode::Down | KeyCode::Char('j') => self.move_row(1),
-            KeyCode::Up | KeyCode::Char('k') => self.move_row(-1),
-            KeyCode::Right | KeyCode::Char('l') => {
-                self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1);
-            }
-            KeyCode::Left | KeyCode::Char('h') => {
-                self.mix_idx = self.mix_idx.saturating_sub(1);
-            }
-            _ => {}
-        }
-        Action::None
-    }
-
-    fn render(&mut self, f: &mut Frame, area: Rect) {
+impl Widget for &mut PpO2Tab {
+    fn render(self, area: Rect, buf: &mut Buffer) {
         let window_size = col_window_size(
             area.width, PPO2_TABLE_OVERHEAD_W, COL_PPO2_MIX_W, PPO2_TABLE_MIX_COUNT,
         );
@@ -150,7 +134,30 @@ impl Component for PpO2Tab {
             Some(col_in_window),
         );
         let table = styled_table(PpO2Tab::build_rows(&mixes), constraints, header, title);
-        f.render_stateful_widget(table, area, &mut self.table_state);
+        StatefulWidget::render(table, area, buf, &mut self.table_state);
+    }
+}
+
+impl Component for PpO2Tab {
+    fn title(&self) -> &'static str { "ppO₂ by Depth" }
+
+    fn handle_key(&mut self, key: KeyEvent) -> Action {
+        match key.code {
+            KeyCode::Down | KeyCode::Char('j') => self.move_row(1),
+            KeyCode::Up | KeyCode::Char('k') => self.move_row(-1),
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1);
+            }
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.mix_idx = self.mix_idx.saturating_sub(1);
+            }
+            _ => {}
+        }
+        Action::None
+    }
+
+    fn render(&mut self, f: &mut Frame, area: Rect) {
+        f.render_widget(self, area);
     }
 
     fn status_bar(&self) -> Paragraph<'static> {
