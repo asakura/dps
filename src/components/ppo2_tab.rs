@@ -143,6 +143,23 @@ impl Widget for &mut PpO2Tab {
     }
 }
 
+struct PpO2TabStatus<'a>(&'a PpO2Tab);
+
+impl Widget for PpO2TabStatus<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let depth_m = self.0.table_state.selected().unwrap_or(0);
+        let mix = self.0.selected_mix();
+        let depth = Meters::new(depth_m as f64);
+        let ppo2 = mix.ppo2_at(depth);
+        let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
+        let text = format!(
+            " \u{25c6} {}({}%)  @ {} m  \u{2192}  ppO\u{2082} {:.2} bar",
+            name, mix.o2_percent(), depth_m, ppo2.value(),
+        );
+        Paragraph::new(text).style(THEME.status_active()).render(area, buf);
+    }
+}
+
 impl Component for PpO2Tab {
     fn title(&self) -> &'static str { "ppO₂ by Depth" }
 
@@ -165,19 +182,8 @@ impl Component for PpO2Tab {
         Widget::render(self, area, buf);
     }
 
-    fn status_bar(&self) -> Paragraph<'static> {
-        let depth_m = self.table_state.selected().unwrap_or(0);
-        let mix = self.selected_mix();
-        let depth = Meters::new(depth_m as f64);
-        let ppo2 = mix.ppo2_at(depth);
-        let name = mix.label()
-            .map(|s| format!("{} ", s))
-            .unwrap_or_default();
-        let text = format!(
-            " \u{25c6} {}({}%)  @ {} m  \u{2192}  ppO\u{2082} {:.2} bar",
-            name, mix.o2_percent(), depth_m, ppo2.value()
-        );
-        Paragraph::new(text).style(THEME.status_active())
+    fn render_status(&self, area: Rect, buf: &mut Buffer) {
+        PpO2TabStatus(self).render(area, buf);
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
@@ -193,17 +199,16 @@ impl Component for PpO2Tab {
 mod tests {
     use super::*;
     use crossterm::event::KeyModifiers;
-    use ratatui::{Terminal, backend::TestBackend};
 
     fn press(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
-    fn paragraph_text(p: Paragraph<'static>, width: u16) -> String {
-        let backend = TestBackend::new(width, 1);
-        let mut terminal = Terminal::new(backend).unwrap();
-        terminal.draw(|f| f.render_widget(p, f.area())).unwrap();
-        terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect()
+    fn widget_text(widget: impl Widget, width: u16) -> String {
+        let area = Rect::new(0, 0, width, 1);
+        let mut buf = Buffer::empty(area);
+        widget.render(area, &mut buf);
+        buf.content.iter().map(|c| c.symbol()).collect()
     }
 
     mod initial_state {
@@ -341,7 +346,8 @@ mod tests {
 
         #[test]
         fn shows_air_at_surface() {
-            let text = paragraph_text(PpO2Tab::new().status_bar(), 60);
+            let tab = PpO2Tab::new();
+            let text = widget_text(PpO2TabStatus(&tab), 60);
             assert!(text.contains("21"));
             assert!(text.contains("@ 0 m"));
         }
@@ -350,7 +356,7 @@ mod tests {
         fn shows_updated_depth_after_navigation() {
             let mut tab = PpO2Tab::new();
             for _ in 0..10 { tab.handle_key(press(KeyCode::Down)); }
-            let text = paragraph_text(tab.status_bar(), 60);
+            let text = widget_text(PpO2TabStatus(&tab), 60);
             assert!(text.contains("@ 10 m"));
         }
     }

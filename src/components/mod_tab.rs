@@ -153,6 +153,27 @@ impl Widget for &mut ModTab {
     }
 }
 
+struct ModTabStatus<'a>(&'a ModTab);
+
+impl Widget for ModTabStatus<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        match self.0.selection {
+            Some((mix, ppo2)) => {
+                let depth = mix.mod_at(ppo2);
+                let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
+                let text = format!(
+                    " \u{25c6} {}({}%)  MOD {}  @ ppO\u{2082} {}",
+                    name, mix.o2_percent(), depth, ppo2,
+                );
+                Paragraph::new(text).style(THEME.status_active()).render(area, buf);
+            }
+            None => Paragraph::new(" No gas selected — press Enter to select")
+                .style(THEME.status_empty())
+                .render(area, buf),
+        }
+    }
+}
+
 impl Component for ModTab {
     fn title(&self) -> &'static str { "MOD Table" }
 
@@ -180,22 +201,8 @@ impl Component for ModTab {
         Widget::render(self, area, buf);
     }
 
-    fn status_bar(&self) -> Paragraph<'static> {
-        match self.selection {
-            Some((mix, ppo2)) => {
-                let depth = mix.mod_at(ppo2);
-                let name = mix.label()
-                    .map(|s| format!("{} ", s))
-                    .unwrap_or_default();
-                let text = format!(
-                    " \u{25c6} {}({}%)  MOD {}  @ ppO\u{2082} {}",
-                    name, mix.o2_percent(), depth, ppo2
-                );
-                Paragraph::new(text).style(THEME.status_active())
-            }
-            None => Paragraph::new(" No gas selected — press Enter to select")
-                .style(THEME.status_empty()),
-        }
+    fn render_status(&self, area: Rect, buf: &mut Buffer) {
+        ModTabStatus(self).render(area, buf);
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
@@ -212,17 +219,16 @@ impl Component for ModTab {
 mod tests {
     use super::*;
     use crossterm::event::KeyModifiers;
-    use ratatui::{Terminal, backend::TestBackend};
 
     fn press(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
-    fn paragraph_text(p: Paragraph<'static>, width: u16) -> String {
-        let backend = TestBackend::new(width, 1);
-        let mut terminal = Terminal::new(backend).unwrap();
-        terminal.draw(|f| f.render_widget(p, f.area())).unwrap();
-        terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect()
+    fn widget_text(widget: impl Widget, width: u16) -> String {
+        let area = Rect::new(0, 0, width, 1);
+        let mut buf = Buffer::empty(area);
+        widget.render(area, &mut buf);
+        buf.content.iter().map(|c| c.symbol()).collect()
     }
 
     mod initial_state {
@@ -413,7 +419,8 @@ mod tests {
 
         #[test]
         fn no_selection_shows_prompt() {
-            let text = paragraph_text(ModTab::new().status_bar(), 60);
+            let tab = ModTab::new();
+            let text = widget_text(ModTabStatus(&tab), 60);
             assert!(text.contains("No gas"));
         }
 
@@ -421,7 +428,7 @@ mod tests {
         fn selection_shows_mix_percent_and_mod() {
             let mut tab = ModTab::new();
             tab.handle_key(press(KeyCode::Enter));
-            let text = paragraph_text(tab.status_bar(), 60);
+            let text = widget_text(ModTabStatus(&tab), 60);
             assert!(text.contains("32"));
             assert!(text.contains("MOD"));
         }

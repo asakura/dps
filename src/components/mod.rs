@@ -5,7 +5,7 @@ pub mod ppo2_tab;
 pub mod which_key;
 
 use crossterm::event::KeyEvent;
-use ratatui::{buffer::Buffer, layout::Rect, widgets::Paragraph};
+use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::action::Action;
 
@@ -24,8 +24,8 @@ pub trait Component {
     fn handle_key(&mut self, key: KeyEvent) -> Action;
     /// Draw the component's content into `area`.
     fn render(&mut self, area: Rect, buf: &mut Buffer);
-    /// One-line status paragraph rendered below the main content area.
-    fn status_bar(&self) -> Paragraph<'static>;
+    /// Render a one-line status bar below the main content area.
+    fn render_status(&self, area: Rect, buf: &mut Buffer);
     /// Structured key bindings for the which-key popup and hint line.
     fn key_bindings(&self) -> &'static [KeyBinding] { &[] }
 }

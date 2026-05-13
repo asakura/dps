@@ -80,7 +80,7 @@ impl Widget for &mut App {
             .render(chunks[0], buf);
 
         self.tabs[self.active].render(chunks[1], buf);
-        self.tabs[self.active].status_bar().render(chunks[2], buf);
+        self.tabs[self.active].render_status(chunks[2], buf);
 
         let hint = self.tabs[self.active]
             .key_bindings()
