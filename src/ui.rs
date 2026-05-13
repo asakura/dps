@@ -51,6 +51,98 @@ pub(crate) fn styled_table(
         .highlight_symbol("▶ ")
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod window_start_fn {
+        use super::*;
+
+        #[test]
+        fn at_start_stays_at_zero() {
+            assert_eq!(window_start(0, 10, 3), 0);
+        }
+
+        #[test]
+        fn centres_on_selected_index() {
+            assert_eq!(window_start(5, 10, 3), 4);
+        }
+
+        #[test]
+        fn clamps_at_end() {
+            assert_eq!(window_start(9, 10, 3), 7);
+        }
+
+        #[test]
+        fn full_window_always_starts_at_zero() {
+            assert_eq!(window_start(5, 10, 10), 0);
+        }
+    }
+
+    mod col_window_size_fn {
+        use super::*;
+
+        #[test]
+        fn minimum_one_column() {
+            assert_eq!(col_window_size(10, 10, 9, 20), 1);
+        }
+
+        #[test]
+        fn counts_additional_columns_by_width() {
+            // 1 + (80 - 10 - 9) / (9 + 1) = 1 + 6 = 7
+            assert_eq!(col_window_size(80, 10, 9, 20), 7);
+        }
+
+        #[test]
+        fn capped_at_max() {
+            assert_eq!(col_window_size(80, 10, 9, 5), 5);
+        }
+
+        #[test]
+        fn exactly_two_columns_fit() {
+            // 1 + (29 - 10 - 9) / (9 + 1) = 1 + 1 = 2
+            assert_eq!(col_window_size(29, 10, 9, 20), 2);
+        }
+    }
+
+    mod trailing_constraints_fn {
+        use super::*;
+
+        #[test]
+        fn zero_data_columns_returns_only_fixed() {
+            let c = trailing_constraints(&[Constraint::Length(12)], 0, 9);
+            assert_eq!(c, vec![Constraint::Length(12)]);
+        }
+
+        #[test]
+        fn single_data_column_is_fill() {
+            let c = trailing_constraints(&[], 1, 9);
+            assert_eq!(c, vec![Constraint::Fill(1)]);
+        }
+
+        #[test]
+        fn multiple_data_columns_last_is_fill() {
+            let c = trailing_constraints(&[], 3, 9);
+            assert_eq!(c, vec![
+                Constraint::Length(9),
+                Constraint::Length(9),
+                Constraint::Fill(1),
+            ]);
+        }
+
+        #[test]
+        fn fixed_columns_prepended() {
+            let c = trailing_constraints(&[Constraint::Length(12), Constraint::Length(6)], 2, 9);
+            assert_eq!(c, vec![
+                Constraint::Length(12),
+                Constraint::Length(6),
+                Constraint::Length(9),
+                Constraint::Fill(1),
+            ]);
+        }
+    }
+}
+
 /// Header row from `fixed` cells and dynamic `labels`, with the `highlighted` column underlined.
 pub(crate) fn build_header_row(
     fixed: Vec<Cell<'static>>,

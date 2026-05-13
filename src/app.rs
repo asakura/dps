@@ -77,6 +77,89 @@ impl Widget for HintBar<'_> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyModifiers};
+
+    fn press(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn widget_text(widget: impl Widget, width: u16) -> String {
+        let area = ratatui::layout::Rect::new(0, 0, width, 1);
+        let mut buf = ratatui::buffer::Buffer::empty(area);
+        widget.render(area, &mut buf);
+        buf.content.iter().map(|c| c.symbol()).collect()
+    }
+
+    mod handle_key {
+        use super::*;
+
+        #[test]
+        fn q_quits() {
+            assert!(matches!(App::new().handle_key(press(KeyCode::Char('q'))), Action::Quit));
+        }
+
+        #[test]
+        fn esc_quits() {
+            assert!(matches!(App::new().handle_key(press(KeyCode::Esc)), Action::Quit));
+        }
+
+        #[test]
+        fn question_mark_toggles_which_key() {
+            let mut app = App::new();
+            assert!(!app.show_which_key);
+            app.handle_key(press(KeyCode::Char('?')));
+            assert!(app.show_which_key);
+            app.handle_key(press(KeyCode::Char('?')));
+            assert!(!app.show_which_key);
+        }
+
+        #[test]
+        fn tab_cycles_active() {
+            let mut app = App::new();
+            assert_eq!(app.active, 0);
+            app.handle_key(press(KeyCode::Tab));
+            assert_eq!(app.active, 1);
+            app.handle_key(press(KeyCode::Tab));
+            assert_eq!(app.active, 0);
+        }
+
+        #[test]
+        fn other_keys_return_none() {
+            assert!(matches!(App::new().handle_key(press(KeyCode::Char('j'))), Action::None));
+        }
+    }
+
+    mod hint_bar {
+        use super::*;
+
+        static COMP: &[KeyBinding] = &[KeyBinding { key: "j/k", desc: "move" }];
+        static GLOB: &[KeyBinding] = &[KeyBinding { key: "q",   desc: "quit" }];
+
+        #[test]
+        fn renders_component_bindings_first() {
+            let text = widget_text(HintBar { component: COMP, global: GLOB }, 60);
+            let j_pos = text.find("j/k").unwrap();
+            let q_pos = text.find("q quit").unwrap();
+            assert!(j_pos < q_pos);
+        }
+
+        #[test]
+        fn renders_all_bindings() {
+            let text = widget_text(HintBar { component: COMP, global: GLOB }, 60);
+            assert!(text.contains("j/k move"));
+            assert!(text.contains("q quit"));
+        }
+
+        #[test]
+        fn empty_bindings_renders_without_panic() {
+            widget_text(HintBar { component: &[], global: &[] }, 40);
+        }
+    }
+}
+
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let chunks = Layout::vertical([
