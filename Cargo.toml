@@ -17,6 +17,9 @@ directories = "5"
 tracing = "0.1"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+better-panic = "0.3.0"
+strip-ansi-escapes = "0.2.1"
+human-panic = "2.0.8"
 
 [dev-dependencies]
 approx = "0.5.1"

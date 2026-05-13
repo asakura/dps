@@ -1,4 +1,7 @@
-use std::{io, panic, time::{Duration, Instant}};
+use std::{
+    io, panic,
+    time::{Duration, Instant},
+};
 
 use clap::Parser;
 use color_eyre::Result;
@@ -13,6 +16,7 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 use dps::action::Action;
 use dps::app::App;
 use dps::cli::Cli;
+use dps::errors;
 use dps::logging::initialize_logging;
 
 fn restore_terminal() -> io::Result<()> {
@@ -54,11 +58,13 @@ impl Drop for Tui {
 }
 
 fn main() -> Result<()> {
-    color_eyre::install()?;
+    errors::init()?;
     initialize_logging()?;
+
     let cli = Cli::parse();
     let tick_interval = Duration::from_secs_f64(1.0 / cli.tick_rate);
     let frame_interval = Duration::from_secs_f64(1.0 / cli.frame_rate);
+
     let mut last_frame = Instant::now();
     let mut tui = Tui::new()?;
     let mut app = App::new();
@@ -72,9 +78,15 @@ fn main() -> Result<()> {
         let timeout = tick_interval.min(frame_interval.saturating_sub(last_frame.elapsed()));
 
         if event::poll(timeout)? {
-            let Event::Key(key) = event::read()? else { continue; };
-            if key.kind != KeyEventKind::Press { continue; }
-            if matches!(app.handle_key(key), Action::Quit) { break; }
+            let Event::Key(key) = event::read()? else {
+                continue;
+            };
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+            if matches!(app.handle_key(key), Action::Quit) {
+                break;
+            }
         }
     }
 
