@@ -2,7 +2,6 @@
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
-    Frame,
     buffer::Buffer,
     layout::{Constraint, Rect},
     style::Color,
@@ -177,8 +176,8 @@ impl Component for ModTab {
         Action::None
     }
 
-    fn render(&mut self, f: &mut Frame, area: Rect) {
-        f.render_widget(self, area);
+    fn render(&mut self, area: Rect, buf: &mut Buffer) {
+        Widget::render(self, area, buf);
     }
 
     fn status_bar(&self) -> Paragraph<'static> {

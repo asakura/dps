@@ -3,8 +3,9 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
-    layout::{Constraint, Layout},
-    widgets::{Paragraph, Tabs},
+    buffer::Buffer,
+    layout::{Constraint, Layout, Rect},
+    widgets::{Paragraph, Tabs, Widget},
 };
 
 use crate::{
@@ -56,7 +57,12 @@ impl App {
 
     /// Draws the tab bar, active component, status bar, and help line.
     pub fn render(&mut self, f: &mut Frame) {
-        let area = f.area();
+        f.render_widget(self, f.area());
+    }
+}
+
+impl Widget for &mut App {
+    fn render(self, area: Rect, buf: &mut Buffer) {
         let chunks = Layout::vertical([
             Constraint::Length(1),
             Constraint::Fill(1),
@@ -66,16 +72,16 @@ impl App {
         .split(area);
 
         let titles: Vec<&str> = self.tabs.iter().map(|t| t.title()).collect();
-        f.render_widget(
-            Tabs::new(titles)
-                .select(self.active)
-                .style(THEME.nav_bar())
-                .highlight_style(THEME.selection())
-                .divider("│"),
-            chunks[0],
-        );
-        self.tabs[self.active].render(f, chunks[1]);
-        f.render_widget(self.tabs[self.active].status_bar(), chunks[2]);
+        Tabs::new(titles)
+            .select(self.active)
+            .style(THEME.nav_bar())
+            .highlight_style(THEME.selection())
+            .divider("│")
+            .render(chunks[0], buf);
+
+        self.tabs[self.active].render(chunks[1], buf);
+        self.tabs[self.active].status_bar().render(chunks[2], buf);
+
         let hint = self.tabs[self.active]
             .key_bindings()
             .iter()
@@ -83,15 +89,11 @@ impl App {
             .map(|b| format!("{} {}", b.key, b.desc))
             .collect::<Vec<_>>()
             .join("   ");
-        f.render_widget(
-            Paragraph::new(format!(" {hint}")).style(THEME.hint()),
-            chunks[3],
-        );
+        Paragraph::new(format!(" {hint}")).style(THEME.hint()).render(chunks[3], buf);
+
         if self.show_which_key {
-            f.render_widget(
-                WhichKey::new(GLOBAL_BINDINGS, self.tabs[self.active].key_bindings()),
-                area,
-            );
+            WhichKey::new(GLOBAL_BINDINGS, self.tabs[self.active].key_bindings())
+                .render(area, buf);
         }
     }
 }
