@@ -1,7 +1,8 @@
+use anyhow::Result;
 use vergen::{BuildBuilder, CargoBuilder, Emitter};
 use vergen_gix::GixBuilder;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let build = BuildBuilder::default().build_date(true).build()?;
     let gix = GixBuilder::default()
         .describe(true, true, None)
