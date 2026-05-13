@@ -46,16 +46,10 @@ impl App {
     /// Intercepts `?` (which-key toggle), `q`/Esc (quit), and Tab (cycle tabs)
     /// globally; delegates all other keys to the active component.
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
-        if key.code == KeyCode::Char('?') {
-            self.show_which_key = !self.show_which_key;
-            return Action::None;
-        }
         match key.code {
+            KeyCode::Char('?') => { self.show_which_key = !self.show_which_key; Action::None }
             KeyCode::Char('q') | KeyCode::Esc => Action::Quit,
-            KeyCode::Tab => {
-                self.active = (self.active + 1) % self.tabs.len();
-                Action::None
-            }
+            KeyCode::Tab => { self.active = (self.active + 1) % self.tabs.len(); Action::None }
             _ => self.tabs[self.active].handle_key(key),
         }
     }
