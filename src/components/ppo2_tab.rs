@@ -189,3 +189,170 @@ impl Component for PpO2Tab {
         BINDINGS
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyModifiers;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    fn press(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn paragraph_text(p: Paragraph<'static>, width: u16) -> String {
+        let backend = TestBackend::new(width, 1);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| f.render_widget(p, f.area())).unwrap();
+        terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect()
+    }
+
+    mod initial_state {
+        use super::*;
+
+        #[test]
+        fn selected_depth_is_zero() {
+            let tab = PpO2Tab::new();
+            assert_eq!(tab.table_state.selected().unwrap(), 0);
+        }
+
+        #[test]
+        fn selected_mix_is_air() {
+            let tab = PpO2Tab::new();
+            assert_eq!(tab.selected_mix().o2_percent(), 21);
+        }
+    }
+
+    mod row_navigation {
+        use super::*;
+
+        #[test]
+        fn down_advances_depth() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_key(press(KeyCode::Down));
+            assert_eq!(tab.table_state.selected().unwrap(), 1);
+        }
+
+        #[test]
+        fn j_advances_depth() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_key(press(KeyCode::Char('j')));
+            assert_eq!(tab.table_state.selected().unwrap(), 1);
+        }
+
+        #[test]
+        fn up_at_zero_stays_at_zero() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_key(press(KeyCode::Up));
+            assert_eq!(tab.table_state.selected().unwrap(), 0);
+        }
+
+        #[test]
+        fn down_clamped_at_max_depth() {
+            let mut tab = PpO2Tab::new();
+            for _ in 0..100 { tab.handle_key(press(KeyCode::Down)); }
+            assert_eq!(tab.table_state.selected().unwrap(), PPO2_TABLE_DEPTH_MAX);
+        }
+    }
+
+    mod mix_navigation {
+        use super::*;
+
+        #[test]
+        fn right_increments_mix_idx() {
+            let mut tab = PpO2Tab::new();
+            let before = tab.mix_idx;
+            tab.handle_key(press(KeyCode::Right));
+            assert_eq!(tab.mix_idx, before + 1);
+        }
+
+        #[test]
+        fn l_increments_mix_idx() {
+            let mut tab = PpO2Tab::new();
+            let before = tab.mix_idx;
+            tab.handle_key(press(KeyCode::Char('l')));
+            assert_eq!(tab.mix_idx, before + 1);
+        }
+
+        #[test]
+        fn left_decrements_mix_idx() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_key(press(KeyCode::Right));
+            let before = tab.mix_idx;
+            tab.handle_key(press(KeyCode::Left));
+            assert_eq!(tab.mix_idx, before - 1);
+        }
+
+        #[test]
+        fn right_clamped_at_last_mix() {
+            let mut tab = PpO2Tab::new();
+            for _ in 0..20 { tab.handle_key(press(KeyCode::Right)); }
+            assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
+        }
+
+        #[test]
+        fn left_clamped_at_zero() {
+            let mut tab = PpO2Tab::new();
+            for _ in 0..20 { tab.handle_key(press(KeyCode::Left)); }
+            assert_eq!(tab.mix_idx, 0);
+        }
+    }
+
+    mod ppo2_cell_color_fn {
+        use super::*;
+
+        #[test]
+        fn hypoxic_below_threshold_is_red() {
+            assert_eq!(ppo2_cell_color(0.10), THEME.red);
+        }
+
+        #[test]
+        fn at_hypoxic_threshold_is_green() {
+            assert_eq!(ppo2_cell_color(0.18), THEME.green);
+        }
+
+        #[test]
+        fn normal_range_is_green() {
+            assert_eq!(ppo2_cell_color(1.0), THEME.green);
+        }
+
+        #[test]
+        fn at_caution_threshold_is_yellow() {
+            assert_eq!(ppo2_cell_color(1.4), THEME.yellow);
+        }
+
+        #[test]
+        fn caution_range_is_yellow() {
+            assert_eq!(ppo2_cell_color(1.5), THEME.yellow);
+        }
+
+        #[test]
+        fn at_danger_threshold_is_red() {
+            assert_eq!(ppo2_cell_color(1.6), THEME.red);
+        }
+
+        #[test]
+        fn above_danger_is_red() {
+            assert_eq!(ppo2_cell_color(2.0), THEME.red);
+        }
+    }
+
+    mod status_bar_fn {
+        use super::*;
+
+        #[test]
+        fn shows_air_at_surface() {
+            let text = paragraph_text(PpO2Tab::new().status_bar(), 60);
+            assert!(text.contains("21"));
+            assert!(text.contains("@ 0 m"));
+        }
+
+        #[test]
+        fn shows_updated_depth_after_navigation() {
+            let mut tab = PpO2Tab::new();
+            for _ in 0..10 { tab.handle_key(press(KeyCode::Down)); }
+            let text = paragraph_text(tab.status_bar(), 60);
+            assert!(text.contains("@ 10 m"));
+        }
+    }
+}

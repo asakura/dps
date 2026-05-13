@@ -208,3 +208,223 @@ impl Component for ModTab {
         BINDINGS
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyModifiers;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    fn press(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn paragraph_text(p: Paragraph<'static>, width: u16) -> String {
+        let backend = TestBackend::new(width, 1);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| f.render_widget(p, f.area())).unwrap();
+        terminal.backend().buffer().content.iter().map(|c| c.symbol()).collect()
+    }
+
+    mod initial_state {
+        use super::*;
+
+        #[test]
+        fn selected_row_is_ean32() {
+            let tab = ModTab::new();
+            let idx = tab.table_state.selected().unwrap();
+            assert_eq!(tab.mixes[idx].o2_percent(), DEFAULT_MIX_O2_PCT);
+        }
+
+        #[test]
+        fn ppo2_is_1_4_bar() {
+            let tab = ModTab::new();
+            assert!((tab.ppo2().value() - 1.4).abs() < 1e-9);
+        }
+
+        #[test]
+        fn no_selection() {
+            assert!(ModTab::new().selection.is_none());
+        }
+    }
+
+    mod row_navigation {
+        use super::*;
+
+        #[test]
+        fn down_advances_row() {
+            let mut tab = ModTab::new();
+            let start = tab.table_state.selected().unwrap();
+            tab.handle_key(press(KeyCode::Down));
+            assert_eq!(tab.table_state.selected().unwrap(), start + 1);
+        }
+
+        #[test]
+        fn j_advances_row() {
+            let mut tab = ModTab::new();
+            let start = tab.table_state.selected().unwrap();
+            tab.handle_key(press(KeyCode::Char('j')));
+            assert_eq!(tab.table_state.selected().unwrap(), start + 1);
+        }
+
+        #[test]
+        fn up_retreats_row() {
+            let mut tab = ModTab::new();
+            tab.handle_key(press(KeyCode::Down));
+            let after = tab.table_state.selected().unwrap();
+            tab.handle_key(press(KeyCode::Up));
+            assert_eq!(tab.table_state.selected().unwrap(), after - 1);
+        }
+
+        #[test]
+        fn k_retreats_row() {
+            let mut tab = ModTab::new();
+            tab.handle_key(press(KeyCode::Down));
+            let after = tab.table_state.selected().unwrap();
+            tab.handle_key(press(KeyCode::Char('k')));
+            assert_eq!(tab.table_state.selected().unwrap(), after - 1);
+        }
+
+        #[test]
+        fn down_clamped_at_last_mix() {
+            let mut tab = ModTab::new();
+            for _ in 0..200 { tab.handle_key(press(KeyCode::Down)); }
+            assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
+        }
+
+        #[test]
+        fn up_clamped_at_zero() {
+            let mut tab = ModTab::new();
+            for _ in 0..200 { tab.handle_key(press(KeyCode::Up)); }
+            assert_eq!(tab.table_state.selected().unwrap(), 0);
+        }
+    }
+
+    mod ppo2_navigation {
+        use super::*;
+
+        #[test]
+        fn right_increments_ppo2_idx() {
+            let mut tab = ModTab::new();
+            let before = tab.ppo2_idx;
+            tab.handle_key(press(KeyCode::Right));
+            assert_eq!(tab.ppo2_idx, before + 1);
+        }
+
+        #[test]
+        fn l_increments_ppo2_idx() {
+            let mut tab = ModTab::new();
+            let before = tab.ppo2_idx;
+            tab.handle_key(press(KeyCode::Char('l')));
+            assert_eq!(tab.ppo2_idx, before + 1);
+        }
+
+        #[test]
+        fn left_decrements_ppo2_idx() {
+            let mut tab = ModTab::new();
+            tab.handle_key(press(KeyCode::Right));
+            let before = tab.ppo2_idx;
+            tab.handle_key(press(KeyCode::Left));
+            assert_eq!(tab.ppo2_idx, before - 1);
+        }
+
+        #[test]
+        fn h_decrements_ppo2_idx() {
+            let mut tab = ModTab::new();
+            tab.handle_key(press(KeyCode::Right));
+            let before = tab.ppo2_idx;
+            tab.handle_key(press(KeyCode::Char('h')));
+            assert_eq!(tab.ppo2_idx, before - 1);
+        }
+
+        #[test]
+        fn right_clamped_at_max() {
+            let mut tab = ModTab::new();
+            for _ in 0..20 { tab.handle_key(press(KeyCode::Right)); }
+            assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
+        }
+
+        #[test]
+        fn left_clamped_at_zero() {
+            let mut tab = ModTab::new();
+            for _ in 0..20 { tab.handle_key(press(KeyCode::Left)); }
+            assert_eq!(tab.ppo2_idx, 0);
+        }
+    }
+
+    mod enter_key {
+        use super::*;
+
+        #[test]
+        fn stores_current_mix_and_ppo2() {
+            let mut tab = ModTab::new();
+            let row = tab.table_state.selected().unwrap();
+            let expected_pct = tab.mixes[row].o2_percent();
+            let expected_ppo2 = tab.ppo2().value();
+            tab.handle_key(press(KeyCode::Enter));
+            let (mix, ppo2) = tab.selection.unwrap();
+            assert_eq!(mix.o2_percent(), expected_pct);
+            assert!((ppo2.value() - expected_ppo2).abs() < 1e-9);
+        }
+
+        #[test]
+        fn selection_updates_after_moving_row() {
+            let mut tab = ModTab::new();
+            tab.handle_key(press(KeyCode::Enter));
+            let first_pct = tab.selection.unwrap().0.o2_percent();
+            tab.handle_key(press(KeyCode::Down));
+            tab.handle_key(press(KeyCode::Enter));
+            let second_pct = tab.selection.unwrap().0.o2_percent();
+            assert_ne!(first_pct, second_pct);
+        }
+    }
+
+    mod mod_color_fn {
+        use super::*;
+
+        #[test]
+        fn below_10m_is_red() {
+            assert_eq!(mod_color(9.9), THEME.red);
+            assert_eq!(mod_color(0.0), THEME.red);
+        }
+
+        #[test]
+        fn exactly_10m_is_yellow() {
+            assert_eq!(mod_color(10.0), THEME.yellow);
+        }
+
+        #[test]
+        fn between_thresholds_is_yellow() {
+            assert_eq!(mod_color(15.0), THEME.yellow);
+        }
+
+        #[test]
+        fn exactly_20m_is_green() {
+            assert_eq!(mod_color(20.0), THEME.green);
+        }
+
+        #[test]
+        fn above_20m_is_green() {
+            assert_eq!(mod_color(33.75), THEME.green);
+        }
+    }
+
+    mod status_bar_fn {
+        use super::*;
+
+        #[test]
+        fn no_selection_shows_prompt() {
+            let text = paragraph_text(ModTab::new().status_bar(), 60);
+            assert!(text.contains("No gas"));
+        }
+
+        #[test]
+        fn selection_shows_mix_percent_and_mod() {
+            let mut tab = ModTab::new();
+            tab.handle_key(press(KeyCode::Enter));
+            let text = paragraph_text(tab.status_bar(), 60);
+            assert!(text.contains("32"));
+            assert!(text.contains("MOD"));
+        }
+    }
+}
