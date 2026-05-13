@@ -91,14 +91,19 @@ impl ModTab {
 
     fn move_row(&mut self, delta: isize) {
         let last = self.mixes.len().saturating_sub(1) as isize;
-        let next = self.table_state.selected()
+        let next = self
+            .table_state
+            .selected()
             .map(|i| (i as isize + delta).clamp(0, last) as usize)
             .unwrap_or(0);
         self.table_state.select(Some(next));
     }
 
     fn build_rows(&self, cols: &[Bar]) -> Vec<Row<'static>> {
-        self.mixes.iter().map(|mix| ModRow { mix, cols }.into()).collect()
+        self.mixes
+            .iter()
+            .map(|mix| ModRow { mix, cols }.into())
+            .collect()
     }
 }
 
@@ -135,7 +140,8 @@ impl Widget for &mut ModTab {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let window_size = col_window_size(area.width, TABLE_OVERHEAD_W, COL_MOD_W, PPO2_COUNT);
         let col_in_window = self.ppo2_window_col(window_size);
-        self.table_state.select_column(Some(col_in_window + FIXED_COL_COUNT));
+        self.table_state
+            .select_column(Some(col_in_window + FIXED_COL_COUNT));
         let cols = self.visible_columns(window_size);
         let title = format!(" DPS — MOD Table   ppO\u{2082} {} ", self.ppo2());
         let constraints = trailing_constraints(
@@ -144,7 +150,10 @@ impl Widget for &mut ModTab {
             COL_MOD_W,
         );
         let header = build_header_row(
-            vec![Cell::from("Name").style(THEME.header_cell()), Cell::from("O\u{2082}%").style(THEME.header_cell())],
+            vec![
+                Cell::from("Name").style(THEME.header_cell()),
+                Cell::from("O\u{2082}%").style(THEME.header_cell()),
+            ],
             cols.iter().map(|c| c.to_string()),
             Some(col_in_window),
         );
@@ -163,9 +172,14 @@ impl Widget for ModTabStatus<'_> {
                 let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
                 let text = format!(
                     " \u{25c6} {}({}%)  MOD {}  @ ppO\u{2082} {}",
-                    name, mix.o2_percent(), depth, ppo2,
+                    name,
+                    mix.o2_percent(),
+                    depth,
+                    ppo2,
                 );
-                Paragraph::new(text).style(THEME.status_active()).render(area, buf);
+                Paragraph::new(text)
+                    .style(THEME.status_active())
+                    .render(area, buf);
             }
             None => Paragraph::new(" No gas selected — press Enter to select")
                 .style(THEME.status_empty())
@@ -175,7 +189,9 @@ impl Widget for ModTabStatus<'_> {
 }
 
 impl Component for ModTab {
-    fn title(&self) -> &'static str { "MOD Table" }
+    fn title(&self) -> &'static str {
+        "MOD Table"
+    }
 
     fn handle_key(&mut self, key: KeyEvent) -> Action {
         match key.code {
@@ -207,9 +223,18 @@ impl Component for ModTab {
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
         static BINDINGS: &[KeyBinding] = &[
-            KeyBinding { key: "j/k",   desc: "navigate rows"    },
-            KeyBinding { key: "h/l",   desc: "change ppO\u{2082} limit" },
-            KeyBinding { key: "Enter", desc: "select gas"        },
+            KeyBinding {
+                key: "j/k",
+                desc: "navigate rows",
+            },
+            KeyBinding {
+                key: "h/l",
+                desc: "change ppO\u{2082} limit",
+            },
+            KeyBinding {
+                key: "Enter",
+                desc: "select gas",
+            },
         ];
         BINDINGS
     }
@@ -293,14 +318,18 @@ mod tests {
         #[test]
         fn down_clamped_at_last_mix() {
             let mut tab = ModTab::new();
-            for _ in 0..200 { tab.handle_key(press(KeyCode::Down)); }
+            for _ in 0..200 {
+                tab.handle_key(press(KeyCode::Down));
+            }
             assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
         }
 
         #[test]
         fn up_clamped_at_zero() {
             let mut tab = ModTab::new();
-            for _ in 0..200 { tab.handle_key(press(KeyCode::Up)); }
+            for _ in 0..200 {
+                tab.handle_key(press(KeyCode::Up));
+            }
             assert_eq!(tab.table_state.selected().unwrap(), 0);
         }
     }
@@ -345,14 +374,18 @@ mod tests {
         #[test]
         fn right_clamped_at_max() {
             let mut tab = ModTab::new();
-            for _ in 0..20 { tab.handle_key(press(KeyCode::Right)); }
+            for _ in 0..20 {
+                tab.handle_key(press(KeyCode::Right));
+            }
             assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
         }
 
         #[test]
         fn left_clamped_at_zero() {
             let mut tab = ModTab::new();
-            for _ in 0..20 { tab.handle_key(press(KeyCode::Left)); }
+            for _ in 0..20 {
+                tab.handle_key(press(KeyCode::Left));
+            }
             assert_eq!(tab.ppo2_idx, 0);
         }
     }

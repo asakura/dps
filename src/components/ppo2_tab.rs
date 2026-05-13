@@ -78,7 +78,9 @@ impl PpO2Tab {
     }
 
     fn move_row(&mut self, delta: isize) {
-        let next = self.table_state.selected()
+        let next = self
+            .table_state
+            .selected()
             .map(|i| (i as isize + delta).clamp(0, PPO2_TABLE_DEPTH_MAX as isize) as usize)
             .unwrap_or(0);
         self.table_state.select(Some(next));
@@ -102,7 +104,9 @@ impl From<PpO2Row<'_>> for Row<'static> {
         let mut cells = vec![Cell::from(format!("{:>3} m", r.depth))];
         for mix in r.mixes {
             let ppo2 = mix.ppo2_at(depth);
-            cells.push(Cell::from(format!("{:.2}", ppo2.value())).style(ppo2_cell_color(ppo2.value())));
+            cells.push(
+                Cell::from(format!("{:.2}", ppo2.value())).style(ppo2_cell_color(ppo2.value())),
+            );
         }
         Row::new(cells)
     }
@@ -121,10 +125,14 @@ fn ppo2_cell_color(ppo2: f64) -> Color {
 impl Widget for &mut PpO2Tab {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let window_size = col_window_size(
-            area.width, PPO2_TABLE_OVERHEAD_W, COL_PPO2_MIX_W, PPO2_TABLE_MIX_COUNT,
+            area.width,
+            PPO2_TABLE_OVERHEAD_W,
+            COL_PPO2_MIX_W,
+            PPO2_TABLE_MIX_COUNT,
         );
         let col_in_window = self.mix_window_col(window_size);
-        self.table_state.select_column(Some(col_in_window + FIXED_COL_COUNT));
+        self.table_state
+            .select_column(Some(col_in_window + FIXED_COL_COUNT));
         let mixes = self.visible_cols(window_size);
         let mix = self.selected_mix();
         let title = format!(" DPS — ppO\u{2082} by Depth   {}% ", mix.o2_percent());
@@ -154,14 +162,21 @@ impl Widget for PpO2TabStatus<'_> {
         let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
         let text = format!(
             " \u{25c6} {}({}%)  @ {} m  \u{2192}  ppO\u{2082} {:.2} bar",
-            name, mix.o2_percent(), depth_m, ppo2.value(),
+            name,
+            mix.o2_percent(),
+            depth_m,
+            ppo2.value(),
         );
-        Paragraph::new(text).style(THEME.status_active()).render(area, buf);
+        Paragraph::new(text)
+            .style(THEME.status_active())
+            .render(area, buf);
     }
 }
 
 impl Component for PpO2Tab {
-    fn title(&self) -> &'static str { "ppO₂ by Depth" }
+    fn title(&self) -> &'static str {
+        "ppO₂ by Depth"
+    }
 
     fn handle_key(&mut self, key: KeyEvent) -> Action {
         match key.code {
@@ -188,8 +203,14 @@ impl Component for PpO2Tab {
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
         static BINDINGS: &[KeyBinding] = &[
-            KeyBinding { key: "j/k", desc: "navigate depth" },
-            KeyBinding { key: "h/l", desc: "change mix"     },
+            KeyBinding {
+                key: "j/k",
+                desc: "navigate depth",
+            },
+            KeyBinding {
+                key: "h/l",
+                desc: "change mix",
+            },
         ];
         BINDINGS
     }
@@ -254,7 +275,9 @@ mod tests {
         #[test]
         fn down_clamped_at_max_depth() {
             let mut tab = PpO2Tab::new();
-            for _ in 0..100 { tab.handle_key(press(KeyCode::Down)); }
+            for _ in 0..100 {
+                tab.handle_key(press(KeyCode::Down));
+            }
             assert_eq!(tab.table_state.selected().unwrap(), PPO2_TABLE_DEPTH_MAX);
         }
     }
@@ -290,14 +313,18 @@ mod tests {
         #[test]
         fn right_clamped_at_last_mix() {
             let mut tab = PpO2Tab::new();
-            for _ in 0..20 { tab.handle_key(press(KeyCode::Right)); }
+            for _ in 0..20 {
+                tab.handle_key(press(KeyCode::Right));
+            }
             assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
         }
 
         #[test]
         fn left_clamped_at_zero() {
             let mut tab = PpO2Tab::new();
-            for _ in 0..20 { tab.handle_key(press(KeyCode::Left)); }
+            for _ in 0..20 {
+                tab.handle_key(press(KeyCode::Left));
+            }
             assert_eq!(tab.mix_idx, 0);
         }
     }
@@ -355,7 +382,9 @@ mod tests {
         #[test]
         fn shows_updated_depth_after_navigation() {
             let mut tab = PpO2Tab::new();
-            for _ in 0..10 { tab.handle_key(press(KeyCode::Down)); }
+            for _ in 0..10 {
+                tab.handle_key(press(KeyCode::Down));
+            }
             let text = widget_text(PpO2TabStatus(&tab), 60);
             assert!(text.contains("@ 10 m"));
         }

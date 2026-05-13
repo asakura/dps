@@ -123,8 +123,8 @@ impl Ean {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
     use crate::units::{Bar, Meters};
+    use approx::assert_relative_eq;
 
     // --- from_percent ---
 

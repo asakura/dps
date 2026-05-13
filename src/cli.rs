@@ -65,7 +65,8 @@ mod tests {
 
         #[test]
         fn long_flags() {
-            let cli = Cli::try_parse_from(["dps", "--tick-rate", "10.0", "--frame-rate", "30.0"]).unwrap();
+            let cli = Cli::try_parse_from(["dps", "--tick-rate", "10.0", "--frame-rate", "30.0"])
+                .unwrap();
             assert_eq!(cli.tick_rate, 10.0);
             assert_eq!(cli.frame_rate, 30.0);
         }

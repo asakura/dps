@@ -3,7 +3,10 @@ use vergen_gix::GixBuilder;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let build = BuildBuilder::default().build_date(true).build()?;
-    let gix = GixBuilder::default().describe(true, true, None).sha(true).build()?;
+    let gix = GixBuilder::default()
+        .describe(true, true, None)
+        .sha(true)
+        .build()?;
 
     Emitter::default()
         .add_instructions(&build)?

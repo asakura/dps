@@ -29,5 +29,7 @@ pub trait Component {
     /// Render a one-line status bar below the main content area.
     fn render_status(&self, area: Rect, buf: &mut Buffer);
     /// Structured key bindings for the which-key popup and hint line.
-    fn key_bindings(&self) -> &'static [KeyBinding] { &[] }
+    fn key_bindings(&self) -> &'static [KeyBinding] {
+        &[]
+    }
 }
