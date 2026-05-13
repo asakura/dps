@@ -61,6 +61,22 @@ impl App {
     }
 }
 
+struct HintBar<'a> {
+    component: &'a [KeyBinding],
+    global: &'a [KeyBinding],
+}
+
+impl Widget for HintBar<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let hint = self.component.iter()
+            .chain(self.global.iter())
+            .map(|b| format!("{} {}", b.key, b.desc))
+            .collect::<Vec<_>>()
+            .join("   ");
+        Paragraph::new(format!(" {hint}")).style(THEME.hint()).render(area, buf);
+    }
+}
+
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let chunks = Layout::vertical([
@@ -82,14 +98,8 @@ impl Widget for &mut App {
         self.tabs[self.active].render(chunks[1], buf);
         self.tabs[self.active].render_status(chunks[2], buf);
 
-        let hint = self.tabs[self.active]
-            .key_bindings()
-            .iter()
-            .chain(GLOBAL_BINDINGS.iter())
-            .map(|b| format!("{} {}", b.key, b.desc))
-            .collect::<Vec<_>>()
-            .join("   ");
-        Paragraph::new(format!(" {hint}")).style(THEME.hint()).render(chunks[3], buf);
+        HintBar { component: self.tabs[self.active].key_bindings(), global: GLOBAL_BINDINGS }
+            .render(chunks[3], buf);
 
         if self.show_which_key {
             WhichKey::new(GLOBAL_BINDINGS, self.tabs[self.active].key_bindings())
