@@ -88,6 +88,31 @@ impl ModTab {
     fn ppo2_window_col(&self, window_size: usize) -> usize {
         self.ppo2_idx - window_start(self.ppo2_idx, PPO2_COUNT, window_size)
     }
+
+    fn move_row(&mut self, delta: isize) {
+        let last = self.mixes.len().saturating_sub(1) as isize;
+        let next = self.table_state.selected()
+            .map(|i| (i as isize + delta).clamp(0, last) as usize)
+            .unwrap_or(0);
+        self.table_state.select(Some(next));
+    }
+
+    fn build_rows(&self, cols: &[Bar]) -> Vec<Row<'static>> {
+        self.mixes.iter().map(|mix| {
+            let mut cells = vec![
+                Cell::from(mix.label().unwrap_or("")),
+                Cell::from(format!("{:>4}%", mix.o2_percent())),
+            ];
+            for &col in cols {
+                let depth = mix.mod_at(col);
+                cells.push(
+                    Cell::from(format!("{}", depth))
+                        .style(mod_color(depth.value())),
+                );
+            }
+            Row::new(cells)
+        }).collect()
+    }
 }
 
 fn mod_color(depth_m: f64) -> Color {
@@ -100,43 +125,13 @@ fn mod_color(depth_m: f64) -> Color {
     }
 }
 
-fn build_rows(mixes: &[Ean], cols: &[Bar]) -> Vec<Row<'static>> {
-    mixes
-        .iter()
-        .map(|mix| {
-            let mut cells = vec![
-                Cell::from(mix.label().unwrap_or("")),
-                Cell::from(format!("{:>4}%", mix.o2_percent())),
-            ];
-            for &col in cols.iter() {
-                let depth = mix.mod_at(col);
-                cells.push(
-                    Cell::from(format!("{}", depth))
-                        .style(mod_color(depth.value())),
-                );
-            }
-            Row::new(cells)
-        })
-        .collect()
-}
-
 impl Component for ModTab {
     fn title(&self) -> &'static str { "MOD Table" }
 
     fn handle_key(&mut self, key: KeyEvent) -> Action {
         match key.code {
-            KeyCode::Down | KeyCode::Char('j') => {
-                let next = self.table_state.selected()
-                    .map(|i| (i + 1).min(self.mixes.len() - 1))
-                    .unwrap_or(0);
-                self.table_state.select(Some(next));
-            }
-            KeyCode::Up | KeyCode::Char('k') => {
-                let prev = self.table_state.selected()
-                    .map(|i| i.saturating_sub(1))
-                    .unwrap_or(0);
-                self.table_state.select(Some(prev));
-            }
+            KeyCode::Down | KeyCode::Char('j') => self.move_row(1),
+            KeyCode::Up | KeyCode::Char('k') => self.move_row(-1),
             KeyCode::Right | KeyCode::Char('l') => {
                 self.ppo2_idx = (self.ppo2_idx + 1).min(PPO2_MAX_IDX);
             }
@@ -169,7 +164,7 @@ impl Component for ModTab {
             cols.iter().map(|c| c.to_string()),
             Some(col_in_window),
         );
-        let table = styled_table(build_rows(&self.mixes, &cols), constraints, header, title);
+        let table = styled_table(self.build_rows(&cols), constraints, header, title);
         f.render_stateful_widget(table, area, &mut self.table_state);
     }
 
