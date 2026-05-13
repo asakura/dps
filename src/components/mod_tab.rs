@@ -99,20 +99,26 @@ impl ModTab {
     }
 
     fn build_rows(&self, cols: &[Bar]) -> Vec<Row<'static>> {
-        self.mixes.iter().map(|mix| {
-            let mut cells = vec![
-                Cell::from(mix.label().unwrap_or("")),
-                Cell::from(format!("{:>4}%", mix.o2_percent())),
-            ];
-            for &col in cols {
-                let depth = mix.mod_at(col);
-                cells.push(
-                    Cell::from(format!("{}", depth))
-                        .style(mod_color(depth.value())),
-                );
-            }
-            Row::new(cells)
-        }).collect()
+        self.mixes.iter().map(|mix| ModRow { mix, cols }.into()).collect()
+    }
+}
+
+struct ModRow<'a> {
+    mix: &'a Ean,
+    cols: &'a [Bar],
+}
+
+impl From<ModRow<'_>> for Row<'static> {
+    fn from(r: ModRow<'_>) -> Row<'static> {
+        let mut cells = vec![
+            Cell::from(r.mix.label().unwrap_or("")),
+            Cell::from(format!("{:>4}%", r.mix.o2_percent())),
+        ];
+        for &col in r.cols {
+            let depth = r.mix.mod_at(col);
+            cells.push(Cell::from(format!("{}", depth)).style(mod_color(depth.value())));
+        }
+        Row::new(cells)
     }
 }
 

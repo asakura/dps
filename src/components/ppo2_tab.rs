@@ -87,19 +87,25 @@ impl PpO2Tab {
 
     fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
         (0..=PPO2_TABLE_DEPTH_MAX)
-            .map(|d| {
-                let depth = Meters::new(d as f64);
-                let mut cells = vec![Cell::from(format!("{:>3} m", d))];
-                for mix in mixes {
-                    let ppo2 = mix.ppo2_at(depth);
-                    cells.push(
-                        Cell::from(format!("{:.2}", ppo2.value()))
-                            .style(ppo2_cell_color(ppo2.value())),
-                    );
-                }
-                Row::new(cells)
-            })
+            .map(|d| PpO2Row { depth: d, mixes }.into())
             .collect()
+    }
+}
+
+struct PpO2Row<'a> {
+    depth: usize,
+    mixes: &'a [Ean],
+}
+
+impl From<PpO2Row<'_>> for Row<'static> {
+    fn from(r: PpO2Row<'_>) -> Row<'static> {
+        let depth = Meters::new(r.depth as f64);
+        let mut cells = vec![Cell::from(format!("{:>3} m", r.depth))];
+        for mix in r.mixes {
+            let ppo2 = mix.ppo2_at(depth);
+            cells.push(Cell::from(format!("{:.2}", ppo2.value())).style(ppo2_cell_color(ppo2.value())));
+        }
+        Row::new(cells)
     }
 }
 
