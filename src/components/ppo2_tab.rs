@@ -76,6 +76,13 @@ impl PpO2Tab {
     fn mix_window_col(&self, window_size: usize) -> usize {
         self.mix_idx - window_start(self.mix_idx, PPO2_TABLE_MIX_COUNT, window_size)
     }
+
+    fn move_row(&mut self, delta: isize) {
+        let next = self.table_state.selected()
+            .map(|i| (i as isize + delta).clamp(0, PPO2_TABLE_DEPTH_MAX as isize) as usize)
+            .unwrap_or(0);
+        self.table_state.select(Some(next));
+    }
 }
 
 fn ppo2_cell_color(ppo2: f64) -> Color {
@@ -110,18 +117,8 @@ impl Component for PpO2Tab {
 
     fn handle_key(&mut self, key: KeyEvent) -> Action {
         match key.code {
-            KeyCode::Down | KeyCode::Char('j') => {
-                let next = self.table_state.selected()
-                    .map(|i| (i + 1).min(PPO2_TABLE_DEPTH_MAX))
-                    .unwrap_or(0);
-                self.table_state.select(Some(next));
-            }
-            KeyCode::Up | KeyCode::Char('k') => {
-                let prev = self.table_state.selected()
-                    .map(|i| i.saturating_sub(1))
-                    .unwrap_or(0);
-                self.table_state.select(Some(prev));
-            }
+            KeyCode::Down | KeyCode::Char('j') => self.move_row(1),
+            KeyCode::Up | KeyCode::Char('k') => self.move_row(-1),
             KeyCode::Right | KeyCode::Char('l') => {
                 self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1);
             }
