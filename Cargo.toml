@@ -6,7 +6,7 @@ authors = ["Mikalai Seva"]
 
 [build-dependencies]
 anyhow = "1"
-vergen = { version = "9", features = ["build", "cargo"] }
+vergen = { version = "9", features = ["build"] }
 vergen-gix = "9"
 
 [dependencies]
