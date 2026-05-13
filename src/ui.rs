@@ -24,8 +24,13 @@ pub(crate) fn col_window_size(width: u16, overhead: u16, col_w: u16, max: usize)
 /// Constraint list for `fixed` columns followed by `n` data columns of `col_w`;
 /// the last data column uses `Fill(1)` to absorb leftover terminal width.
 pub(crate) fn trailing_constraints(fixed: &[Constraint], n: usize, col_w: u16) -> Vec<Constraint> {
-    fixed.iter().copied()
-        .chain(std::iter::repeat_n(Constraint::Length(col_w), n.saturating_sub(1)))
+    fixed
+        .iter()
+        .copied()
+        .chain(std::iter::repeat_n(
+            Constraint::Length(col_w),
+            n.saturating_sub(1),
+        ))
         .chain((n > 0).then_some(Constraint::Fill(1)))
         .collect()
 }
@@ -49,6 +54,24 @@ pub(crate) fn styled_table(
         .row_highlight_style(THEME.selection())
         .column_highlight_style(THEME.column_focus())
         .highlight_symbol("▶ ")
+}
+
+/// Header row from `fixed` cells and dynamic `labels`, with the `highlighted` column underlined.
+pub(crate) fn build_header_row(
+    fixed: Vec<Cell<'static>>,
+    labels: impl Iterator<Item = String>,
+    highlighted: Option<usize>,
+) -> Row<'static> {
+    let mut cells = fixed;
+    for (i, label) in labels.enumerate() {
+        let style = if highlighted == Some(i) {
+            THEME.header_cell_active()
+        } else {
+            THEME.header_cell()
+        };
+        cells.push(Cell::from(label).style(style));
+    }
+    Row::new(cells).style(THEME.header())
 }
 
 #[cfg(test)]
@@ -123,36 +146,28 @@ mod tests {
         #[test]
         fn multiple_data_columns_last_is_fill() {
             let c = trailing_constraints(&[], 3, 9);
-            assert_eq!(c, vec![
-                Constraint::Length(9),
-                Constraint::Length(9),
-                Constraint::Fill(1),
-            ]);
+            assert_eq!(
+                c,
+                vec![
+                    Constraint::Length(9),
+                    Constraint::Length(9),
+                    Constraint::Fill(1),
+                ]
+            );
         }
 
         #[test]
         fn fixed_columns_prepended() {
             let c = trailing_constraints(&[Constraint::Length(12), Constraint::Length(6)], 2, 9);
-            assert_eq!(c, vec![
-                Constraint::Length(12),
-                Constraint::Length(6),
-                Constraint::Length(9),
-                Constraint::Fill(1),
-            ]);
+            assert_eq!(
+                c,
+                vec![
+                    Constraint::Length(12),
+                    Constraint::Length(6),
+                    Constraint::Length(9),
+                    Constraint::Fill(1),
+                ]
+            );
         }
     }
-}
-
-/// Header row from `fixed` cells and dynamic `labels`, with the `highlighted` column underlined.
-pub(crate) fn build_header_row(
-    fixed: Vec<Cell<'static>>,
-    labels: impl Iterator<Item = String>,
-    highlighted: Option<usize>,
-) -> Row<'static> {
-    let mut cells = fixed;
-    for (i, label) in labels.enumerate() {
-        let style = if highlighted == Some(i) { THEME.header_cell_active() } else { THEME.header_cell() };
-        cells.push(Cell::from(label).style(style));
-    }
-    Row::new(cells).style(THEME.header())
 }
