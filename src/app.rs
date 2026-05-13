@@ -3,7 +3,7 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Layout},
     widgets::{Paragraph, Tabs},
 };
 
@@ -63,15 +63,13 @@ impl App {
     /// Draws the tab bar, active component, status bar, and help line.
     pub fn render(&mut self, f: &mut Frame) {
         let area = f.area();
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(1),
-                Constraint::Fill(1),
-                Constraint::Length(1),
-                Constraint::Length(1),
-            ])
-            .split(area);
+        let chunks = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Fill(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .split(area);
 
         let titles: Vec<&str> = self.tabs.iter().map(|t| t.title()).collect();
         f.render_widget(
