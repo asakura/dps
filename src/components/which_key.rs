@@ -5,7 +5,7 @@
 //! 10 description). The panel spans the full terminal width and is anchored to the
 //! bottom edge.
 //!
-//! Each binding is rendered by the private [`Entry`] widget, which lays out a
+//! Each binding is rendered by a private `Entry` widget, which lays out a
 //! single row as `LEAD | KEY_W | ENTRY_GAP | desc`.
 //!
 //! # Example

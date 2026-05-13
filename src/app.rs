@@ -61,6 +61,7 @@ impl App {
     }
 }
 
+/// One-line hint bar showing component bindings followed by global bindings.
 struct HintBar<'a> {
     component: &'a [KeyBinding],
     global: &'a [KeyBinding],

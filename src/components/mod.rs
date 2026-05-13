@@ -11,7 +11,9 @@ use crate::action::Action;
 
 /// A single key→action entry for the which-key popup and help line.
 pub struct KeyBinding {
+    /// Key label shown in the popup (e.g. `"j/k"`, `"Enter"`).
     pub key: &'static str,
+    /// Short description of the action.
     pub desc: &'static str,
 }
 
