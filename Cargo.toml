@@ -10,13 +10,13 @@ vergen-gix = "9"
 
 [dependencies]
 clap = { version = "4", features = ["derive", "cargo"] }
-ratatui = "0.29"
-crossterm = "0.28"
+ratatui = "0.30"
+crossterm = "0.29"
 color-eyre = "0.6"
-directories = "5"
-tracing = "0.1"
-tracing-error = "0.2"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+directories = "6.0"
+tracing = "0.1.44"
+tracing-error = "0.2.1"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 better-panic = "0.3.0"
 strip-ansi-escapes = "0.2.1"
 human-panic = "2.0.8"
