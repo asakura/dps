@@ -5,7 +5,7 @@ edition = "2024"
 authors = ["Mikalai Seva"]
 
 [build-dependencies]
-vergen = { version = "9", features = ["build"] }
+vergen = { version = "9", features = ["build", "cargo"] }
 vergen-gix = "9"
 
 [dependencies]
@@ -20,6 +20,5 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 better-panic = "0.3.0"
 strip-ansi-escapes = "0.2.1"
 human-panic = "2.0.8"
-
 [dev-dependencies]
 approx = "0.5.1"

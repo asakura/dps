@@ -1,8 +1,21 @@
 //! Platform-aware configuration and data directory resolution.
 
-use std::path::PathBuf;
+use std::{env, path::PathBuf, sync::LazyLock};
 
 use directories::ProjectDirs;
+
+pub static PROJECT_NAME: LazyLock<String> =
+    LazyLock::new(|| env!("CARGO_CRATE_NAME").to_uppercase());
+pub static DATA_FOLDER: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
+    env::var(format!("{}_DATA", *PROJECT_NAME))
+        .ok()
+        .map(PathBuf::from)
+});
+pub static CONFIG_FOLDER: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
+    env::var(format!("{}_CONFIG", *PROJECT_NAME))
+        .ok()
+        .map(PathBuf::from)
+});
 
 /// Returns the XDG/platform config directory for this application, or `None`
 /// if the home directory cannot be determined.

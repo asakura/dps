@@ -17,7 +17,7 @@ use dps::action::Action;
 use dps::app::App;
 use dps::cli::Cli;
 use dps::errors;
-use dps::logging::initialize_logging;
+use dps::logging;
 
 fn restore_terminal() -> io::Result<()> {
     disable_raw_mode()?;
@@ -59,7 +59,7 @@ impl Drop for Tui {
 
 fn main() -> Result<()> {
     errors::init()?;
-    initialize_logging()?;
+    logging::init()?;
 
     let cli = Cli::parse();
     let tick_interval = Duration::from_secs_f64(1.0 / cli.tick_rate);

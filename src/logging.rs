@@ -1,27 +1,32 @@
 //! File-based tracing initialisation.
 
 use tracing_error::ErrorLayer;
-use tracing_subscriber::{Layer, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::config::get_data_dir;
+use crate::config;
 
-/// Initialises a file-based `tracing` subscriber and registers it globally.
-///
-/// Creates the data directory if absent, opens `dps.log` inside it, and sets
-/// the default log level to `INFO`. Override with the `DPS_LOGLEVEL` env var.
-pub fn initialize_logging() -> color_eyre::Result<()> {
-    let directory = get_data_dir();
-    std::fs::create_dir_all(&directory)?;
-    let log_path = directory.join(concat!(env!("CARGO_PKG_NAME"), ".log"));
+pub static LOG_ENV: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| format!("{}_LOG_LEVEL", *config::PROJECT_NAME));
+pub static LOG_FILE: std::sync::LazyLock<String> =
+    std::sync::LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
+
+pub fn init() -> color_eyre::Result<()> {
+    let directory = config::get_data_dir();
+
+    std::fs::create_dir_all(directory.clone())?;
+
+    let log_path = directory.join(LOG_FILE.clone());
     let log_file = std::fs::File::create(log_path)?;
+    let env_filter = EnvFilter::builder().with_default_directive(tracing::Level::INFO.into());
 
-    let log_env = format!("{}_LOGLEVEL", env!("CARGO_PKG_NAME").to_uppercase());
-    let env_filter = tracing_subscriber::filter::EnvFilter::builder()
-        .with_default_directive(tracing::Level::INFO.into())
-        .with_env_var(log_env)
-        .from_env_lossy();
+    // If the `RUST_LOG` environment variable is set, use that as the default, otherwise use the
+    // value of the `LOG_ENV` environment variable. If the `LOG_ENV` environment variable contains
+    // errors, then this will return an error.
+    let env_filter = env_filter
+        .try_from_env()
+        .or_else(|_| env_filter.with_env_var(LOG_ENV.clone()).from_env())?;
 
-    let file_subscriber = tracing_subscriber::fmt::layer()
+    let file_subscriber = fmt::layer()
         .with_file(true)
         .with_line_number(true)
         .with_writer(log_file)
@@ -32,7 +37,7 @@ pub fn initialize_logging() -> color_eyre::Result<()> {
     tracing_subscriber::registry()
         .with(file_subscriber)
         .with(ErrorLayer::default())
-        .init();
+        .try_init()?;
 
     Ok(())
 }
