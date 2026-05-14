@@ -187,9 +187,6 @@ impl Widget for ModTabStatus<'_> {
     }
 }
 
-const SCROLL_DELTA: isize = 10;
-const PAGE_DELTA: isize = 20;
-
 impl Component for ModTab {
     fn title(&self) -> &'static str {
         "MOD Table"
@@ -201,10 +198,10 @@ impl Component for ModTab {
             Action::Up => self.move_row(-1),
             Action::Right => self.ppo2_idx = (self.ppo2_idx + 1).min(PPO2_MAX_IDX),
             Action::Left => self.ppo2_idx = self.ppo2_idx.saturating_sub(1),
-            Action::ScrollDown => self.move_row(SCROLL_DELTA),
-            Action::ScrollUp => self.move_row(-SCROLL_DELTA),
-            Action::PageDown => self.move_row(PAGE_DELTA),
-            Action::PageUp => self.move_row(-PAGE_DELTA),
+            Action::ScrollDown => self.move_row(super::SCROLL_DELTA),
+            Action::ScrollUp => self.move_row(-super::SCROLL_DELTA),
+            Action::PageDown => self.move_row(super::PAGE_DELTA),
+            Action::PageUp => self.move_row(-super::PAGE_DELTA),
             Action::GotoTop => self.table_state.select(Some(0)),
             Action::GotoBottom => self.table_state.select(Some(self.mixes.len() - 1)),
             Action::Select => {
@@ -411,7 +408,7 @@ mod tests {
                     .iter()
                     .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
                     .unwrap()
-                    + SCROLL_DELTA as usize,
+                    + super::SCROLL_DELTA as usize,
             );
         }
 
@@ -422,7 +419,7 @@ mod tests {
             tab.handle_action(Action::ScrollUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                tab.mixes.len() - 1 - SCROLL_DELTA as usize,
+                tab.mixes.len() - 1 - super::SCROLL_DELTA as usize,
             );
         }
 
@@ -433,7 +430,7 @@ mod tests {
             tab.handle_action(Action::PageDown);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                start + PAGE_DELTA as usize,
+                start + super::PAGE_DELTA as usize,
             );
         }
 
@@ -444,7 +441,7 @@ mod tests {
             tab.handle_action(Action::PageUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                tab.mixes.len() - 1 - PAGE_DELTA as usize,
+                tab.mixes.len() - 1 - super::PAGE_DELTA as usize,
             );
         }
 

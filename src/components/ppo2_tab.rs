@@ -174,9 +174,6 @@ impl Widget for PpO2TabStatus<'_> {
     }
 }
 
-const SCROLL_DELTA: isize = 10;
-const PAGE_DELTA: isize = 20;
-
 impl Component for PpO2Tab {
     fn title(&self) -> &'static str {
         "ppO₂ by Depth"
@@ -188,10 +185,10 @@ impl Component for PpO2Tab {
             Action::Up => self.move_row(-1),
             Action::Right => self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1),
             Action::Left => self.mix_idx = self.mix_idx.saturating_sub(1),
-            Action::ScrollDown => self.move_row(SCROLL_DELTA),
-            Action::ScrollUp => self.move_row(-SCROLL_DELTA),
-            Action::PageDown => self.move_row(PAGE_DELTA),
-            Action::PageUp => self.move_row(-PAGE_DELTA),
+            Action::ScrollDown => self.move_row(super::SCROLL_DELTA),
+            Action::ScrollUp => self.move_row(-super::SCROLL_DELTA),
+            Action::PageDown => self.move_row(super::PAGE_DELTA),
+            Action::PageUp => self.move_row(-super::PAGE_DELTA),
             Action::GotoTop => self.table_state.select(Some(0)),
             Action::GotoBottom => self.table_state.select(Some(PPO2_TABLE_DEPTH_MAX)),
             Action::Select => {
@@ -386,7 +383,7 @@ mod tests {
             tab.handle_action(Action::ScrollDown);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                SCROLL_DELTA as usize,
+                super::SCROLL_DELTA as usize,
             );
         }
 
@@ -397,7 +394,7 @@ mod tests {
             tab.handle_action(Action::ScrollUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                PPO2_TABLE_DEPTH_MAX - SCROLL_DELTA as usize,
+                PPO2_TABLE_DEPTH_MAX - super::SCROLL_DELTA as usize,
             );
         }
 
@@ -407,7 +404,7 @@ mod tests {
             tab.handle_action(Action::PageDown);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                PAGE_DELTA as usize,
+                super::PAGE_DELTA as usize,
             );
         }
 
@@ -418,7 +415,7 @@ mod tests {
             tab.handle_action(Action::PageUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                PPO2_TABLE_DEPTH_MAX - PAGE_DELTA as usize,
+                PPO2_TABLE_DEPTH_MAX - super::PAGE_DELTA as usize,
             );
         }
 

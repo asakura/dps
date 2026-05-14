@@ -16,6 +16,9 @@ pub struct KeyBinding {
     pub desc: &'static str,
 }
 
+pub const SCROLL_DELTA: isize = 10;
+pub const PAGE_DELTA: isize = 20;
+
 /// Interface that every screen must implement to participate in the event loop
 /// and render pipeline.
 pub trait Component {
