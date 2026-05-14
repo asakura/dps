@@ -244,8 +244,8 @@ mod tests {
             let tab = PpO2Tab::new();
             assert_eq!(tab.selected_mix().o2_percent(), 21);
         }
-    }
 
+    }
 
     mod ppo2_cell_color_fn {
         use super::*;
@@ -320,6 +320,14 @@ mod tests {
         }
 
         #[test]
+        fn down_clamped_at_max_depth() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::Down);
+            assert_eq!(tab.table_state.selected().unwrap(), PPO2_TABLE_DEPTH_MAX);
+        }
+
+        #[test]
         fn up_at_zero_stays_at_zero() {
             let mut tab = PpO2Tab::new();
             tab.handle_action(Action::Up);
@@ -354,12 +362,34 @@ mod tests {
         }
 
         #[test]
+        fn scroll_up_moves_by_delta() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::ScrollUp);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                PPO2_TABLE_DEPTH_MAX - SCROLL_DELTA as usize,
+            );
+        }
+
+        #[test]
         fn page_down_moves_by_page_delta() {
             let mut tab = PpO2Tab::new();
             tab.handle_action(Action::PageDown);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 PAGE_DELTA as usize,
+            );
+        }
+
+        #[test]
+        fn page_up_moves_by_page_delta() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::PageUp);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                PPO2_TABLE_DEPTH_MAX - PAGE_DELTA as usize,
             );
         }
 
@@ -372,12 +402,30 @@ mod tests {
         }
 
         #[test]
+        fn right_clamped_at_last_mix() {
+            let mut tab = PpO2Tab::new();
+            for _ in 0..=PPO2_TABLE_MIX_COUNT {
+                tab.handle_action(Action::Right);
+            }
+            assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
+        }
+
+        #[test]
         fn left_decrements_mix() {
             let mut tab = PpO2Tab::new();
             tab.handle_action(Action::Right);
             let before = tab.mix_idx;
             tab.handle_action(Action::Left);
             assert_eq!(tab.mix_idx, before - 1);
+        }
+
+        #[test]
+        fn left_clamped_at_zero_mix() {
+            let mut tab = PpO2Tab::new();
+            for _ in 0..=PPO2_MIX_DEFAULT_IDX {
+                tab.handle_action(Action::Left);
+            }
+            assert_eq!(tab.mix_idx, 0);
         }
     }
 }

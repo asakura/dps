@@ -366,12 +366,28 @@ mod tests {
         }
 
         #[test]
+        fn down_clamped_at_last_mix() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::Down);
+            assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
+        }
+
+        #[test]
         fn up_retreats_row() {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Down);
             let after = tab.table_state.selected().unwrap();
             tab.handle_action(Action::Up);
             assert_eq!(tab.table_state.selected().unwrap(), after - 1);
+        }
+
+        #[test]
+        fn up_clamped_at_zero() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::GotoTop);
+            tab.handle_action(Action::Up);
+            assert_eq!(tab.table_state.selected().unwrap(), 0);
         }
 
         #[test]
@@ -406,6 +422,17 @@ mod tests {
         }
 
         #[test]
+        fn scroll_up_moves_by_delta() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::ScrollUp);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                tab.mixes.len() - 1 - SCROLL_DELTA as usize,
+            );
+        }
+
+        #[test]
         fn page_down_moves_by_page_delta() {
             let mut tab = ModTab::new();
             let start = tab.table_state.selected().unwrap();
@@ -413,6 +440,17 @@ mod tests {
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 start + PAGE_DELTA as usize,
+            );
+        }
+
+        #[test]
+        fn page_up_moves_by_page_delta() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::PageUp);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                tab.mixes.len() - 1 - PAGE_DELTA as usize,
             );
         }
 
@@ -425,12 +463,30 @@ mod tests {
         }
 
         #[test]
+        fn right_clamped_at_max_ppo2() {
+            let mut tab = ModTab::new();
+            for _ in 0..=PPO2_MAX_IDX {
+                tab.handle_action(Action::Right);
+            }
+            assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
+        }
+
+        #[test]
         fn left_decrements_ppo2() {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Right);
             let before = tab.ppo2_idx;
             tab.handle_action(Action::Left);
             assert_eq!(tab.ppo2_idx, before - 1);
+        }
+
+        #[test]
+        fn left_clamped_at_zero_ppo2() {
+            let mut tab = ModTab::new();
+            for _ in 0..=PPO2_DEFAULT_IDX {
+                tab.handle_action(Action::Left);
+            }
+            assert_eq!(tab.ppo2_idx, 0);
         }
     }
 }
