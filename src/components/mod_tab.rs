@@ -276,7 +276,7 @@ mod tests {
         }
     }
 
-    mod enter_key {
+    mod select_action {
         use super::*;
 
         #[test]
@@ -303,7 +303,7 @@ mod tests {
         }
     }
 
-    mod mod_color_fn {
+    mod mod_color {
         use super::*;
 
         #[test]
@@ -333,7 +333,7 @@ mod tests {
         }
     }
 
-    mod status_bar_fn {
+    mod status_bar {
         use super::*;
 
         #[test]

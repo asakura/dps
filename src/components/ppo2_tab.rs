@@ -258,7 +258,7 @@ mod tests {
         }
     }
 
-    mod enter_key {
+    mod select_action {
         use super::*;
 
         #[test]
@@ -282,7 +282,7 @@ mod tests {
         }
     }
 
-    mod ppo2_cell_color_fn {
+    mod ppo2_cell_color {
         use super::*;
 
         #[test]
@@ -321,7 +321,7 @@ mod tests {
         }
     }
 
-    mod status_bar_fn {
+    mod status_bar {
         use super::*;
 
         #[test]
