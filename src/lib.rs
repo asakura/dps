@@ -7,6 +7,7 @@ pub mod config;
 pub mod errors;
 pub mod gas;
 pub mod logging;
+pub mod mode;
 pub mod theme;
 pub mod ui;
 pub mod units;

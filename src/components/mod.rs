@@ -28,6 +28,13 @@ pub trait Component {
     fn render(&mut self, area: Rect, buf: &mut Buffer);
     /// Render a one-line status bar below the main content area.
     fn render_status(&self, area: Rect, buf: &mut Buffer);
+    /// Respond to a semantic action produced by the keybinding layer.
+    ///
+    /// Called when a configured key sequence resolves to an [`Action`] before
+    /// the raw-key fallback path is reached.  The default implementation is a
+    /// no-op; components override it for the actions they support.
+    fn handle_action(&mut self, _action: Action) {}
+
     /// Structured key bindings for the which-key popup and hint line.
     fn key_bindings(&self) -> &'static [KeyBinding] {
         &[]

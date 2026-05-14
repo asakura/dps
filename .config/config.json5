@@ -1,0 +1,31 @@
+{
+  keybindings: {
+    Home: {
+      // movement
+      j: "Down",
+      k: "Up",
+      h: "Left",
+      l: "Right",
+      "<Down>": "Down",
+      "<Up>": "Up",
+      "<Left>": "Left",
+      "<Right>": "Right",
+
+      // half-page scroll
+      "<C-d>": "ScrollDown",
+      "<C-u>": "ScrollUp",
+
+      // full-page scroll
+      "<C-f>": "PageDown",
+      "<C-b>": "PageUp",
+      "<PageDown>": "PageDown",
+      "<PageUp>": "PageUp",
+
+      // jump to start / end
+      gg: "GotoTop",
+      "<S-g>": "GotoBottom",
+      "<Home>": "GotoTop",
+      "<End>": "GotoBottom",
+    },
+  },
+}

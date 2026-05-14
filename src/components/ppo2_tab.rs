@@ -173,9 +173,28 @@ impl Widget for PpO2TabStatus<'_> {
     }
 }
 
+const SCROLL_DELTA: isize = 10;
+const PAGE_DELTA: isize = 20;
+
 impl Component for PpO2Tab {
     fn title(&self) -> &'static str {
         "ppO₂ by Depth"
+    }
+
+    fn handle_action(&mut self, action: Action) {
+        match action {
+            Action::Down => self.move_row(1),
+            Action::Up => self.move_row(-1),
+            Action::Right => self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1),
+            Action::Left => self.mix_idx = self.mix_idx.saturating_sub(1),
+            Action::ScrollDown => self.move_row(SCROLL_DELTA),
+            Action::ScrollUp => self.move_row(-SCROLL_DELTA),
+            Action::PageDown => self.move_row(PAGE_DELTA),
+            Action::PageUp => self.move_row(-PAGE_DELTA),
+            Action::GotoTop => self.table_state.select(Some(0)),
+            Action::GotoBottom => self.table_state.select(Some(PPO2_TABLE_DEPTH_MAX)),
+            _ => {}
+        }
     }
 
     fn handle_key(&mut self, key: KeyEvent) -> Action {
@@ -387,6 +406,79 @@ mod tests {
             }
             let text = widget_text(PpO2TabStatus(&tab), 60);
             assert!(text.contains("@ 10 m"));
+        }
+    }
+
+    mod action_dispatch {
+        use super::*;
+        use crate::action::Action;
+
+        #[test]
+        fn down_advances_depth() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::Down);
+            assert_eq!(tab.table_state.selected().unwrap(), 1);
+        }
+
+        #[test]
+        fn up_at_zero_stays_at_zero() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::Up);
+            assert_eq!(tab.table_state.selected().unwrap(), 0);
+        }
+
+        #[test]
+        fn goto_top_selects_depth_zero() {
+            let mut tab = PpO2Tab::new();
+            for _ in 0..10 {
+                tab.handle_action(Action::Down);
+            }
+            tab.handle_action(Action::GotoTop);
+            assert_eq!(tab.table_state.selected().unwrap(), 0);
+        }
+
+        #[test]
+        fn goto_bottom_selects_max_depth() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::GotoBottom);
+            assert_eq!(tab.table_state.selected().unwrap(), PPO2_TABLE_DEPTH_MAX);
+        }
+
+        #[test]
+        fn scroll_down_moves_by_delta() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::ScrollDown);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                SCROLL_DELTA as usize,
+            );
+        }
+
+        #[test]
+        fn page_down_moves_by_page_delta() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::PageDown);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                PAGE_DELTA as usize,
+            );
+        }
+
+        #[test]
+        fn right_increments_mix() {
+            let mut tab = PpO2Tab::new();
+            let before = tab.mix_idx;
+            tab.handle_action(Action::Right);
+            assert_eq!(tab.mix_idx, before + 1);
+        }
+
+        #[test]
+        fn left_decrements_mix() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::Right);
+            let before = tab.mix_idx;
+            tab.handle_action(Action::Left);
+            assert_eq!(tab.mix_idx, before - 1);
         }
     }
 }

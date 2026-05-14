@@ -188,9 +188,28 @@ impl Widget for ModTabStatus<'_> {
     }
 }
 
+const SCROLL_DELTA: isize = 10;
+const PAGE_DELTA: isize = 20;
+
 impl Component for ModTab {
     fn title(&self) -> &'static str {
         "MOD Table"
+    }
+
+    fn handle_action(&mut self, action: Action) {
+        match action {
+            Action::Down => self.move_row(1),
+            Action::Up => self.move_row(-1),
+            Action::Right => self.ppo2_idx = (self.ppo2_idx + 1).min(PPO2_MAX_IDX),
+            Action::Left => self.ppo2_idx = self.ppo2_idx.saturating_sub(1),
+            Action::ScrollDown => self.move_row(SCROLL_DELTA),
+            Action::ScrollUp => self.move_row(-SCROLL_DELTA),
+            Action::PageDown => self.move_row(PAGE_DELTA),
+            Action::PageUp => self.move_row(-PAGE_DELTA),
+            Action::GotoTop => self.table_state.select(Some(0)),
+            Action::GotoBottom => self.table_state.select(Some(self.mixes.len() - 1)),
+            _ => {}
+        }
     }
 
     fn handle_key(&mut self, key: KeyEvent) -> Action {
@@ -464,6 +483,87 @@ mod tests {
             let text = widget_text(ModTabStatus(&tab), 60);
             assert!(text.contains("32"));
             assert!(text.contains("MOD"));
+        }
+    }
+
+    mod action_dispatch {
+        use super::*;
+        use crate::action::Action;
+
+        #[test]
+        fn down_advances_row() {
+            let mut tab = ModTab::new();
+            let start = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::Down);
+            assert_eq!(tab.table_state.selected().unwrap(), start + 1);
+        }
+
+        #[test]
+        fn up_retreats_row() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::Down);
+            let after = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::Up);
+            assert_eq!(tab.table_state.selected().unwrap(), after - 1);
+        }
+
+        #[test]
+        fn goto_top_selects_first_row() {
+            let mut tab = ModTab::new();
+            for _ in 0..10 {
+                tab.handle_action(Action::Down);
+            }
+            tab.handle_action(Action::GotoTop);
+            assert_eq!(tab.table_state.selected().unwrap(), 0);
+        }
+
+        #[test]
+        fn goto_bottom_selects_last_row() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::GotoBottom);
+            assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
+        }
+
+        #[test]
+        fn scroll_down_moves_by_delta() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::ScrollDown);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                tab.mixes
+                    .iter()
+                    .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
+                    .unwrap()
+                    + SCROLL_DELTA as usize,
+            );
+        }
+
+        #[test]
+        fn page_down_moves_by_page_delta() {
+            let mut tab = ModTab::new();
+            let start = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::PageDown);
+            assert_eq!(
+                tab.table_state.selected().unwrap(),
+                start + PAGE_DELTA as usize,
+            );
+        }
+
+        #[test]
+        fn right_increments_ppo2() {
+            let mut tab = ModTab::new();
+            let before = tab.ppo2_idx;
+            tab.handle_action(Action::Right);
+            assert_eq!(tab.ppo2_idx, before + 1);
+        }
+
+        #[test]
+        fn left_decrements_ppo2() {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::Right);
+            let before = tab.ppo2_idx;
+            tab.handle_action(Action::Left);
+            assert_eq!(tab.ppo2_idx, before - 1);
         }
     }
 }

@@ -1,6 +1,6 @@
 //! Command-line interface: argument parsing and version string construction.
 
-use std::sync::OnceLock;
+use std::{path::PathBuf, sync::OnceLock};
 
 use clap::Parser;
 
@@ -17,6 +17,16 @@ pub struct Cli {
     /// Render rate in Hz — maximum number of frames drawn per second.
     #[arg(short, long, value_name = "FLOAT", default_value_t = 60.0)]
     pub frame_rate: f64,
+
+    /// Override the data directory (logs, state). Defaults to the platform data dir
+    /// or the `DPS_DATA` environment variable.
+    #[arg(long, value_name = "PATH")]
+    pub data_dir: Option<PathBuf>,
+
+    /// Override the config directory. Defaults to the platform config dir
+    /// or the `DPS_CONFIG` environment variable.
+    #[arg(long, value_name = "PATH")]
+    pub config_dir: Option<PathBuf>,
 }
 
 /// Builds the version string shown by `--version`.
@@ -61,6 +71,22 @@ mod tests {
             let cli = Cli::try_parse_from(["dps"]).unwrap();
             assert_eq!(cli.tick_rate, 4.0);
             assert_eq!(cli.frame_rate, 60.0);
+            assert!(cli.data_dir.is_none());
+            assert!(cli.config_dir.is_none());
+        }
+
+        #[test]
+        fn data_and_config_dir_flags() {
+            let cli = Cli::try_parse_from([
+                "dps",
+                "--data-dir",
+                "/tmp/mydata",
+                "--config-dir",
+                "/tmp/myconfig",
+            ])
+            .unwrap();
+            assert_eq!(cli.data_dir.unwrap(), PathBuf::from("/tmp/mydata"));
+            assert_eq!(cli.config_dir.unwrap(), PathBuf::from("/tmp/myconfig"));
         }
 
         #[test]

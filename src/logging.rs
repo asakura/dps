@@ -1,5 +1,7 @@
 //! File-based tracing initialisation.
 
+use std::path::Path;
+
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -10,12 +12,15 @@ pub static LOG_ENV: std::sync::LazyLock<String> =
 pub static LOG_FILE: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
 
-pub fn init() -> color_eyre::Result<()> {
-    let directory = config::get_data_dir();
+/// Initialises file-based tracing, writing to `<data_dir>/<crate>.log`.
+///
+/// Call this after resolving the effective data directory (CLI flag →
+/// `DPS_DATA` env var → platform default) so the log file lands in the
+/// right place regardless of which override is active.
+pub fn init(data_dir: &Path) -> color_eyre::Result<()> {
+    std::fs::create_dir_all(data_dir)?;
 
-    std::fs::create_dir_all(directory.clone())?;
-
-    let log_path = directory.join(LOG_FILE.clone());
+    let log_path = data_dir.join(LOG_FILE.clone());
     let log_file = std::fs::File::create(log_path)?;
     let env_filter = EnvFilter::builder().with_default_directive(tracing::Level::INFO.into());
 
