@@ -35,6 +35,7 @@ const PPO2_DANGER_FROM: f64 = 1.6;
 pub struct PpO2Tab {
     table_state: TableState,
     mix_idx: usize,
+    selection: Option<(Meters, Ean)>,
 }
 
 impl Default for PpO2Tab {
@@ -51,6 +52,7 @@ impl PpO2Tab {
         Self {
             table_state,
             mix_idx: PPO2_MIX_DEFAULT_IDX,
+            selection: None,
         }
     }
 
@@ -192,6 +194,11 @@ impl Component for PpO2Tab {
             Action::PageUp => self.move_row(-PAGE_DELTA),
             Action::GotoTop => self.table_state.select(Some(0)),
             Action::GotoBottom => self.table_state.select(Some(PPO2_TABLE_DEPTH_MAX)),
+            Action::Select => {
+                if let Some(depth_m) = self.table_state.selected() {
+                    self.selection = Some((Meters::new(depth_m as f64), self.selected_mix()));
+                }
+            }
             _ => {}
         }
     }
@@ -245,6 +252,34 @@ mod tests {
             assert_eq!(tab.selected_mix().o2_percent(), 21);
         }
 
+        #[test]
+        fn no_selection() {
+            assert!(PpO2Tab::new().selection.is_none());
+        }
+    }
+
+    mod enter_key {
+        use super::*;
+
+        #[test]
+        fn stores_current_depth_and_mix() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::Select);
+            let (depth, mix) = tab.selection.unwrap();
+            assert!((depth.value() - 0.0).abs() < 1e-9);
+            assert_eq!(mix.o2_percent(), 21);
+        }
+
+        #[test]
+        fn selection_updates_after_moving_row() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::Select);
+            let first_depth = tab.selection.unwrap().0.value();
+            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Select);
+            let second_depth = tab.selection.unwrap().0.value();
+            assert_ne!(first_depth, second_depth);
+        }
     }
 
     mod ppo2_cell_color_fn {
