@@ -37,3 +37,15 @@ pub trait Component {
         &[]
     }
 }
+
+#[cfg(test)]
+pub mod test_utils {
+    use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
+
+    pub fn widget_text(widget: impl Widget, width: u16) -> String {
+        let area = Rect::new(0, 0, width, 1);
+        let mut buf = Buffer::empty(area);
+        widget.render(area, &mut buf);
+        buf.content.iter().map(|c| c.symbol()).collect()
+    }
+}

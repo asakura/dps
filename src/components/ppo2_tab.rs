@@ -229,13 +229,7 @@ impl Component for PpO2Tab {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn widget_text(widget: impl Widget, width: u16) -> String {
-        let area = Rect::new(0, 0, width, 1);
-        let mut buf = Buffer::empty(area);
-        widget.render(area, &mut buf);
-        buf.content.iter().map(|c| c.symbol()).collect()
-    }
+    use crate::components::test_utils::widget_text;
 
     mod initial_state {
         use super::*;
