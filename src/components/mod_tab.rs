@@ -1,6 +1,5 @@
 //! MOD-by-ppO₂ table component.
 
-use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
@@ -208,28 +207,13 @@ impl Component for ModTab {
             Action::PageUp => self.move_row(-PAGE_DELTA),
             Action::GotoTop => self.table_state.select(Some(0)),
             Action::GotoBottom => self.table_state.select(Some(self.mixes.len() - 1)),
-            _ => {}
-        }
-    }
-
-    fn handle_key(&mut self, key: KeyEvent) -> Action {
-        match key.code {
-            KeyCode::Down | KeyCode::Char('j') => self.move_row(1),
-            KeyCode::Up | KeyCode::Char('k') => self.move_row(-1),
-            KeyCode::Right | KeyCode::Char('l') => {
-                self.ppo2_idx = (self.ppo2_idx + 1).min(PPO2_MAX_IDX);
-            }
-            KeyCode::Left | KeyCode::Char('h') => {
-                self.ppo2_idx = self.ppo2_idx.saturating_sub(1);
-            }
-            KeyCode::Enter => {
+            Action::Select => {
                 if let Some(row) = self.table_state.selected() {
                     self.selection = Some((self.mixes[row], self.ppo2()));
                 }
             }
             _ => {}
         }
-        Action::None
     }
 
     fn render(&mut self, area: Rect, buf: &mut Buffer) {
@@ -262,11 +246,6 @@ impl Component for ModTab {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossterm::event::KeyModifiers;
-
-    fn press(code: KeyCode) -> KeyEvent {
-        KeyEvent::new(code, KeyModifiers::NONE)
-    }
 
     fn widget_text(widget: impl Widget, width: u16) -> String {
         let area = Rect::new(0, 0, width, 1);
@@ -297,118 +276,6 @@ mod tests {
         }
     }
 
-    mod row_navigation {
-        use super::*;
-
-        #[test]
-        fn down_advances_row() {
-            let mut tab = ModTab::new();
-            let start = tab.table_state.selected().unwrap();
-            tab.handle_key(press(KeyCode::Down));
-            assert_eq!(tab.table_state.selected().unwrap(), start + 1);
-        }
-
-        #[test]
-        fn j_advances_row() {
-            let mut tab = ModTab::new();
-            let start = tab.table_state.selected().unwrap();
-            tab.handle_key(press(KeyCode::Char('j')));
-            assert_eq!(tab.table_state.selected().unwrap(), start + 1);
-        }
-
-        #[test]
-        fn up_retreats_row() {
-            let mut tab = ModTab::new();
-            tab.handle_key(press(KeyCode::Down));
-            let after = tab.table_state.selected().unwrap();
-            tab.handle_key(press(KeyCode::Up));
-            assert_eq!(tab.table_state.selected().unwrap(), after - 1);
-        }
-
-        #[test]
-        fn k_retreats_row() {
-            let mut tab = ModTab::new();
-            tab.handle_key(press(KeyCode::Down));
-            let after = tab.table_state.selected().unwrap();
-            tab.handle_key(press(KeyCode::Char('k')));
-            assert_eq!(tab.table_state.selected().unwrap(), after - 1);
-        }
-
-        #[test]
-        fn down_clamped_at_last_mix() {
-            let mut tab = ModTab::new();
-            for _ in 0..200 {
-                tab.handle_key(press(KeyCode::Down));
-            }
-            assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
-        }
-
-        #[test]
-        fn up_clamped_at_zero() {
-            let mut tab = ModTab::new();
-            for _ in 0..200 {
-                tab.handle_key(press(KeyCode::Up));
-            }
-            assert_eq!(tab.table_state.selected().unwrap(), 0);
-        }
-    }
-
-    mod ppo2_navigation {
-        use super::*;
-
-        #[test]
-        fn right_increments_ppo2_idx() {
-            let mut tab = ModTab::new();
-            let before = tab.ppo2_idx;
-            tab.handle_key(press(KeyCode::Right));
-            assert_eq!(tab.ppo2_idx, before + 1);
-        }
-
-        #[test]
-        fn l_increments_ppo2_idx() {
-            let mut tab = ModTab::new();
-            let before = tab.ppo2_idx;
-            tab.handle_key(press(KeyCode::Char('l')));
-            assert_eq!(tab.ppo2_idx, before + 1);
-        }
-
-        #[test]
-        fn left_decrements_ppo2_idx() {
-            let mut tab = ModTab::new();
-            tab.handle_key(press(KeyCode::Right));
-            let before = tab.ppo2_idx;
-            tab.handle_key(press(KeyCode::Left));
-            assert_eq!(tab.ppo2_idx, before - 1);
-        }
-
-        #[test]
-        fn h_decrements_ppo2_idx() {
-            let mut tab = ModTab::new();
-            tab.handle_key(press(KeyCode::Right));
-            let before = tab.ppo2_idx;
-            tab.handle_key(press(KeyCode::Char('h')));
-            assert_eq!(tab.ppo2_idx, before - 1);
-        }
-
-        #[test]
-        fn right_clamped_at_max() {
-            let mut tab = ModTab::new();
-            for _ in 0..20 {
-                tab.handle_key(press(KeyCode::Right));
-            }
-            assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
-        }
-
-        #[test]
-        fn left_clamped_at_zero() {
-            let mut tab = ModTab::new();
-            for _ in 0..20 {
-                tab.handle_key(press(KeyCode::Left));
-            }
-            assert_eq!(tab.ppo2_idx, 0);
-        }
-    }
-
     mod enter_key {
         use super::*;
 
@@ -418,7 +285,7 @@ mod tests {
             let row = tab.table_state.selected().unwrap();
             let expected_pct = tab.mixes[row].o2_percent();
             let expected_ppo2 = tab.ppo2().value();
-            tab.handle_key(press(KeyCode::Enter));
+            tab.handle_action(Action::Select);
             let (mix, ppo2) = tab.selection.unwrap();
             assert_eq!(mix.o2_percent(), expected_pct);
             assert!((ppo2.value() - expected_ppo2).abs() < 1e-9);
@@ -427,10 +294,10 @@ mod tests {
         #[test]
         fn selection_updates_after_moving_row() {
             let mut tab = ModTab::new();
-            tab.handle_key(press(KeyCode::Enter));
+            tab.handle_action(Action::Select);
             let first_pct = tab.selection.unwrap().0.o2_percent();
-            tab.handle_key(press(KeyCode::Down));
-            tab.handle_key(press(KeyCode::Enter));
+            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Select);
             let second_pct = tab.selection.unwrap().0.o2_percent();
             assert_ne!(first_pct, second_pct);
         }
@@ -479,7 +346,7 @@ mod tests {
         #[test]
         fn selection_shows_mix_percent_and_mod() {
             let mut tab = ModTab::new();
-            tab.handle_key(press(KeyCode::Enter));
+            tab.handle_action(Action::Select);
             let text = widget_text(ModTabStatus(&tab), 60);
             assert!(text.contains("32"));
             assert!(text.contains("MOD"));

@@ -4,7 +4,6 @@ pub mod mod_tab;
 pub mod ppo2_tab;
 pub mod which_key;
 
-use crossterm::event::KeyEvent;
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::action::Action;
@@ -22,8 +21,6 @@ pub struct KeyBinding {
 pub trait Component {
     /// Short display name shown in the tab bar.
     fn title(&self) -> &'static str;
-    /// Process a key press and return the resulting action.
-    fn handle_key(&mut self, key: KeyEvent) -> Action;
     /// Draw the component's content into `area`.
     fn render(&mut self, area: Rect, buf: &mut Buffer);
     /// Render a one-line status bar below the main content area.

@@ -1,6 +1,9 @@
 {
   keybindings: {
     Home: {
+      // select
+      "<CR>": "Select",
+
       // movement
       j: "Down",
       k: "Up",

@@ -161,7 +161,7 @@ impl App {
                 self.active = (self.active + 1) % self.tabs.len();
                 Action::None
             }
-            _ => self.tabs[self.active].handle_key(key),
+            _ => Action::None,
         }
     }
 

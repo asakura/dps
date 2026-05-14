@@ -23,4 +23,5 @@ pub enum Action {
     PageDown,
     GotoTop,
     GotoBottom,
+    Select,
 }

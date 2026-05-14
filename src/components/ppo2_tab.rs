@@ -1,6 +1,5 @@
 //! ppO₂-by-depth table component.
 
-use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
@@ -197,21 +196,6 @@ impl Component for PpO2Tab {
         }
     }
 
-    fn handle_key(&mut self, key: KeyEvent) -> Action {
-        match key.code {
-            KeyCode::Down | KeyCode::Char('j') => self.move_row(1),
-            KeyCode::Up | KeyCode::Char('k') => self.move_row(-1),
-            KeyCode::Right | KeyCode::Char('l') => {
-                self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1);
-            }
-            KeyCode::Left | KeyCode::Char('h') => {
-                self.mix_idx = self.mix_idx.saturating_sub(1);
-            }
-            _ => {}
-        }
-        Action::None
-    }
-
     fn render(&mut self, area: Rect, buf: &mut Buffer) {
         Widget::render(self, area, buf);
     }
@@ -238,11 +222,6 @@ impl Component for PpO2Tab {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossterm::event::KeyModifiers;
-
-    fn press(code: KeyCode) -> KeyEvent {
-        KeyEvent::new(code, KeyModifiers::NONE)
-    }
 
     fn widget_text(widget: impl Widget, width: u16) -> String {
         let area = Rect::new(0, 0, width, 1);
@@ -267,86 +246,6 @@ mod tests {
         }
     }
 
-    mod row_navigation {
-        use super::*;
-
-        #[test]
-        fn down_advances_depth() {
-            let mut tab = PpO2Tab::new();
-            tab.handle_key(press(KeyCode::Down));
-            assert_eq!(tab.table_state.selected().unwrap(), 1);
-        }
-
-        #[test]
-        fn j_advances_depth() {
-            let mut tab = PpO2Tab::new();
-            tab.handle_key(press(KeyCode::Char('j')));
-            assert_eq!(tab.table_state.selected().unwrap(), 1);
-        }
-
-        #[test]
-        fn up_at_zero_stays_at_zero() {
-            let mut tab = PpO2Tab::new();
-            tab.handle_key(press(KeyCode::Up));
-            assert_eq!(tab.table_state.selected().unwrap(), 0);
-        }
-
-        #[test]
-        fn down_clamped_at_max_depth() {
-            let mut tab = PpO2Tab::new();
-            for _ in 0..100 {
-                tab.handle_key(press(KeyCode::Down));
-            }
-            assert_eq!(tab.table_state.selected().unwrap(), PPO2_TABLE_DEPTH_MAX);
-        }
-    }
-
-    mod mix_navigation {
-        use super::*;
-
-        #[test]
-        fn right_increments_mix_idx() {
-            let mut tab = PpO2Tab::new();
-            let before = tab.mix_idx;
-            tab.handle_key(press(KeyCode::Right));
-            assert_eq!(tab.mix_idx, before + 1);
-        }
-
-        #[test]
-        fn l_increments_mix_idx() {
-            let mut tab = PpO2Tab::new();
-            let before = tab.mix_idx;
-            tab.handle_key(press(KeyCode::Char('l')));
-            assert_eq!(tab.mix_idx, before + 1);
-        }
-
-        #[test]
-        fn left_decrements_mix_idx() {
-            let mut tab = PpO2Tab::new();
-            tab.handle_key(press(KeyCode::Right));
-            let before = tab.mix_idx;
-            tab.handle_key(press(KeyCode::Left));
-            assert_eq!(tab.mix_idx, before - 1);
-        }
-
-        #[test]
-        fn right_clamped_at_last_mix() {
-            let mut tab = PpO2Tab::new();
-            for _ in 0..20 {
-                tab.handle_key(press(KeyCode::Right));
-            }
-            assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
-        }
-
-        #[test]
-        fn left_clamped_at_zero() {
-            let mut tab = PpO2Tab::new();
-            for _ in 0..20 {
-                tab.handle_key(press(KeyCode::Left));
-            }
-            assert_eq!(tab.mix_idx, 0);
-        }
-    }
 
     mod ppo2_cell_color_fn {
         use super::*;
@@ -402,7 +301,7 @@ mod tests {
         fn shows_updated_depth_after_navigation() {
             let mut tab = PpO2Tab::new();
             for _ in 0..10 {
-                tab.handle_key(press(KeyCode::Down));
+                tab.handle_action(Action::Down);
             }
             let text = widget_text(PpO2TabStatus(&tab), 60);
             assert!(text.contains("@ 10 m"));
