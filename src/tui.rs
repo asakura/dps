@@ -118,28 +118,84 @@ impl Tui {
         })
     }
 
+    /// Sets the application-logic timer rate in Hz (default 4.0).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use dps::tui::Tui;
+    /// let tui = Tui::new()?.tick_rate(10.0);
+    /// # Ok::<_, color_eyre::Report>(())
+    /// ```
     pub fn tick_rate(mut self, tick_rate: f64) -> Self {
         debug_assert!(tick_rate > 0.0 && tick_rate.is_finite(), "tick_rate must be a positive finite number");
         self.tick_rate = tick_rate;
         self
     }
 
+    /// Sets the render timer rate in Hz (default 60.0).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use dps::tui::Tui;
+    /// let tui = Tui::new()?.frame_rate(30.0);
+    /// # Ok::<_, color_eyre::Report>(())
+    /// ```
     pub fn frame_rate(mut self, frame_rate: f64) -> Self {
         debug_assert!(frame_rate > 0.0 && frame_rate.is_finite(), "frame_rate must be a positive finite number");
         self.frame_rate = frame_rate;
         self
     }
 
+    /// Enables or disables mouse-event capture (default `false`).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use dps::tui::Tui;
+    /// let tui = Tui::new()?.mouse(true);
+    /// # Ok::<_, color_eyre::Report>(())
+    /// ```
     pub fn mouse(mut self, mouse: bool) -> Self {
         self.mouse = mouse;
         self
     }
 
+    /// Enables or disables bracketed-paste support (default `false`).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use dps::tui::Tui;
+    /// let tui = Tui::new()?.paste(true);
+    /// # Ok::<_, color_eyre::Report>(())
+    /// ```
     pub fn paste(mut self, paste: bool) -> Self {
         self.paste = paste;
         self
     }
 
+    /// Spawns the async event loop without entering raw mode.
+    ///
+    /// Prefer [`enter`] for normal use; call `start` directly only when you
+    /// need to manage raw mode yourself.  Any previously running loop is
+    /// cancelled first.
+    ///
+    /// [`enter`]: Tui::enter
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::Tui;
+    /// let mut tui = Tui::new()?;
+    /// tui.start();
+    /// tui.stop()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn start(&mut self) {
         debug_assert!(
             self.frame_rate >= self.tick_rate,
@@ -239,6 +295,24 @@ impl Tui {
         Ok(())
     }
 
+    /// Enters the alternate screen, enables raw mode, and starts the event loop.
+    ///
+    /// Call [`exit`] (or let [`Drop`] handle it) to restore the terminal.
+    ///
+    /// [`exit`]: Tui::exit
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::Tui;
+    /// let mut tui = Tui::new()?;
+    /// tui.enter()?;
+    /// tui.exit()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn enter(&mut self) -> color_eyre::Result<()> {
         enable_raw_mode()?;
         execute!(stdout(), EnterAlternateScreen, cursor::Hide)?;
@@ -256,6 +330,25 @@ impl Tui {
         Ok(())
     }
 
+    /// Stops the event loop and restores the terminal to its original state.
+    ///
+    /// Safe to call even if [`enter`] was never called; the raw-mode guard
+    /// checks the terminal state before attempting to restore it.
+    ///
+    /// [`enter`]: Tui::enter
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::Tui;
+    /// let mut tui = Tui::new()?;
+    /// tui.enter()?;
+    /// tui.exit()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn exit(&mut self) -> color_eyre::Result<()> {
         self.stop()?;
 
@@ -278,10 +371,46 @@ impl Tui {
         Ok(())
     }
 
+    /// Signals the event loop to stop; returns immediately without waiting.
+    ///
+    /// Use [`stop`] if you need to wait for the task to finish.
+    ///
+    /// [`stop`]: Tui::stop
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::Tui;
+    /// let mut tui = Tui::new()?;
+    /// tui.start();
+    /// tui.cancel();
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn cancel(&self) {
         self.cancellation_token.cancel();
     }
 
+    /// Exits the TUI and suspends the process with `SIGTSTP` (Unix only).
+    ///
+    /// Call [`resume`] to re-enter the TUI after the process is foregrounded.
+    ///
+    /// [`resume`]: Tui::resume
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::Tui;
+    /// let mut tui = Tui::new()?;
+    /// tui.enter()?;
+    /// tui.suspend()?; // process receives SIGTSTP here
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn suspend(&mut self) -> color_eyre::Result<()> {
         self.exit()?;
 
@@ -291,11 +420,44 @@ impl Tui {
         Ok(())
     }
 
+    /// Re-enters the TUI after a [`suspend`].
+    ///
+    /// [`suspend`]: Tui::suspend
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::Tui;
+    /// let mut tui = Tui::new()?;
+    /// tui.enter()?;
+    /// tui.suspend()?;
+    /// tui.resume()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn resume(&mut self) -> color_eyre::Result<()> {
         self.enter()?;
         Ok(())
     }
 
+    /// Receives the next event from the event loop, or `None` if the channel is closed.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::Tui;
+    /// let mut tui = Tui::new()?;
+    /// tui.start();
+    /// if let Some(event) = tui.next_event().await {
+    ///     // handle event
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn next_event(&mut self) -> Option<Event> {
         self.event_rx.recv().await
     }
