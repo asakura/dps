@@ -85,6 +85,7 @@ pub struct Tui {
     task: JoinHandle<()>,
     cancellation_token: CancellationToken,
     event_rx: UnboundedReceiver<Event>,
+    /// Inject a synthetic event into the loop (e.g. from tests or signal handlers).
     pub event_tx: UnboundedSender<Event>,
     frame_rate: f64,
     tick_rate: f64,
