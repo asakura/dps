@@ -82,7 +82,10 @@ impl App {
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
     ) -> color_eyre::Result<Self> {
-        let config = Config::from_dirs(config_dir, data_dir).unwrap_or_default();
+        let config = Config::from_dirs(config_dir, data_dir).unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "config load failed, using defaults");
+            Config::default()
+        });
         tracing::debug!(
             data_dir = %config.config.data_dir.display(),
             config_dir = %config.config.config_dir.display(),
