@@ -308,22 +308,24 @@ mod tests {
 
     #[test]
     fn default_keybindings_loaded_from_embedded_config() -> color_eyre::Result<()> {
+        use crate::action::Movement;
         let c = Config::new()?;
         let home = c.keybindings.0.get(&Mode::Home).unwrap();
         // Spot-check a few bindings that must come from the embedded config.json5.
         assert_eq!(
             home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Down
+            &Action::Move(Movement::Down)
         );
         assert_eq!(
             home.get(&parse_key_sequence("gg").unwrap()).unwrap(),
-            &Action::GotoTop
+            &Action::Move(Movement::GotoTop)
         );
         Ok(())
     }
 
     #[test]
     fn user_config_adds_binding_and_defaults_merge_in() -> color_eyre::Result<()> {
+        use crate::action::Movement;
         let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
         let dir = tempfile::tempdir().unwrap();
@@ -339,18 +341,19 @@ mod tests {
         let home = c.keybindings.0.get(&Mode::Home).unwrap();
         assert_eq!(
             home.get(&parse_key_sequence("x").unwrap()).unwrap(),
-            &Action::ScrollUp,
+            &Action::Move(Movement::ScrollUp),
         );
         // Default binding merged in alongside the user binding.
         assert_eq!(
             home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Down,
+            &Action::Move(Movement::Down),
         );
         Ok(())
     }
 
     #[test]
     fn user_config_override_wins_over_default() -> color_eyre::Result<()> {
+        use crate::action::Movement;
         let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
         let dir = tempfile::tempdir().unwrap();
@@ -368,13 +371,14 @@ mod tests {
         // User's remap wins — default must not overwrite it.
         assert_eq!(
             home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Up,
+            &Action::Move(Movement::Up),
         );
         Ok(())
     }
 
     #[test]
     fn from_dirs_loads_file_from_given_directory() -> color_eyre::Result<()> {
+        use crate::action::Movement;
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("config.json5"),
@@ -385,12 +389,12 @@ mod tests {
         // User-added binding present.
         assert_eq!(
             home.get(&parse_key_sequence("x").unwrap()).unwrap(),
-            &Action::ScrollUp,
+            &Action::Move(Movement::ScrollUp),
         );
         // Embedded default still merged in.
         assert_eq!(
             home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Down,
+            &Action::Move(Movement::Down),
         );
         Ok(())
     }

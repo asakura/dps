@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 use crate::{
-    action::Action,
+    action::{Action, Movement},
     gas::Ean,
     theme::THEME,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
@@ -91,6 +91,61 @@ impl ModTab {
     fn move_row(&mut self, delta: isize) {
         let max = self.mixes.len().saturating_sub(1);
         super::move_row(&mut self.table_state, delta, max);
+    }
+
+    fn move_up(&mut self) {
+        self.move_row(-1);
+    }
+
+    fn move_down(&mut self) {
+        self.move_row(1);
+    }
+
+    fn move_left(&mut self) {
+        self.ppo2_idx = self.ppo2_idx.saturating_sub(1);
+    }
+
+    fn move_right(&mut self) {
+        self.ppo2_idx = (self.ppo2_idx + 1).min(PPO2_MAX_IDX);
+    }
+
+    fn scroll_up(&mut self) {
+        self.move_row(-super::SCROLL_DELTA);
+    }
+
+    fn scroll_down(&mut self) {
+        self.move_row(super::SCROLL_DELTA);
+    }
+
+    fn page_up(&mut self) {
+        self.move_row(-super::PAGE_DELTA);
+    }
+
+    fn page_down(&mut self) {
+        self.move_row(super::PAGE_DELTA);
+    }
+
+    fn goto_top(&mut self) {
+        self.table_state.select(Some(0));
+    }
+
+    fn goto_bottom(&mut self) {
+        self.table_state.select(Some(self.mixes.len() - 1));
+    }
+
+    fn handle_movement(&mut self, mv: Movement) {
+        match mv {
+            Movement::Up => self.move_up(),
+            Movement::Down => self.move_down(),
+            Movement::Left => self.move_left(),
+            Movement::Right => self.move_right(),
+            Movement::ScrollUp => self.scroll_up(),
+            Movement::ScrollDown => self.scroll_down(),
+            Movement::PageUp => self.page_up(),
+            Movement::PageDown => self.page_down(),
+            Movement::GotoTop => self.goto_top(),
+            Movement::GotoBottom => self.goto_bottom(),
+        }
     }
 
     fn build_rows(&self, cols: &[Bar]) -> Vec<Row<'static>> {
@@ -189,22 +244,13 @@ impl Component for ModTab {
 
     fn handle_action(&mut self, action: Action) {
         match action {
-            Action::Down => self.move_row(1),
-            Action::Up => self.move_row(-1),
-            Action::Right => self.ppo2_idx = (self.ppo2_idx + 1).min(PPO2_MAX_IDX),
-            Action::Left => self.ppo2_idx = self.ppo2_idx.saturating_sub(1),
-            Action::ScrollDown => self.move_row(super::SCROLL_DELTA),
-            Action::ScrollUp => self.move_row(-super::SCROLL_DELTA),
-            Action::PageDown => self.move_row(super::PAGE_DELTA),
-            Action::PageUp => self.move_row(-super::PAGE_DELTA),
-            Action::GotoTop => self.table_state.select(Some(0)),
-            Action::GotoBottom => self.table_state.select(Some(self.mixes.len() - 1)),
+            Action::Move(mv) => self.handle_movement(mv),
             Action::Select => {
                 if let Some(row) = self.table_state.selected() {
                     self.selection = Some((self.mixes[row], self.ppo2()));
                 }
             }
-            _ => {}
+            Action::Quit | Action::None => {}
         }
     }
 
@@ -264,6 +310,7 @@ mod tests {
 
     mod select_action {
         use super::*;
+        use crate::action::Movement;
 
         #[test]
         fn stores_current_mix_and_ppo2() {
@@ -282,7 +329,7 @@ mod tests {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Select);
             let first_pct = tab.selection.unwrap().0.o2_percent();
-            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
             let second_pct = tab.selection.unwrap().0.o2_percent();
             assert_ne!(first_pct, second_pct);
@@ -341,39 +388,39 @@ mod tests {
 
     mod action_dispatch {
         use super::*;
-        use crate::action::Action;
+        use crate::action::{Action, Movement};
         use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[test]
         fn down_advances_row() {
             let mut tab = ModTab::new();
             let start = tab.table_state.selected().unwrap();
-            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Move(Movement::Down));
             assert_eq!(tab.table_state.selected().unwrap(), start + 1);
         }
 
         #[test]
         fn down_clamped_at_last_mix() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::GotoBottom);
-            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::Down));
             assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
         }
 
         #[test]
         fn up_retreats_row() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Move(Movement::Down));
             let after = tab.table_state.selected().unwrap();
-            tab.handle_action(Action::Up);
+            tab.handle_action(Action::Move(Movement::Up));
             assert_eq!(tab.table_state.selected().unwrap(), after - 1);
         }
 
         #[test]
         fn up_clamped_at_zero() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::GotoTop);
-            tab.handle_action(Action::Up);
+            tab.handle_action(Action::Move(Movement::GotoTop));
+            tab.handle_action(Action::Move(Movement::Up));
             assert_eq!(tab.table_state.selected().unwrap(), 0);
         }
 
@@ -381,23 +428,23 @@ mod tests {
         fn goto_top_selects_first_row() {
             let mut tab = ModTab::new();
             for _ in 0..10 {
-                tab.handle_action(Action::Down);
+                tab.handle_action(Action::Move(Movement::Down));
             }
-            tab.handle_action(Action::GotoTop);
+            tab.handle_action(Action::Move(Movement::GotoTop));
             assert_eq!(tab.table_state.selected().unwrap(), 0);
         }
 
         #[test]
         fn goto_bottom_selects_last_row() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
             assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
         }
 
         #[test]
         fn scroll_down_moves_by_delta() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::ScrollDown);
+            tab.handle_action(Action::Move(Movement::ScrollDown));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 tab.mixes
@@ -411,8 +458,8 @@ mod tests {
         #[test]
         fn scroll_up_moves_by_delta() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::GotoBottom);
-            tab.handle_action(Action::ScrollUp);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::ScrollUp));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 tab.mixes.len() - 1 - SCROLL_DELTA as usize,
@@ -423,7 +470,7 @@ mod tests {
         fn page_down_moves_by_page_delta() {
             let mut tab = ModTab::new();
             let start = tab.table_state.selected().unwrap();
-            tab.handle_action(Action::PageDown);
+            tab.handle_action(Action::Move(Movement::PageDown));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 start + PAGE_DELTA as usize,
@@ -433,8 +480,8 @@ mod tests {
         #[test]
         fn page_up_moves_by_page_delta() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::GotoBottom);
-            tab.handle_action(Action::PageUp);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::PageUp));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 tab.mixes.len() - 1 - PAGE_DELTA as usize,
@@ -445,7 +492,7 @@ mod tests {
         fn right_increments_ppo2() {
             let mut tab = ModTab::new();
             let before = tab.ppo2_idx;
-            tab.handle_action(Action::Right);
+            tab.handle_action(Action::Move(Movement::Right));
             assert_eq!(tab.ppo2_idx, before + 1);
         }
 
@@ -453,7 +500,7 @@ mod tests {
         fn right_clamped_at_max_ppo2() {
             let mut tab = ModTab::new();
             for _ in 0..=PPO2_MAX_IDX {
-                tab.handle_action(Action::Right);
+                tab.handle_action(Action::Move(Movement::Right));
             }
             assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
         }
@@ -461,9 +508,9 @@ mod tests {
         #[test]
         fn left_decrements_ppo2() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::Right);
+            tab.handle_action(Action::Move(Movement::Right));
             let before = tab.ppo2_idx;
-            tab.handle_action(Action::Left);
+            tab.handle_action(Action::Move(Movement::Left));
             assert_eq!(tab.ppo2_idx, before - 1);
         }
 
@@ -471,9 +518,25 @@ mod tests {
         fn left_clamped_at_zero_ppo2() {
             let mut tab = ModTab::new();
             for _ in 0..=PPO2_DEFAULT_IDX {
-                tab.handle_action(Action::Left);
+                tab.handle_action(Action::Move(Movement::Left));
             }
             assert_eq!(tab.ppo2_idx, 0);
+        }
+
+        #[test]
+        fn none_is_a_noop() {
+            let mut tab = ModTab::new();
+            let before = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::None);
+            assert_eq!(tab.table_state.selected().unwrap(), before);
+        }
+
+        #[test]
+        fn quit_is_a_noop() {
+            let mut tab = ModTab::new();
+            let before = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::Quit);
+            assert_eq!(tab.table_state.selected().unwrap(), before);
         }
     }
 }

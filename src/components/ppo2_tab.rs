@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 use crate::{
-    action::Action,
+    action::{Action, Movement},
     gas::Ean,
     theme::THEME,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
@@ -82,6 +82,61 @@ impl PpO2Tab {
         super::move_row(&mut self.table_state, delta, PPO2_TABLE_DEPTH_MAX);
     }
 
+    fn move_up(&mut self) {
+        self.move_row(-1);
+    }
+
+    fn move_down(&mut self) {
+        self.move_row(1);
+    }
+
+    fn move_left(&mut self) {
+        self.mix_idx = self.mix_idx.saturating_sub(1);
+    }
+
+    fn move_right(&mut self) {
+        self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1);
+    }
+
+    fn scroll_up(&mut self) {
+        self.move_row(-super::SCROLL_DELTA);
+    }
+
+    fn scroll_down(&mut self) {
+        self.move_row(super::SCROLL_DELTA);
+    }
+
+    fn page_up(&mut self) {
+        self.move_row(-super::PAGE_DELTA);
+    }
+
+    fn page_down(&mut self) {
+        self.move_row(super::PAGE_DELTA);
+    }
+
+    fn goto_top(&mut self) {
+        self.table_state.select(Some(0));
+    }
+
+    fn goto_bottom(&mut self) {
+        self.table_state.select(Some(PPO2_TABLE_DEPTH_MAX));
+    }
+
+    fn handle_movement(&mut self, mv: Movement) {
+        match mv {
+            Movement::Up => self.move_up(),
+            Movement::Down => self.move_down(),
+            Movement::Left => self.move_left(),
+            Movement::Right => self.move_right(),
+            Movement::ScrollUp => self.scroll_up(),
+            Movement::ScrollDown => self.scroll_down(),
+            Movement::PageUp => self.page_up(),
+            Movement::PageDown => self.page_down(),
+            Movement::GotoTop => self.goto_top(),
+            Movement::GotoBottom => self.goto_bottom(),
+        }
+    }
+
     fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
         (0..=PPO2_TABLE_DEPTH_MAX)
             .map(|d| PpO2Row { depth: d, mixes }.into())
@@ -151,21 +206,25 @@ struct PpO2TabStatus<'a>(&'a PpO2Tab);
 
 impl Widget for PpO2TabStatus<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let depth_m = self.0.table_state.selected().unwrap_or(0);
-        let mix = self.0.selected_mix();
-        let depth = Meters::new(depth_m as f64);
-        let ppo2 = mix.ppo2_at(depth);
-        let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
-        let text = format!(
-            " \u{25c6} {}({}%)  @ {} m  \u{2192}  ppO\u{2082} {:.2} bar",
-            name,
-            mix.o2_percent(),
-            depth_m,
-            ppo2.value(),
-        );
-        Paragraph::new(text)
-            .style(THEME.status_active())
-            .render(area, buf);
+        match self.0.selection {
+            Some((depth, mix)) => {
+                let ppo2 = mix.ppo2_at(depth);
+                let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
+                let text = format!(
+                    " \u{25c6} {}({}%)  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
+                    name,
+                    mix.o2_percent(),
+                    depth,
+                    ppo2.value(),
+                );
+                Paragraph::new(text)
+                    .style(THEME.status_active())
+                    .render(area, buf);
+            }
+            None => Paragraph::new(" No depth selected — press Enter to select")
+                .style(THEME.status_empty())
+                .render(area, buf),
+        }
     }
 }
 
@@ -176,22 +235,13 @@ impl Component for PpO2Tab {
 
     fn handle_action(&mut self, action: Action) {
         match action {
-            Action::Down => self.move_row(1),
-            Action::Up => self.move_row(-1),
-            Action::Right => self.mix_idx = (self.mix_idx + 1).min(PPO2_TABLE_MIX_COUNT - 1),
-            Action::Left => self.mix_idx = self.mix_idx.saturating_sub(1),
-            Action::ScrollDown => self.move_row(super::SCROLL_DELTA),
-            Action::ScrollUp => self.move_row(-super::SCROLL_DELTA),
-            Action::PageDown => self.move_row(super::PAGE_DELTA),
-            Action::PageUp => self.move_row(-super::PAGE_DELTA),
-            Action::GotoTop => self.table_state.select(Some(0)),
-            Action::GotoBottom => self.table_state.select(Some(PPO2_TABLE_DEPTH_MAX)),
+            Action::Move(mv) => self.handle_movement(mv),
             Action::Select => {
                 if let Some(depth_m) = self.table_state.selected() {
                     self.selection = Some((Meters::new(depth_m as f64), self.selected_mix()));
                 }
             }
-            _ => {}
+            Action::Quit | Action::None => {}
         }
     }
 
@@ -246,6 +296,7 @@ mod tests {
 
     mod select_action {
         use super::*;
+        use crate::action::Movement;
 
         #[test]
         fn stores_current_depth_and_mix() {
@@ -261,7 +312,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
             tab.handle_action(Action::Select);
             let first_depth = tab.selection.unwrap().0.value();
-            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
             let second_depth = tab.selection.unwrap().0.value();
             assert_ne!(first_depth, second_depth);
@@ -309,50 +360,61 @@ mod tests {
 
     mod status_bar {
         use super::*;
+        use crate::action::Movement;
 
         #[test]
-        fn shows_air_at_surface() {
+        fn no_selection_shows_prompt() {
             let tab = PpO2Tab::new();
             let text = widget_text(PpO2TabStatus(&tab), 60);
-            assert!(text.contains("21"));
-            assert!(text.contains("@ 0 m"));
+            assert!(text.contains("No depth selected"));
         }
 
         #[test]
-        fn shows_updated_depth_after_navigation() {
+        fn selection_shows_depth_mix_and_ppo2() {
             let mut tab = PpO2Tab::new();
             for _ in 0..10 {
-                tab.handle_action(Action::Down);
+                tab.handle_action(Action::Move(Movement::Down));
             }
-            let text = widget_text(PpO2TabStatus(&tab), 60);
-            assert!(text.contains("@ 10 m"));
+            tab.handle_action(Action::Select);
+            let text = widget_text(PpO2TabStatus(&tab), 80);
+            assert!(text.contains("10.0 m"));
+            assert!(text.contains("21")); // Air (EAN21)
         }
     }
 
     mod action_dispatch {
         use super::*;
-        use crate::action::Action;
+        use crate::action::{Action, Movement};
         use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[test]
         fn down_advances_depth() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Move(Movement::Down));
             assert_eq!(tab.table_state.selected().unwrap(), 1);
         }
 
         #[test]
         fn down_clamped_at_max_depth() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::GotoBottom);
-            tab.handle_action(Action::Down);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::Down));
             assert_eq!(tab.table_state.selected().unwrap(), PPO2_TABLE_DEPTH_MAX);
+        }
+
+        #[test]
+        fn up_retreats_depth() {
+            let mut tab = PpO2Tab::new();
+            tab.handle_action(Action::Move(Movement::Down));
+            let after = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::Move(Movement::Up));
+            assert_eq!(tab.table_state.selected().unwrap(), after - 1);
         }
 
         #[test]
         fn up_at_zero_stays_at_zero() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::Up);
+            tab.handle_action(Action::Move(Movement::Up));
             assert_eq!(tab.table_state.selected().unwrap(), 0);
         }
 
@@ -360,23 +422,23 @@ mod tests {
         fn goto_top_selects_depth_zero() {
             let mut tab = PpO2Tab::new();
             for _ in 0..10 {
-                tab.handle_action(Action::Down);
+                tab.handle_action(Action::Move(Movement::Down));
             }
-            tab.handle_action(Action::GotoTop);
+            tab.handle_action(Action::Move(Movement::GotoTop));
             assert_eq!(tab.table_state.selected().unwrap(), 0);
         }
 
         #[test]
         fn goto_bottom_selects_max_depth() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::GotoBottom);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
             assert_eq!(tab.table_state.selected().unwrap(), PPO2_TABLE_DEPTH_MAX);
         }
 
         #[test]
         fn scroll_down_moves_by_delta() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::ScrollDown);
+            tab.handle_action(Action::Move(Movement::ScrollDown));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 SCROLL_DELTA as usize,
@@ -386,8 +448,8 @@ mod tests {
         #[test]
         fn scroll_up_moves_by_delta() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::GotoBottom);
-            tab.handle_action(Action::ScrollUp);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::ScrollUp));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 PPO2_TABLE_DEPTH_MAX - SCROLL_DELTA as usize,
@@ -397,7 +459,7 @@ mod tests {
         #[test]
         fn page_down_moves_by_page_delta() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::PageDown);
+            tab.handle_action(Action::Move(Movement::PageDown));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 PAGE_DELTA as usize,
@@ -407,8 +469,8 @@ mod tests {
         #[test]
         fn page_up_moves_by_page_delta() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::GotoBottom);
-            tab.handle_action(Action::PageUp);
+            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::PageUp));
             assert_eq!(
                 tab.table_state.selected().unwrap(),
                 PPO2_TABLE_DEPTH_MAX - PAGE_DELTA as usize,
@@ -419,7 +481,7 @@ mod tests {
         fn right_increments_mix() {
             let mut tab = PpO2Tab::new();
             let before = tab.mix_idx;
-            tab.handle_action(Action::Right);
+            tab.handle_action(Action::Move(Movement::Right));
             assert_eq!(tab.mix_idx, before + 1);
         }
 
@@ -427,7 +489,7 @@ mod tests {
         fn right_clamped_at_last_mix() {
             let mut tab = PpO2Tab::new();
             for _ in 0..=PPO2_TABLE_MIX_COUNT {
-                tab.handle_action(Action::Right);
+                tab.handle_action(Action::Move(Movement::Right));
             }
             assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
         }
@@ -435,9 +497,9 @@ mod tests {
         #[test]
         fn left_decrements_mix() {
             let mut tab = PpO2Tab::new();
-            tab.handle_action(Action::Right);
+            tab.handle_action(Action::Move(Movement::Right));
             let before = tab.mix_idx;
-            tab.handle_action(Action::Left);
+            tab.handle_action(Action::Move(Movement::Left));
             assert_eq!(tab.mix_idx, before - 1);
         }
 
@@ -445,9 +507,25 @@ mod tests {
         fn left_clamped_at_zero_mix() {
             let mut tab = PpO2Tab::new();
             for _ in 0..=PPO2_MIX_DEFAULT_IDX {
-                tab.handle_action(Action::Left);
+                tab.handle_action(Action::Move(Movement::Left));
             }
             assert_eq!(tab.mix_idx, 0);
+        }
+
+        #[test]
+        fn none_is_a_noop() {
+            let mut tab = PpO2Tab::new();
+            let before = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::None);
+            assert_eq!(tab.table_state.selected().unwrap(), before);
+        }
+
+        #[test]
+        fn quit_is_a_noop() {
+            let mut tab = PpO2Tab::new();
+            let before = tab.table_state.selected().unwrap();
+            tab.handle_action(Action::Quit);
+            assert_eq!(tab.table_state.selected().unwrap(), before);
         }
     }
 }

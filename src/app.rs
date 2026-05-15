@@ -140,7 +140,7 @@ impl App {
     fn dispatch(&mut self, action: Action) -> Action {
         match action {
             Action::Quit => Action::Quit,
-            other => {
+            other @ (Action::Move(_) | Action::Select | Action::None) => {
                 self.tabs[self.active].handle_action(other);
                 Action::None
             }
@@ -237,6 +237,7 @@ mod tests {
 
     mod handle_key {
         use super::*;
+        use crate::action::Movement;
         use crate::config::{AppConfig, Config, KeyBindings, Styles};
         use crate::config::keys::parse_key_sequence;
         use std::collections::HashMap;
@@ -301,7 +302,7 @@ mod tests {
 
         #[test]
         fn chord_first_key_is_prefix() {
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::GotoTop)]));
+            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('g'))),
                 Action::None
@@ -311,7 +312,7 @@ mod tests {
         #[test]
         fn chord_completes_on_second_key() {
             // Action is dispatched to the component; caller sees None.
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::GotoTop)]));
+            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
             app.handle_key(press(KeyCode::Char('g')));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('g'))),
@@ -324,8 +325,8 @@ mod tests {
             // "g" is a prefix of "gg"; when "j" breaks the chord it is retried
             // as a standalone key, matched as Down, dispatched, and None returned.
             let mut app = App::new(config_with_keybindings(&[
-                ("gg", Action::GotoTop),
-                ("j", Action::Down),
+                ("gg", Action::Move(Movement::GotoTop)),
+                ("j", Action::Move(Movement::Down)),
             ]));
             app.handle_key(press(KeyCode::Char('g')));
             assert!(matches!(
@@ -338,7 +339,7 @@ mod tests {
         fn chord_broken_unbound_key_falls_to_global_fallback() {
             // "g" is a prefix of "gg"; "q" breaks the chord and has no
             // configured binding, so the hardcoded fallback fires: q → Quit.
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::GotoTop)]));
+            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
             app.handle_key(press(KeyCode::Char('g')));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('q'))),
@@ -349,7 +350,7 @@ mod tests {
         #[test]
         fn exact_match_clears_buffer_for_next_chord() {
             // After a chord fires the buffer is cleared; the next key starts fresh.
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::GotoTop)]));
+            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
             app.handle_key(press(KeyCode::Char('g')));
             app.handle_key(press(KeyCode::Char('g'))); // exact → GotoTop, buffer cleared
             // 'g' is a prefix again — should return None, not misfire.
@@ -361,7 +362,7 @@ mod tests {
 
         #[test]
         fn three_key_chord_accumulates_and_fires() {
-            let mut app = App::new(config_with_keybindings(&[("abc", Action::GotoTop)]));
+            let mut app = App::new(config_with_keybindings(&[("abc", Action::Move(Movement::GotoTop))]));
             assert!(matches!(app.handle_key(press(KeyCode::Char('a'))), Action::None));
             assert!(matches!(app.handle_key(press(KeyCode::Char('b'))), Action::None));
             // Action dispatched to component; caller sees None.
@@ -377,8 +378,8 @@ mod tests {
             // j is retried alone and is a prefix of jk, so None is returned and
             // the buffer still holds j. Pressing k then completes jk.
             let mut app = App::new(config_with_keybindings(&[
-                ("gg", Action::GotoTop),
-                ("jk", Action::ScrollUp),
+                ("gg", Action::Move(Movement::GotoTop)),
+                ("jk", Action::Move(Movement::ScrollUp)),
             ]));
             app.handle_key(press(KeyCode::Char('g'))); // prefix
             assert!(matches!(
@@ -393,9 +394,9 @@ mod tests {
 
         #[test]
         fn bound_movement_action_is_dispatched_and_returns_none() {
-            // A configured binding resolves to Action::Down; App dispatches it
-            // to the component and returns None — the caller never sees Down.
-            let mut app = App::new(config_with_keybindings(&[("j", Action::Down)]));
+            // A configured binding resolves to Action::Move(Down); App dispatches it
+            // to the component and returns None — the caller never sees the movement.
+            let mut app = App::new(config_with_keybindings(&[("j", Action::Move(Movement::Down))]));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('j'))),
                 Action::None
