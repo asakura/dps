@@ -140,7 +140,6 @@ impl App {
     fn dispatch(&mut self, action: Action) -> Action {
         match action {
             Action::Quit => Action::Quit,
-            Action::None => Action::None,
             other => {
                 self.tabs[self.active].handle_action(other);
                 Action::None
