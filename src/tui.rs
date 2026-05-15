@@ -119,11 +119,13 @@ impl Tui {
     }
 
     pub fn tick_rate(mut self, tick_rate: f64) -> Self {
+        debug_assert!(tick_rate > 0.0 && tick_rate.is_finite(), "tick_rate must be a positive finite number");
         self.tick_rate = tick_rate;
         self
     }
 
     pub fn frame_rate(mut self, frame_rate: f64) -> Self {
+        debug_assert!(frame_rate > 0.0 && frame_rate.is_finite(), "frame_rate must be a positive finite number");
         self.frame_rate = frame_rate;
         self
     }
@@ -139,6 +141,12 @@ impl Tui {
     }
 
     pub fn start(&mut self) {
+        debug_assert!(
+            self.frame_rate >= self.tick_rate,
+            "frame_rate ({}) should be >= tick_rate ({})",
+            self.frame_rate,
+            self.tick_rate
+        );
         self.cancel();
         self.cancellation_token = CancellationToken::new();
 
