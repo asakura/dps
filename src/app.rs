@@ -233,12 +233,7 @@ mod tests {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
-    fn widget_text(widget: impl Widget, width: u16) -> String {
-        let area = ratatui::layout::Rect::new(0, 0, width, 1);
-        let mut buf = ratatui::buffer::Buffer::empty(area);
-        widget.render(area, &mut buf);
-        buf.content.iter().map(|c| c.symbol()).collect()
-    }
+    use crate::components::test_utils::widget_text;
 
     mod handle_key {
         use super::*;
