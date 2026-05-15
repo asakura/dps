@@ -25,7 +25,7 @@ use tokio::{
     time::interval,
 };
 use tokio_util::sync::CancellationToken;
-use tracing::error;
+use tracing::{error, warn};
 
 /// Events produced by the terminal input stream and the tick/render timers.
 ///
@@ -186,7 +186,10 @@ impl Tui {
                         CrosstermEvent::Paste(s) => Event::Paste(s),
                         _ => continue,
                     }
-                    Some(Err(_)) => Event::Error,
+                    Some(Err(e)) => {
+                        warn!("crossterm event error: {e}");
+                        Event::Error
+                    }
                     None => break,
                 },
             };

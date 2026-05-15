@@ -137,8 +137,16 @@ impl App {
                         break;
                     }
                 }
-                Some(Event::Quit) | None => break,
-                _ => {}
+                Some(Event::Quit) | Some(Event::Closed) | None => break,
+                Some(Event::Error) => {}
+                Some(Event::Init) => {} // TODO: implement init handler
+                Some(Event::Tick) => {} // TODO: implement tick handler
+                Some(Event::FocusGained) => {} // TODO: implement focus gained handler
+                Some(Event::FocusLost) => {} // TODO: implement focus lost handler
+                Some(Event::Paste(_)) => {} // TODO: implement paste handler
+                Some(Event::Mouse(_)) => {} // TODO: implement mouse handler
+                // terminal handles resize on the next Render tick (≤16 ms at 60 fps)
+                Some(Event::Resize(_, _)) => {} // TODO: implement resize handler
             }
         }
 
