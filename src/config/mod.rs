@@ -2,7 +2,12 @@
 
 pub mod keys;
 
-use std::{collections::HashMap, env, path::{Path, PathBuf}, sync::LazyLock};
+use std::{
+    collections::HashMap,
+    env,
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
 use crossterm::event::KeyEvent;
 use directories::ProjectDirs;
@@ -73,7 +78,6 @@ pub static CONFIG_FOLDER: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
         .map(PathBuf::from)
 });
 
-
 impl Config {
     /// Loads config from the env-var / platform-default directories.
     pub fn new() -> color_eyre::Result<Self, config::ConfigError> {
@@ -112,8 +116,14 @@ impl Config {
             .unwrap_or_else(get_config_dir);
 
         let mut builder = config::Config::builder()
-            .set_default("data_dir", effective_data_dir.to_string_lossy().into_owned())?
-            .set_default("config_dir", effective_config_dir.to_string_lossy().into_owned())?;
+            .set_default(
+                "data_dir",
+                effective_data_dir.to_string_lossy().into_owned(),
+            )?
+            .set_default(
+                "config_dir",
+                effective_config_dir.to_string_lossy().into_owned(),
+            )?;
 
         let config_files = [
             ("config.json5", config::FileFormat::Json5),
@@ -138,12 +148,10 @@ impl Config {
 
         // Explicit directory parameters win over anything the config file may set.
         if let Some(p) = data_dir {
-            builder = builder
-                .set_override("data_dir", p.to_string_lossy().into_owned())?;
+            builder = builder.set_override("data_dir", p.to_string_lossy().into_owned())?;
         }
         if let Some(p) = config_dir {
-            builder = builder
-                .set_override("config_dir", p.to_string_lossy().into_owned())?;
+            builder = builder.set_override("config_dir", p.to_string_lossy().into_owned())?;
         }
 
         let mut cfg: Self = builder.build()?.try_deserialize()?;

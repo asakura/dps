@@ -1,18 +1,21 @@
 //! Application state and tab routing.
 
-use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{
-    Frame,
-    buffer::Buffer,
-    layout::{Constraint, Layout, Rect},
-    widgets::{Paragraph, Tabs, Widget},
-};
+use std::path::Path;
+
 use crate::{
     action::Action,
     components::{Component, KeyBinding, mod_tab::ModTab, ppo2_tab::PpO2Tab, which_key::WhichKey},
     config::{Config, KeyBindings},
     mode::Mode,
     theme::THEME,
+    tui::{Event, Tui},
+};
+use crossterm::event::{KeyCode, KeyEvent};
+use ratatui::{
+    Frame,
+    buffer::Buffer,
+    layout::{Constraint, Layout, Rect},
+    widgets::{Paragraph, Tabs, Widget},
 };
 
 static GLOBAL_BINDINGS: &[KeyBinding] = &[
@@ -39,6 +42,8 @@ pub struct App {
     keybindings: KeyBindings,
     key_buffer: Vec<KeyEvent>,
     mode: Mode,
+    tick_rate: f64,
+    frame_rate: f64,
 }
 
 enum MatchResult {
@@ -48,16 +53,45 @@ enum MatchResult {
     NoMatch,
 }
 
-
 impl Default for App {
     fn default() -> Self {
-        Self::new(Config::default())
+        Self::from_config(4.0, 60.0, Config::default())
     }
 }
 
 impl App {
-    /// Creates an `App` pre-loaded with all tabs in their default state.
-    pub fn new(config: Config) -> Self {
+    /// Creates an `App`, loading configuration from disk (falls back to
+    /// defaults on any error).
+    ///
+    /// `tick_rate` controls how often the internal timer fires (Hz);
+    /// `frame_rate` caps the render rate (Hz).  `config_dir` and `data_dir`
+    /// override the env-var / platform defaults when `Some`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> color_eyre::Result<()> {
+    /// use dps::app::App;
+    /// let _app = App::new(4.0, 60.0, None, None)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn new(
+        tick_rate: f64,
+        frame_rate: f64,
+        config_dir: Option<&Path>,
+        data_dir: Option<&Path>,
+    ) -> color_eyre::Result<Self> {
+        let config = Config::from_dirs(config_dir, data_dir).unwrap_or_default();
+        tracing::debug!(
+            data_dir = %config.config.data_dir.display(),
+            config_dir = %config.config.config_dir.display(),
+            "effective directories"
+        );
+        Ok(Self::from_config(tick_rate, frame_rate, config))
+    }
+
+    fn from_config(tick_rate: f64, frame_rate: f64, config: Config) -> Self {
         Self {
             tabs: vec![Box::new(ModTab::new()), Box::new(PpO2Tab::new())],
             active: 0,
@@ -65,7 +99,50 @@ impl App {
             keybindings: config.keybindings,
             key_buffer: Vec::new(),
             mode: Mode::Home,
+            tick_rate,
+            frame_rate,
         }
+    }
+
+    /// Runs the event loop until the user quits.
+    ///
+    /// Enters the terminal (raw mode + alternate screen), then drives
+    /// tick/render intervals and key input until [`Action::Quit`] is received
+    /// or the event stream closes. Terminal state is restored on return.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// use dps::app::App;
+    /// let mut app = App::new(4.0, 60.0, None, None)?;
+    /// app.run().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn run(&mut self) -> color_eyre::Result<()> {
+        let mut tui = Tui::new()?
+            .tick_rate(self.tick_rate)
+            .frame_rate(self.frame_rate);
+        tui.enter()?;
+
+        loop {
+            match tui.next_event().await {
+                Some(Event::Render) => {
+                    tui.draw(|f| self.render(f))?;
+                }
+                Some(Event::Key(key)) => {
+                    if matches!(self.handle_key(key), Action::Quit) {
+                        break;
+                    }
+                }
+                Some(Event::Quit) | None => break,
+                _ => {}
+            }
+        }
+
+        Ok(())
     }
 
     /// Checks `key_buffer` against the current mode's bindings.
@@ -233,14 +310,47 @@ mod tests {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
+    mod new {
+        use super::*;
+
+        #[test]
+        fn succeeds_with_valid_rates() {
+            assert!(App::new(4.0, 60.0, None, None).is_ok());
+        }
+
+        #[test]
+        fn stores_tick_and_frame_rate() {
+            let app = App::new(10.0, 30.0, None, None).unwrap();
+            assert_eq!(app.tick_rate, 10.0);
+            assert_eq!(app.frame_rate, 30.0);
+        }
+
+        #[test]
+        fn starts_on_first_tab() {
+            let app = App::new(4.0, 60.0, None, None).unwrap();
+            assert_eq!(app.active, 0);
+        }
+
+        #[test]
+        fn default_uses_fallback_rates() {
+            let app = App::default();
+            assert_eq!(app.tick_rate, 4.0);
+            assert_eq!(app.frame_rate, 60.0);
+        }
+    }
+
     use crate::components::test_utils::widget_text;
 
     mod handle_key {
         use super::*;
         use crate::action::Movement;
-        use crate::config::{AppConfig, Config, KeyBindings, Styles};
         use crate::config::keys::parse_key_sequence;
+        use crate::config::{AppConfig, Config, KeyBindings, Styles};
         use std::collections::HashMap;
+
+        fn with_config(config: Config) -> App {
+            App::from_config(4.0, 60.0, config)
+        }
 
         fn config_with_keybindings(bindings: &[(&str, Action)]) -> Config {
             let mut home_map = HashMap::new();
@@ -259,7 +369,7 @@ mod tests {
         #[test]
         fn q_quits() {
             assert!(matches!(
-                App::new(Config::default()).handle_key(press(KeyCode::Char('q'))),
+                with_config(Config::default()).handle_key(press(KeyCode::Char('q'))),
                 Action::Quit
             ));
         }
@@ -267,14 +377,14 @@ mod tests {
         #[test]
         fn esc_quits() {
             assert!(matches!(
-                App::new(Config::default()).handle_key(press(KeyCode::Esc)),
+                with_config(Config::default()).handle_key(press(KeyCode::Esc)),
                 Action::Quit
             ));
         }
 
         #[test]
         fn question_mark_toggles_which_key() {
-            let mut app = App::new(Config::default());
+            let mut app = with_config(Config::default());
             assert!(!app.show_which_key);
             app.handle_key(press(KeyCode::Char('?')));
             assert!(app.show_which_key);
@@ -284,7 +394,7 @@ mod tests {
 
         #[test]
         fn tab_cycles_active() {
-            let mut app = App::new(Config::default());
+            let mut app = with_config(Config::default());
             assert_eq!(app.active, 0);
             app.handle_key(press(KeyCode::Tab));
             assert_eq!(app.active, 1);
@@ -295,14 +405,17 @@ mod tests {
         #[test]
         fn other_keys_return_none() {
             assert!(matches!(
-                App::new(Config::default()).handle_key(press(KeyCode::Char('j'))),
+                with_config(Config::default()).handle_key(press(KeyCode::Char('j'))),
                 Action::None
             ));
         }
 
         #[test]
         fn chord_first_key_is_prefix() {
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
+            let mut app = with_config(config_with_keybindings(&[(
+                "gg",
+                Action::Move(Movement::GotoTop),
+            )]));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('g'))),
                 Action::None
@@ -312,7 +425,10 @@ mod tests {
         #[test]
         fn chord_completes_on_second_key() {
             // Action is dispatched to the component; caller sees None.
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
+            let mut app = with_config(config_with_keybindings(&[(
+                "gg",
+                Action::Move(Movement::GotoTop),
+            )]));
             app.handle_key(press(KeyCode::Char('g')));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('g'))),
@@ -324,7 +440,7 @@ mod tests {
         fn chord_broken_key_retried_as_new_binding() {
             // "g" is a prefix of "gg"; when "j" breaks the chord it is retried
             // as a standalone key, matched as Down, dispatched, and None returned.
-            let mut app = App::new(config_with_keybindings(&[
+            let mut app = with_config(config_with_keybindings(&[
                 ("gg", Action::Move(Movement::GotoTop)),
                 ("j", Action::Move(Movement::Down)),
             ]));
@@ -339,7 +455,10 @@ mod tests {
         fn chord_broken_unbound_key_falls_to_global_fallback() {
             // "g" is a prefix of "gg"; "q" breaks the chord and has no
             // configured binding, so the hardcoded fallback fires: q → Quit.
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
+            let mut app = with_config(config_with_keybindings(&[(
+                "gg",
+                Action::Move(Movement::GotoTop),
+            )]));
             app.handle_key(press(KeyCode::Char('g')));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('q'))),
@@ -350,7 +469,10 @@ mod tests {
         #[test]
         fn exact_match_clears_buffer_for_next_chord() {
             // After a chord fires the buffer is cleared; the next key starts fresh.
-            let mut app = App::new(config_with_keybindings(&[("gg", Action::Move(Movement::GotoTop))]));
+            let mut app = with_config(config_with_keybindings(&[(
+                "gg",
+                Action::Move(Movement::GotoTop),
+            )]));
             app.handle_key(press(KeyCode::Char('g')));
             app.handle_key(press(KeyCode::Char('g'))); // exact → GotoTop, buffer cleared
             // 'g' is a prefix again — should return None, not misfire.
@@ -362,9 +484,18 @@ mod tests {
 
         #[test]
         fn three_key_chord_accumulates_and_fires() {
-            let mut app = App::new(config_with_keybindings(&[("abc", Action::Move(Movement::GotoTop))]));
-            assert!(matches!(app.handle_key(press(KeyCode::Char('a'))), Action::None));
-            assert!(matches!(app.handle_key(press(KeyCode::Char('b'))), Action::None));
+            let mut app = with_config(config_with_keybindings(&[(
+                "abc",
+                Action::Move(Movement::GotoTop),
+            )]));
+            assert!(matches!(
+                app.handle_key(press(KeyCode::Char('a'))),
+                Action::None
+            ));
+            assert!(matches!(
+                app.handle_key(press(KeyCode::Char('b'))),
+                Action::None
+            ));
             // Action dispatched to component; caller sees None.
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('c'))),
@@ -377,7 +508,7 @@ mod tests {
             // "gg" and "jk" are bound. Pressing g (prefix) then j breaks gg;
             // j is retried alone and is a prefix of jk, so None is returned and
             // the buffer still holds j. Pressing k then completes jk.
-            let mut app = App::new(config_with_keybindings(&[
+            let mut app = with_config(config_with_keybindings(&[
                 ("gg", Action::Move(Movement::GotoTop)),
                 ("jk", Action::Move(Movement::ScrollUp)),
             ]));
@@ -396,7 +527,10 @@ mod tests {
         fn bound_movement_action_is_dispatched_and_returns_none() {
             // A configured binding resolves to Action::Move(Down); App dispatches it
             // to the component and returns None — the caller never sees the movement.
-            let mut app = App::new(config_with_keybindings(&[("j", Action::Move(Movement::Down))]));
+            let mut app = with_config(config_with_keybindings(&[(
+                "j",
+                Action::Move(Movement::Down),
+            )]));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('j'))),
                 Action::None
@@ -406,7 +540,7 @@ mod tests {
         #[test]
         fn quit_action_propagates_to_caller() {
             // Quit must still reach the event loop even when routed through dispatch.
-            let mut app = App::new(config_with_keybindings(&[("q", Action::Quit)]));
+            let mut app = with_config(config_with_keybindings(&[("q", Action::Quit)]));
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('q'))),
                 Action::Quit

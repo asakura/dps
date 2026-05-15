@@ -19,12 +19,13 @@ pub fn init() -> color_eyre::Result<()> {
     eyre_hook.install()?;
 
     std::panic::set_hook(Box::new(move |panic_info| {
-        // this code needed for later
-        // if let Ok(mut t) = crate::tui::Tui::new() {
-        //     if let Err(r) = t.exit() {
-        //         error!("Unable to exit Terminal: {:?}", r);
-        //     }
-        // }
+        // process::exit bypasses Drop, so restore the terminal explicitly.
+        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = crossterm::execute!(
+            std::io::stderr(),
+            crossterm::terminal::LeaveAlternateScreen,
+            crossterm::cursor::Show,
+        );
 
         #[cfg(not(debug_assertions))]
         {

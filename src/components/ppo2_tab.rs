@@ -439,10 +439,7 @@ mod tests {
         fn scroll_down_moves_by_delta() {
             let mut tab = PpO2Tab::new();
             tab.handle_action(Action::Move(Movement::ScrollDown));
-            assert_eq!(
-                tab.table_state.selected().unwrap(),
-                SCROLL_DELTA as usize,
-            );
+            assert_eq!(tab.table_state.selected().unwrap(), SCROLL_DELTA as usize,);
         }
 
         #[test]
@@ -460,10 +457,7 @@ mod tests {
         fn page_down_moves_by_page_delta() {
             let mut tab = PpO2Tab::new();
             tab.handle_action(Action::Move(Movement::PageDown));
-            assert_eq!(
-                tab.table_state.selected().unwrap(),
-                PAGE_DELTA as usize,
-            );
+            assert_eq!(tab.table_state.selected().unwrap(), PAGE_DELTA as usize,);
         }
 
         #[test]

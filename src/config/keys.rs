@@ -495,8 +495,14 @@ mod tests {
     fn two_consecutive_angle_bracket_specs() {
         let seq = parse_key_sequence("<C-w><C-j>").unwrap();
         assert_eq!(seq.len(), 2);
-        assert_eq!(seq[0], KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL));
-        assert_eq!(seq[1], KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL));
+        assert_eq!(
+            seq[0],
+            KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL)
+        );
+        assert_eq!(
+            seq[1],
+            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL)
+        );
     }
 
     #[test]
@@ -543,7 +549,10 @@ mod tests {
     fn bare_and_bracketed_mixed_sequence() {
         let seq = parse_key_sequence("j<Down>").unwrap();
         assert_eq!(seq.len(), 2);
-        assert_eq!(seq[0], KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE));
+        assert_eq!(
+            seq[0],
+            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)
+        );
         assert_eq!(seq[1], KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
     }
 }
