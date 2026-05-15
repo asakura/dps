@@ -2,20 +2,29 @@
 
 use std::{path::PathBuf, sync::OnceLock};
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 
 use crate::config::{get_config_dir, get_data_dir};
+
+fn parse_positive_hz(s: &str) -> Result<f64, String> {
+    let v: f64 = s.parse().map_err(|_| format!("`{s}` is not a valid number"))?;
+    if v > 0.0 && v.is_finite() {
+        Ok(v)
+    } else {
+        Err(format!("`{s}` must be a positive finite number"))
+    }
+}
 
 /// Command-line arguments for `dps`.
 #[derive(Parser, Debug)]
 #[command(author, version = version(), about)]
 pub struct Cli {
     /// Input-polling rate in Hz — how often the event loop checks for key presses.
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 4.0)]
+    #[arg(short, long, value_name = "FLOAT", default_value_t = 4.0, value_parser = parse_positive_hz)]
     pub tick_rate: f64,
 
     /// Render rate in Hz — maximum number of frames drawn per second.
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 60.0)]
+    #[arg(short, long, value_name = "FLOAT", default_value_t = 60.0, value_parser = parse_positive_hz)]
     pub frame_rate: f64,
 
     /// Override the data directory (logs, state). Defaults to the platform data dir
@@ -27,6 +36,22 @@ pub struct Cli {
     /// or the `DPS_CONFIG` environment variable.
     #[arg(long, value_name = "PATH")]
     pub config_dir: Option<PathBuf>,
+}
+
+impl Cli {
+    /// Returns a clap error if `frame_rate` is less than `tick_rate`.
+    pub fn validate(&self) -> Result<(), clap::Error> {
+        if self.frame_rate < self.tick_rate {
+            return Err(Self::command().error(
+                clap::error::ErrorKind::ArgumentConflict,
+                format!(
+                    "--frame-rate ({}) must be >= --tick-rate ({})",
+                    self.frame_rate, self.tick_rate
+                ),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Builds the version string shown by `--version`.
@@ -102,6 +127,38 @@ mod tests {
             let cli = Cli::try_parse_from(["dps", "-t", "8.0", "-f", "24.0"]).unwrap();
             assert_eq!(cli.tick_rate, 8.0);
             assert_eq!(cli.frame_rate, 24.0);
+        }
+
+        #[test]
+        fn frame_rate_below_tick_rate_is_rejected() {
+            let cli = Cli::try_parse_from(["dps", "--tick-rate", "60", "--frame-rate", "4"]).unwrap();
+            assert!(cli.validate().is_err());
+        }
+
+        #[test]
+        fn frame_rate_equal_to_tick_rate_is_accepted() {
+            let cli = Cli::try_parse_from(["dps", "--tick-rate", "30", "--frame-rate", "30"]).unwrap();
+            assert!(cli.validate().is_ok());
+        }
+
+        #[test]
+        fn zero_tick_rate_is_rejected() {
+            assert!(Cli::try_parse_from(["dps", "--tick-rate", "0"]).is_err());
+        }
+
+        #[test]
+        fn negative_tick_rate_is_rejected() {
+            assert!(Cli::try_parse_from(["dps", "--tick-rate", "-1"]).is_err());
+        }
+
+        #[test]
+        fn zero_frame_rate_is_rejected() {
+            assert!(Cli::try_parse_from(["dps", "--frame-rate", "0"]).is_err());
+        }
+
+        #[test]
+        fn negative_frame_rate_is_rejected() {
+            assert!(Cli::try_parse_from(["dps", "--frame-rate", "-5"]).is_err());
         }
     }
 
