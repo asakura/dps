@@ -4,7 +4,7 @@ pub mod mod_tab;
 pub mod ppo2_tab;
 pub mod which_key;
 
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui::{buffer::Buffer, layout::Rect, widgets::TableState};
 
 use crate::action::Action;
 
@@ -18,6 +18,14 @@ pub struct KeyBinding {
 
 pub const SCROLL_DELTA: isize = 10;
 pub const PAGE_DELTA: isize = 20;
+
+pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
+    let next = state
+        .selected()
+        .map(|i| (i as isize + delta).clamp(0, max as isize) as usize)
+        .unwrap_or(0);
+    state.select(Some(next));
+}
 
 /// Interface that every screen must implement to participate in the event loop
 /// and render pipeline.

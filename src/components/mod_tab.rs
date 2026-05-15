@@ -89,13 +89,8 @@ impl ModTab {
     }
 
     fn move_row(&mut self, delta: isize) {
-        let last = self.mixes.len().saturating_sub(1) as isize;
-        let next = self
-            .table_state
-            .selected()
-            .map(|i| (i as isize + delta).clamp(0, last) as usize)
-            .unwrap_or(0);
-        self.table_state.select(Some(next));
+        let max = self.mixes.len().saturating_sub(1);
+        super::move_row(&mut self.table_state, delta, max);
     }
 
     fn build_rows(&self, cols: &[Bar]) -> Vec<Row<'static>> {

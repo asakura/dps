@@ -79,12 +79,7 @@ impl PpO2Tab {
     }
 
     fn move_row(&mut self, delta: isize) {
-        let next = self
-            .table_state
-            .selected()
-            .map(|i| (i as isize + delta).clamp(0, PPO2_TABLE_DEPTH_MAX as isize) as usize)
-            .unwrap_or(0);
-        self.table_state.select(Some(next));
+        super::move_row(&mut self.table_state, delta, PPO2_TABLE_DEPTH_MAX);
     }
 
     fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
