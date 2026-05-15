@@ -332,6 +332,7 @@ mod tests {
     mod action_dispatch {
         use super::*;
         use crate::action::Action;
+        use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[test]
         fn down_advances_depth() {
@@ -378,7 +379,7 @@ mod tests {
             tab.handle_action(Action::ScrollDown);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                super::SCROLL_DELTA as usize,
+                SCROLL_DELTA as usize,
             );
         }
 
@@ -389,7 +390,7 @@ mod tests {
             tab.handle_action(Action::ScrollUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                PPO2_TABLE_DEPTH_MAX - super::SCROLL_DELTA as usize,
+                PPO2_TABLE_DEPTH_MAX - SCROLL_DELTA as usize,
             );
         }
 
@@ -399,7 +400,7 @@ mod tests {
             tab.handle_action(Action::PageDown);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                super::PAGE_DELTA as usize,
+                PAGE_DELTA as usize,
             );
         }
 
@@ -410,7 +411,7 @@ mod tests {
             tab.handle_action(Action::PageUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                PPO2_TABLE_DEPTH_MAX - super::PAGE_DELTA as usize,
+                PPO2_TABLE_DEPTH_MAX - PAGE_DELTA as usize,
             );
         }
 

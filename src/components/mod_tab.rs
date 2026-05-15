@@ -342,6 +342,7 @@ mod tests {
     mod action_dispatch {
         use super::*;
         use crate::action::Action;
+        use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[test]
         fn down_advances_row() {
@@ -403,7 +404,7 @@ mod tests {
                     .iter()
                     .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
                     .unwrap()
-                    + super::SCROLL_DELTA as usize,
+                    + SCROLL_DELTA as usize,
             );
         }
 
@@ -414,7 +415,7 @@ mod tests {
             tab.handle_action(Action::ScrollUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                tab.mixes.len() - 1 - super::SCROLL_DELTA as usize,
+                tab.mixes.len() - 1 - SCROLL_DELTA as usize,
             );
         }
 
@@ -425,7 +426,7 @@ mod tests {
             tab.handle_action(Action::PageDown);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                start + super::PAGE_DELTA as usize,
+                start + PAGE_DELTA as usize,
             );
         }
 
@@ -436,7 +437,7 @@ mod tests {
             tab.handle_action(Action::PageUp);
             assert_eq!(
                 tab.table_state.selected().unwrap(),
-                tab.mixes.len() - 1 - super::PAGE_DELTA as usize,
+                tab.mixes.len() - 1 - PAGE_DELTA as usize,
             );
         }
 
