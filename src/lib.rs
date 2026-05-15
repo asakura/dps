@@ -9,5 +9,6 @@ pub mod gas;
 pub mod logging;
 pub mod mode;
 pub mod theme;
+pub mod tui;
 pub mod ui;
 pub mod units;
