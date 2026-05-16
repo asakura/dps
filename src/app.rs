@@ -36,7 +36,7 @@ static GLOBAL_BINDINGS: &[KeyBinding] = &[
 /// Top-level coordinator: owns the tab list, tracks the active tab, and routes
 /// key events and render calls to the appropriate component.
 pub struct App {
-    tabs: Vec<Box<dyn Component>>,
+    tabs: Vec<Box<dyn Component + Send>>,
     active: usize,
     show_which_key: bool,
     keybindings: KeyBindings,
