@@ -46,7 +46,7 @@ impl Ean {
     /// ```
     #[must_use]
     pub fn o2_percent(self) -> u8 {
-        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, reason = "fraction is in [0.10, 1.0] so rounding gives a value in [10, 100] which fits u8")]
         let pct = (self.fraction * 100.0).round() as u8;
         pct
     }
