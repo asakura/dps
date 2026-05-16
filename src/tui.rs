@@ -297,6 +297,11 @@ impl Tui {
     /// Blocks the calling thread via [`tokio::task::block_in_place`] for up to
     /// ~50 ms; aborts the task if it hasn't exited by then.  Requires the
     /// multi-threaded Tokio runtime.
+    ///
+    /// # Errors
+    ///
+    /// Currently always returns `Ok(())`; the `Result` return type is kept for
+    /// forward-compatibility should cancellation ever become fallible.
     pub fn stop(&self) -> color_eyre::Result<()> {
         const TASK_ABORT_AFTER_MS: u32 = 50;
         const TASK_GIVE_UP_AFTER_MS: u32 = 100;
