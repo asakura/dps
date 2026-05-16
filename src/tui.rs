@@ -230,14 +230,14 @@ impl Tui {
         tick_rate: f64,
         frame_rate: f64,
     ) {
-        let mut event_stream = EventStream::new();
-        let mut tick_interval = interval(Duration::from_secs_f64(1.0 / tick_rate));
-        let mut render_interval = interval(Duration::from_secs_f64(1.0 / frame_rate));
-
         // if this fails, then it's likely a bug in the calling code
         event_tx
             .send(Event::Init)
             .expect("failed to send init event");
+
+        let mut event_stream = EventStream::new();
+        let mut tick_interval = interval(Duration::from_secs_f64(1.0 / tick_rate));
+        let mut render_interval = interval(Duration::from_secs_f64(1.0 / frame_rate));
 
         loop {
             let event = tokio::select! {
@@ -261,7 +261,10 @@ impl Tui {
                         warn!("crossterm event error: {e}");
                         Event::Error
                     }
-                    None => break,
+                    None => {
+                        let _ = event_tx.send(Event::Closed);
+                        break;
+                    }
                 },
             };
 
@@ -571,6 +574,76 @@ mod tests {
             tui.start();
             assert!(tui.stop().is_ok());
             assert!(tui.stop().is_ok());
+        }
+    }
+
+    mod start {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn sends_init_event() {
+            let mut tui = Tui::default();
+            tui.start();
+            let event = tokio::time::timeout(Duration::from_millis(500), tui.next_event())
+                .await
+                .expect("timed out waiting for Init")
+                .expect("channel closed unexpectedly");
+            assert!(matches!(event, Event::Init));
+            tui.stop().unwrap();
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn injected_events_are_received() {
+            let mut tui = Tui::default();
+            tui.start();
+            tui.event_tx.send(Event::Quit).unwrap();
+            let found = tokio::time::timeout(Duration::from_millis(500), async {
+                loop {
+                    match tui.next_event().await {
+                        Some(Event::Quit) => break true,
+                        None => break false,
+                        _ => continue,
+                    }
+                }
+            })
+            .await
+            .expect("timed out waiting for injected event");
+            assert!(found);
+            tui.stop().unwrap();
+        }
+    }
+
+    mod cancel {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn task_finishes_after_cancel() {
+            let mut tui = Tui::default();
+            tui.start();
+            tui.cancel();
+            assert!(tui.stop().is_ok());
+            assert!(tui.task.is_finished());
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn does_not_emit_closed() {
+            let mut tui = Tui::default();
+            tui.start();
+            // drain Init
+            let _ = tokio::time::timeout(Duration::from_millis(100), tui.next_event()).await;
+            tui.cancel();
+            tui.stop().unwrap();
+            // after cancellation the channel still has senders alive (self.event_tx),
+            // so we just verify no Closed event was queued by the loop
+            let mut saw_closed = false;
+            while let Ok(Some(ev)) =
+                tokio::time::timeout(Duration::from_millis(50), tui.next_event()).await
+            {
+                if matches!(ev, Event::Closed) {
+                    saw_closed = true;
+                }
+            }
+            assert!(!saw_closed);
         }
     }
 
