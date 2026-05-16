@@ -71,11 +71,13 @@ impl ModTab {
         }
     }
 
+    #[expect(clippy::cast_precision_loss, reason = "ppo2_idx is bounded by PPO2_MAX_IDX = 8")]
     fn ppo2(&self) -> Bar {
         Bar::new(PPO2_MIN + self.ppo2_idx as f64 * PPO2_STEP)
     }
 
     /// ppO₂ column values for a sliding window of `window_size` columns centred on the selected index.
+    #[expect(clippy::cast_precision_loss, reason = "start + i is bounded by PPO2_COUNT = 9")]
     fn visible_columns(&self, window_size: usize) -> Vec<Bar> {
         let start = window_start(self.ppo2_idx, PPO2_COUNT, window_size);
         let count = window_size.min(PPO2_COUNT);
