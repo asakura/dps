@@ -20,10 +20,7 @@ pub const SCROLL_DELTA: isize = 10;
 pub const PAGE_DELTA: isize = 20;
 
 pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
-    let next = state
-        .selected()
-        .map(|i| (i as isize + delta).clamp(0, max as isize) as usize)
-        .unwrap_or(0);
+    let next = state.selected().map_or(0, |i| i.saturating_add_signed(delta).min(max));
     state.select(Some(next));
 }
 

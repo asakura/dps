@@ -277,7 +277,7 @@ impl Tui {
 
         loop {
             let event = tokio::select! {
-                _ = cancellation_token.cancelled() => {
+                () = cancellation_token.cancelled() => {
                     break;
                 }
                 _ = tick_interval.tick() => Event::Tick,
@@ -291,7 +291,7 @@ impl Tui {
                         CrosstermEvent::FocusLost => Event::FocusLost,
                         CrosstermEvent::FocusGained => Event::FocusGained,
                         CrosstermEvent::Paste(s) => Event::Paste(s),
-                        _ => continue,
+                        CrosstermEvent::Key(_) => continue,
                     }
                     Some(Err(e)) => {
                         warn!("crossterm event error: {e}");
@@ -330,14 +330,12 @@ impl Tui {
 
         tokio::task::block_in_place(|| {
             let mut counter = 0;
-            while self.task.as_ref().map_or(false, |t| !t.is_finished()) {
+            while self.task.as_ref().is_some_and(|t| !t.is_finished()) {
                 std::thread::sleep(Duration::from_millis(1));
                 counter += 1;
 
-                if counter > TASK_ABORT_AFTER_MS {
-                    if let Some(t) = &self.task {
-                        t.abort();
-                    }
+                if counter > TASK_ABORT_AFTER_MS && let Some(t) = &self.task {
+                    t.abort();
                 }
 
                 if counter > TASK_GIVE_UP_AFTER_MS {

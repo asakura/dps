@@ -113,12 +113,8 @@ impl Config {
         let default_config: Config =
             json5::from_str(CONFIG).map_err(|e| config::ConfigError::Message(e.to_string()))?;
 
-        let effective_data_dir = data_dir
-            .map(Path::to_path_buf)
-            .unwrap_or_else(get_data_dir);
-        let effective_config_dir = config_dir
-            .map(Path::to_path_buf)
-            .unwrap_or_else(get_config_dir);
+        let effective_data_dir = data_dir.map_or_else(get_data_dir, Path::to_path_buf);
+        let effective_config_dir = config_dir.map_or_else(get_config_dir, Path::to_path_buf);
 
         let mut builder = config::Config::builder()
             .set_default(
@@ -161,9 +157,9 @@ impl Config {
 
         let mut cfg: Self = builder.build()?.try_deserialize()?;
 
-        for (mode, default_bindings) in default_config.keybindings.0.iter() {
+        for (mode, default_bindings) in &default_config.keybindings.0 {
             let user_bindings = cfg.keybindings.0.entry(*mode).or_default();
-            for (key, cmd) in default_bindings.iter() {
+            for (key, cmd) in default_bindings {
                 user_bindings
                     .entry(key.clone())
                     .or_insert_with(|| cmd.clone());

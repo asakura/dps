@@ -34,7 +34,7 @@ impl Ean {
             return Err(InvalidO2Percent(o2_pct));
         }
         Ok(Self {
-            fraction: o2_pct as f64 / 100.0,
+            fraction: f64::from(o2_pct) / 100.0,
         })
     }
 
@@ -46,7 +46,9 @@ impl Ean {
     /// ```
     #[must_use]
     pub fn o2_percent(self) -> u8 {
-        (self.fraction * 100.0).round() as u8
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let pct = (self.fraction * 100.0).round() as u8;
+        pct
     }
 
     /// Returns the O₂ fraction as a decimal in [0.10, 1.0].

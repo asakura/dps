@@ -87,7 +87,7 @@ impl Widget for WhichKey {
         let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
         let cols = ((area.width + COL_GAP) / (min_col_w + COL_GAP)).max(1) as usize;
         let rows = n.div_ceil(cols);
-        let popup_h = (rows as u16).min(area.height);
+        let popup_h = u16::try_from(rows).unwrap_or(u16::MAX).min(area.height);
         let popup = bottom_rect(popup_h, area);
 
         Clear.render(popup, buf);
