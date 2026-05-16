@@ -53,7 +53,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKe
 /// ```
 pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
     if raw.is_empty() {
-        return Err("Empty key sequence".to_string());
+        return Err("Empty key sequence".to_owned());
     }
 
     let mut keys = Vec::new();
