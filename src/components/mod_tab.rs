@@ -73,7 +73,7 @@ impl ModTab {
     }
 
     #[expect(clippy::cast_precision_loss, reason = "ppo2_idx is bounded by PPO2_MAX_IDX = 8")]
-    fn ppo2(&self) -> Bar {
+    const fn ppo2(&self) -> Bar {
         Bar::new((self.ppo2_idx as f64).mul_add(PPO2_STEP, PPO2_MIN))
     }
 
