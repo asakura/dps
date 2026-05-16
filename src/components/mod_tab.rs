@@ -172,7 +172,7 @@ impl From<ModRow<'_>> for Row<'static> {
         ];
         for &col in r.cols {
             let depth = r.mix.mod_at(col);
-            cells.push(Cell::from(format!("{}", depth)).style(mod_color(depth.value())));
+            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth.value())));
         }
         Row::new(cells)
     }
@@ -221,7 +221,7 @@ impl Widget for ModTabStatus<'_> {
         match self.0.selection {
             Some((mix, ppo2)) => {
                 let depth = mix.mod_at(ppo2);
-                let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
+                let name = mix.label().map(|s| format!("{s} ")).unwrap_or_default();
                 let text = format!(
                     " \u{25c6} {}({}%)  MOD {}  @ ppO\u{2082} {}",
                     name,

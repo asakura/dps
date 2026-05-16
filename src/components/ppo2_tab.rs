@@ -211,7 +211,7 @@ impl Widget for PpO2TabStatus<'_> {
         match self.0.selection {
             Some((depth, mix)) => {
                 let ppo2 = mix.ppo2_at(depth);
-                let name = mix.label().map(|s| format!("{} ", s)).unwrap_or_default();
+                let name = mix.label().map(|s| format!("{s} ")).unwrap_or_default();
                 let text = format!(
                     " \u{25c6} {}({}%)  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
                     name,
