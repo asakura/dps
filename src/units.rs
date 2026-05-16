@@ -19,6 +19,7 @@ macro_rules! unit_newtype {
                 self.0
             }
             /// Returns the greater of two values.
+            #[must_use]
             pub fn max(self, other: Self) -> Self {
                 Self(self.0.max(other.0))
             }
