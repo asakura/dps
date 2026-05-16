@@ -95,7 +95,7 @@ use ratatui::style::{Color, Modifier, Style};
 ///
 /// The first 14 fields (`rosewater` → `lavender`) are accent colours (`"accent": true`
 /// in palette.json). The remaining 12 (`text` → `crust`) are non-accent neutrals.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Theme {
     // ── Accents (accent: true) ───────────────────────────────────────────────
     /// Catppuccin rosewater accent colour.

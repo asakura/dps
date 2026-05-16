@@ -55,7 +55,7 @@ pub struct Config {
 pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);
 
 /// Placeholder for future style configuration.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Styles();
 
 /// Upper-cased crate name, used as the prefix for environment variables

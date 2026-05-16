@@ -32,7 +32,7 @@ const PPO2_CAUTION_FROM: f64 = 1.4;
 const PPO2_DANGER_FROM: f64 = 1.6;
 
 /// ppO₂-by-depth table: partial pressure of oxygen for each mix at each depth.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct PpO2Tab {
     table_state: TableState,
     mix_idx: usize,
