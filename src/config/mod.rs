@@ -105,8 +105,8 @@ impl Config {
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
     ) -> color_eyre::Result<Self, config::ConfigError> {
-        let default_config: Config = json5::from_str(CONFIG)
-            .map_err(|e| config::ConfigError::Message(e.to_string()))?;
+        let default_config: Config =
+            json5::from_str(CONFIG).map_err(|e| config::ConfigError::Message(e.to_string()))?;
 
         let effective_data_dir = data_dir
             .map(|p| p.to_path_buf())
@@ -159,7 +159,9 @@ impl Config {
         for (mode, default_bindings) in default_config.keybindings.0.iter() {
             let user_bindings = cfg.keybindings.0.entry(*mode).or_default();
             for (key, cmd) in default_bindings.iter() {
-                user_bindings.entry(key.clone()).or_insert_with(|| cmd.clone());
+                user_bindings
+                    .entry(key.clone())
+                    .or_insert_with(|| cmd.clone());
             }
         }
 

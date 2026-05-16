@@ -7,7 +7,9 @@ use clap::{CommandFactory, Parser};
 use crate::config::{get_config_dir, get_data_dir};
 
 fn parse_positive_hz(s: &str) -> Result<f64, String> {
-    let v: f64 = s.parse().map_err(|_| format!("`{s}` is not a valid number"))?;
+    let v: f64 = s
+        .parse()
+        .map_err(|_| format!("`{s}` is not a valid number"))?;
     if v > 0.0 && v.is_finite() {
         Ok(v)
     } else {
@@ -131,13 +133,15 @@ mod tests {
 
         #[test]
         fn frame_rate_below_tick_rate_is_rejected() {
-            let cli = Cli::try_parse_from(["dps", "--tick-rate", "60", "--frame-rate", "4"]).unwrap();
+            let cli =
+                Cli::try_parse_from(["dps", "--tick-rate", "60", "--frame-rate", "4"]).unwrap();
             assert!(cli.validate().is_err());
         }
 
         #[test]
         fn frame_rate_equal_to_tick_rate_is_accepted() {
-            let cli = Cli::try_parse_from(["dps", "--tick-rate", "30", "--frame-rate", "30"]).unwrap();
+            let cli =
+                Cli::try_parse_from(["dps", "--tick-rate", "30", "--frame-rate", "30"]).unwrap();
             assert!(cli.validate().is_ok());
         }
 
