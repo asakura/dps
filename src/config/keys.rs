@@ -333,10 +333,10 @@ fn parse_key_code_with_modifiers(
         "isolevel3shift" => KeyCode::Modifier(ModifierKeyCode::IsoLevel3Shift),
         "isolevel5shift" => KeyCode::Modifier(ModifierKeyCode::IsoLevel5Shift),
         k if k.starts_with('f') && k[1..].parse::<u8>().is_ok_and(|n| n >= 1) => {
-            KeyCode::F(k[1..].parse().unwrap())
+            KeyCode::F(k[1..].parse().unwrap_or_else(|_| unreachable!("guard ensures parse succeeds")))
         }
         c if c.chars().count() == 1 => {
-            let mut c = c.chars().next().unwrap();
+            let mut c = c.chars().next().unwrap_or_else(|| unreachable!("guard ensures exactly one char"));
             if modifiers.contains(KeyModifiers::SHIFT) {
                 c = c.to_ascii_uppercase();
             }
