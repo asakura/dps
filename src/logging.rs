@@ -5,8 +5,10 @@ use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::Subs
 
 use crate::config;
 
+/// Environment variable name used to set the log level (e.g. `DPS_LOG_LEVEL`).
 pub static LOG_ENV: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| format!("{}_LOG_LEVEL", *config::PROJECT_NAME));
+/// Log file name, derived from the crate package name (e.g. `dps.log`).
 pub static LOG_FILE: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
 

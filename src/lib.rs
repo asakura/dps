@@ -7,8 +7,10 @@ pub mod config;
 pub mod errors;
 pub mod gas;
 pub mod logging;
+/// Application interaction modes.
 pub mod mode;
 pub mod theme;
+/// Terminal setup, event loop, and input event types.
 pub mod tui;
 pub mod ui;
 pub mod units;

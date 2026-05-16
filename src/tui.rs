@@ -49,11 +49,17 @@ pub enum Event {
     Tick,
     /// Periodic render request at the configured `frame_rate`.
     Render,
+    /// The terminal window gained keyboard focus.
     FocusGained,
+    /// The terminal window lost keyboard focus.
     FocusLost,
+    /// Bracketed paste content received from the terminal.
     Paste(String),
+    /// A keyboard event.
     Key(KeyEvent),
+    /// A mouse event.
     Mouse(MouseEvent),
+    /// The terminal was resized to the given (columns, rows).
     Resize(u16, u16),
 }
 

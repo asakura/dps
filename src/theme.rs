@@ -98,35 +98,61 @@ use ratatui::style::{Color, Modifier, Style};
 #[derive(Debug)]
 pub struct Theme {
     // ── Accents (accent: true) ───────────────────────────────────────────────
+    /// Catppuccin rosewater accent colour.
     pub rosewater: Color,
+    /// Catppuccin flamingo accent colour.
     pub flamingo: Color,
+    /// Catppuccin pink accent colour.
     pub pink: Color,
+    /// Catppuccin mauve accent colour.
     pub mauve: Color,
+    /// Catppuccin red accent colour.
     pub red: Color,
+    /// Catppuccin maroon accent colour.
     pub maroon: Color,
+    /// Catppuccin peach accent colour.
     pub peach: Color,
+    /// Catppuccin yellow accent colour.
     pub yellow: Color,
+    /// Catppuccin green accent colour.
     pub green: Color,
+    /// Catppuccin teal accent colour.
     pub teal: Color,
+    /// Catppuccin sky accent colour.
     pub sky: Color,
+    /// Catppuccin sapphire accent colour.
     pub sapphire: Color,
+    /// Catppuccin blue accent colour.
     pub blue: Color,
+    /// Catppuccin lavender accent colour.
     pub lavender: Color,
     // ── Text ────────────────────────────────────────────────────────────────
+    /// Primary text colour.
     pub text: Color,
+    /// Secondary text colour (slightly dimmed).
     pub subtext1: Color,
+    /// Tertiary text colour (more dimmed).
     pub subtext0: Color,
     // ── Overlay ─────────────────────────────────────────────────────────────
+    /// Overlay colour level 2 (brightest).
     pub overlay2: Color,
+    /// Overlay colour level 1.
     pub overlay1: Color,
+    /// Overlay colour level 0 (darkest).
     pub overlay0: Color,
     // ── Surface ─────────────────────────────────────────────────────────────
+    /// Surface colour level 2 (lightest surface).
     pub surface2: Color,
+    /// Surface colour level 1.
     pub surface1: Color,
+    /// Surface colour level 0 (darkest surface).
     pub surface0: Color,
     // ── Base ────────────────────────────────────────────────────────────────
+    /// Base background colour.
     pub base: Color,
+    /// Darker background layer (beneath base).
     pub mantle: Color,
+    /// Darkest background layer (beneath mantle).
     pub crust: Color,
 }
 

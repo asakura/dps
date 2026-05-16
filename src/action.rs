@@ -8,15 +8,25 @@ use strum::{Display, EnumString};
 /// Directional and positional navigation commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, EnumString)]
 pub enum Movement {
+    /// Move the cursor or selection up by one row.
     Up,
+    /// Move the cursor or selection down by one row.
     Down,
+    /// Move the cursor or selection left.
     Left,
+    /// Move the cursor or selection right.
     Right,
+    /// Scroll up by [`crate::components::SCROLL_DELTA`] rows.
     ScrollUp,
+    /// Scroll down by [`crate::components::SCROLL_DELTA`] rows.
     ScrollDown,
+    /// Jump up by [`crate::components::PAGE_DELTA`] rows.
     PageUp,
+    /// Jump down by [`crate::components::PAGE_DELTA`] rows.
     PageDown,
+    /// Jump to the first row.
     GotoTop,
+    /// Jump to the last row.
     GotoBottom,
 }
 
@@ -33,6 +43,7 @@ pub enum Action {
     None,
     /// A directional or positional navigation command.
     Move(Movement),
+    /// Confirm or activate the highlighted item.
     Select,
 }
 

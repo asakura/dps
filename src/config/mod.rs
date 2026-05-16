@@ -24,8 +24,10 @@ const CONFIG: &str = include_str!("../../.config/config.json5");
 /// platform defaults via the `DPS_DATA` / `DPS_CONFIG` environment variables.
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct AppConfig {
+    /// Directory used for persistent data files such as logs.
     #[serde(default)]
     pub data_dir: PathBuf,
+    /// Directory containing user configuration files.
     #[serde(default)]
     pub config_dir: PathBuf,
 }
@@ -34,10 +36,13 @@ pub struct AppConfig {
 /// file and merged with the embedded defaults.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct Config {
+    /// Resolved data and config directory paths.
     #[serde(default, flatten)]
     pub config: AppConfig,
+    /// Key-sequence–to–action mappings loaded from the config file.
     #[serde(default)]
     pub keybindings: KeyBindings,
+    /// Reserved for future per-component style overrides.
     #[serde(default)]
     pub styles: Styles,
 }

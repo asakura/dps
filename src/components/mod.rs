@@ -17,9 +17,12 @@ pub struct KeyBinding {
     pub desc: &'static str,
 }
 
+/// Row delta applied by scroll-up/scroll-down navigation.
 pub const SCROLL_DELTA: isize = 10;
+/// Row delta applied by page-up/page-down navigation.
 pub const PAGE_DELTA: isize = 20;
 
+/// Moves the selected row by `delta`, clamping the result to `[0, max]`.
 pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
     let next = state.selected().map_or(0, |i| i.saturating_add_signed(delta).min(max));
     state.select(Some(next));
