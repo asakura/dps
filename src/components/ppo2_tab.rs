@@ -46,6 +46,7 @@ impl Default for PpO2Tab {
 
 impl PpO2Tab {
     /// Creates a `PpO2Tab` pre-selected on Air (21%) at 0 m depth.
+    #[must_use]
     pub fn new() -> Self {
         let mut table_state = TableState::default();
         table_state.select(Some(0));

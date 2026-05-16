@@ -133,6 +133,7 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
 /// let event = &parse_key_sequence("<C-w>").unwrap()[0];
 /// assert_eq!(key_event_to_string(event), "<C-w>");
 /// ```
+#[must_use]
 pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     let (key_str, is_special): (String, bool) = match key_event.code {
         KeyCode::Backspace => ("BS".into(), true),

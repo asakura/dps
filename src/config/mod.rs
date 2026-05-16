@@ -194,6 +194,7 @@ fn project_directory() -> Option<ProjectDirs> {
 ///
 /// assert!(!get_config_dir().as_os_str().is_empty());
 /// ```
+#[must_use]
 pub fn get_config_dir() -> PathBuf {
     if let Ok(s) = env::var(format!("{}_CONFIG", *PROJECT_NAME)) {
         PathBuf::from(s)
@@ -221,6 +222,7 @@ pub fn get_config_dir() -> PathBuf {
 ///
 /// assert!(!get_data_dir().as_os_str().is_empty());
 /// ```
+#[must_use]
 pub fn get_data_dir() -> PathBuf {
     if let Ok(s) = env::var(format!("{}_DATA", *PROJECT_NAME)) {
         PathBuf::from(s)

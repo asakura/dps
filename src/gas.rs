@@ -42,6 +42,7 @@ impl Ean {
     /// use dps::gas::Ean;
     /// assert_eq!(Ean::from_percent(32).unwrap().o2_percent(), 32);
     /// ```
+    #[must_use]
     pub fn o2_percent(self) -> u8 {
         (self.fraction * 100.0).round() as u8
     }
@@ -53,6 +54,7 @@ impl Ean {
     /// use dps::gas::Ean;
     /// assert_relative_eq!(Ean::from_percent(32).unwrap().fo2(), 0.32);
     /// ```
+    #[must_use]
     pub fn fo2(self) -> f64 {
         self.fraction
     }
@@ -72,6 +74,7 @@ impl Ean {
     /// let o2 = Ean::from_percent(100).unwrap();
     /// assert_relative_eq!(o2.mod_at(Bar::new(0.5)).value(), 0.0, epsilon = 1e-9);
     /// ```
+    #[must_use]
     pub fn mod_at(self, ppo2_max: Bar) -> Meters {
         let gauge = ppo2_max / self.fo2() - SURFACE_PRESSURE;
         (gauge * SEAWATER).max(Meters::new(0.0))
@@ -87,6 +90,7 @@ impl Ean {
     /// // Air at 30 m: (30/10 + 1) × 0.21 = 0.84 bar
     /// assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).value(), 0.84, epsilon = 1e-9);
     /// ```
+    #[must_use]
     pub fn ppo2_at(self, depth: Meters) -> Bar {
         (depth / SEAWATER + SURFACE_PRESSURE) * self.fraction
     }
@@ -99,6 +103,7 @@ impl Ean {
     /// assert_eq!(Ean::from_percent(32).unwrap().label(), Some("EANx 32"));
     /// assert_eq!(Ean::from_percent(25).unwrap().label(), None);
     /// ```
+    #[must_use]
     pub fn label(self) -> Option<&'static str> {
         match self.o2_percent() {
             10 => Some("Hypoxic 10"),

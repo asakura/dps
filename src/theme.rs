@@ -131,6 +131,7 @@ pub struct Theme {
 
 impl Theme {
     /// Catppuccin Latte — light flavour.
+    #[must_use]
     pub const fn latte() -> Self {
         Self {
             rosewater: Color::Rgb(220, 138, 120), // #dc8a78
@@ -163,6 +164,7 @@ impl Theme {
     }
 
     /// Catppuccin Frappé — cool dark flavour.
+    #[must_use]
     pub const fn frappe() -> Self {
         Self {
             rosewater: Color::Rgb(242, 213, 207), // #f2d5cf
@@ -195,6 +197,7 @@ impl Theme {
     }
 
     /// Catppuccin Macchiato — medium dark flavour.
+    #[must_use]
     pub const fn macchiato() -> Self {
         Self {
             rosewater: Color::Rgb(244, 219, 214), // #f4dbd6
@@ -227,6 +230,7 @@ impl Theme {
     }
 
     /// Catppuccin Mocha — darkest flavour.
+    #[must_use]
     pub const fn mocha() -> Self {
         Self {
             rosewater: Color::Rgb(245, 224, 220), // #f5e0dc
@@ -260,66 +264,80 @@ impl Theme {
 
     // ── Which-key popup ──────────────────────────────────────────────────────
     /// Popup surface: text-on-mantle background.
+    #[must_use]
     pub fn popup_surface(&self) -> Style {
         Style::from((self.text, self.mantle))
     }
     /// Key label: bold peach.
+    #[must_use]
     pub fn key_label(&self) -> Style {
         Style::from((self.peach, Modifier::BOLD))
     }
 
     // ── Table chrome ─────────────────────────────────────────────────────────
     /// Table border.
+    #[must_use]
     pub fn border(&self) -> Style {
         Style::from(self.surface0)
     }
     /// Block title above a table.
+    #[must_use]
     pub fn title(&self) -> Style {
         Style::from(self.lavender)
     }
     /// Header row text.
+    #[must_use]
     pub fn header(&self) -> Style {
         Style::from(self.blue)
     }
     /// Non-highlighted header cell.
+    #[must_use]
     pub fn header_cell(&self) -> Style {
         Style::from(Modifier::BOLD)
     }
     /// Highlighted (selected column) header cell.
+    #[must_use]
     pub fn header_cell_active(&self) -> Style {
         Style::from(Modifier::BOLD | Modifier::UNDERLINED)
     }
     /// Selected row / active element (Catppuccin Selection Rule: mauve bg + base fg).
+    #[must_use]
     pub fn selection(&self) -> Style {
         Style::from((self.base, self.mauve, Modifier::BOLD))
     }
     /// Focused column highlight.
+    #[must_use]
     pub fn column_focus(&self) -> Style {
         Style::from((self.lavender, Modifier::BOLD))
     }
 
     // ── Tab bar ───────────────────────────────────────────────────────────────
     /// Inactive tab bar background.
+    #[must_use]
     pub fn nav_bar(&self) -> Style {
         Style::from((self.subtext0, self.surface0))
     }
 
     // ── Status bar ────────────────────────────────────────────────────────────
     /// Status bar with an active selection.
+    #[must_use]
     pub fn status_active(&self) -> Style {
         Style::from((self.text, self.surface0, Modifier::BOLD))
     }
     /// Status bar empty / placeholder state.
+    #[must_use]
     pub fn status_empty(&self) -> Style {
         Style::from((self.overlay0, self.surface0))
     }
 
     // ── Text ──────────────────────────────────────────────────────────────────
     /// Body text: plain text fg.
+    #[must_use]
     pub fn body_text(&self) -> Style {
         Style::from(self.text)
     }
     /// Hint / help line text.
+    #[must_use]
     pub fn hint(&self) -> Style {
         Style::from(self.subtext0)
     }
@@ -333,6 +351,7 @@ impl Theme {
     /// assert_eq!(accents[0], THEME.rosewater);
     /// assert_eq!(accents[13], THEME.lavender);
     /// ```
+    #[must_use]
     pub fn accents(&self) -> [Color; 14] {
         [
             self.rosewater,

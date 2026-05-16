@@ -139,6 +139,7 @@ impl Tui {
     /// let tui = Tui::new()?.tick_rate(10.0);
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
+    #[must_use]
     pub fn tick_rate(mut self, tick_rate: f64) -> Self {
         assert!(
             tick_rate > 0.0 && tick_rate.is_finite(),
@@ -157,6 +158,7 @@ impl Tui {
     /// let tui = Tui::new()?.frame_rate(30.0);
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
+    #[must_use]
     pub fn frame_rate(mut self, frame_rate: f64) -> Self {
         assert!(
             frame_rate > 0.0 && frame_rate.is_finite(),
@@ -175,6 +177,7 @@ impl Tui {
     /// let tui = Tui::new()?.mouse(true);
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
+    #[must_use]
     pub fn mouse(mut self, mouse: bool) -> Self {
         self.mouse = mouse;
         self
@@ -189,6 +192,7 @@ impl Tui {
     /// let tui = Tui::new()?.paste(true);
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
+    #[must_use]
     pub fn paste(mut self, paste: bool) -> Self {
         self.paste = paste;
         self
@@ -510,6 +514,7 @@ impl Tui {
     /// # Ok(())
     /// # }
     /// ```
+    #[must_use]
     pub fn event_tx(&self) -> UnboundedSender<Event> {
         self.event_tx.clone()
     }
