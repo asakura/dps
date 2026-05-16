@@ -81,7 +81,7 @@ pub enum Event {
 ///
 /// [`enter`]: Tui::enter
 pub struct Tui {
-    pub terminal: Terminal<Backend<Stdout>>,
+    terminal: Terminal<Backend<Stdout>>,
     task: JoinHandle<()>,
     cancellation_token: CancellationToken,
     event_rx: UnboundedReceiver<Event>,
