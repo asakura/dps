@@ -666,6 +666,18 @@ mod tests {
         }
     }
 
+    mod resume {
+        use super::*;
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn compiles_and_returns_result() {
+            let mut tui = Tui::new().unwrap();
+            // enter() requires a real TTY, so resume() will err in CI; we only
+            // assert it doesn't panic.
+            let _ = tui.resume();
+        }
+    }
+
     mod event {
         use super::*;
 
