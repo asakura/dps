@@ -744,5 +744,37 @@ mod tests {
                 let _: Event = serde_json::from_str(&json).unwrap();
             }
         }
+
+        #[test]
+        fn key_event_round_trips_via_json() {
+            use crossterm::event::{KeyCode, KeyEventState, KeyModifiers};
+
+            let key = KeyEvent {
+                code: KeyCode::Char('a'),
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press,
+                state: KeyEventState::NONE,
+            };
+            let event = Event::Key(key);
+            let json = serde_json::to_string(&event).unwrap();
+            let decoded: Event = serde_json::from_str(&json).unwrap();
+            assert!(matches!(decoded, Event::Key(_)));
+        }
+
+        #[test]
+        fn mouse_event_round_trips_via_json() {
+            use crossterm::event::{KeyModifiers, MouseEventKind};
+
+            let mouse = MouseEvent {
+                kind: MouseEventKind::Moved,
+                column: 10,
+                row: 5,
+                modifiers: KeyModifiers::NONE,
+            };
+            let event = Event::Mouse(mouse);
+            let json = serde_json::to_string(&event).unwrap();
+            let decoded: Event = serde_json::from_str(&json).unwrap();
+            assert!(matches!(decoded, Event::Mouse(_)));
+        }
     }
 }
