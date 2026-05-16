@@ -342,23 +342,20 @@ impl Tui {
     /// forward-compatibility should cancellation ever become fallible.
     pub fn stop(&self) -> color_eyre::Result<()> {
         const TASK_ABORT_AFTER_MS: u32 = 50;
-        const TASK_GIVE_UP_AFTER_MS: u32 = 100;
 
         self.cancel();
 
         tokio::task::block_in_place(|| {
-            let mut counter = 0;
+            let mut counter = 0_u32;
             while self.task.as_ref().is_some_and(|t| !t.is_finished()) {
                 std::thread::sleep(Duration::from_millis(1));
                 counter += 1;
 
-                if counter > TASK_ABORT_AFTER_MS && let Some(t) = &self.task {
-                    t.abort();
-                }
-
-                if counter > TASK_GIVE_UP_AFTER_MS {
-                    error!("Failed to abort task in 100 milliseconds for unknown reason");
-                    break;
+                if counter == TASK_ABORT_AFTER_MS {
+                    if let Some(t) = &self.task {
+                        error!("Event loop did not stop gracefully after 50 ms; aborting");
+                        t.abort();
+                    }
                 }
             }
         });
