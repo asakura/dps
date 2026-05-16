@@ -379,7 +379,7 @@ impl Theme {
     /// assert_eq!(accents[13], THEME.lavender);
     /// ```
     #[must_use]
-    pub fn accents(&self) -> [Color; 14] {
+    pub const fn accents(&self) -> [Color; 14] {
         [
             self.rosewater,
             self.flamingo,

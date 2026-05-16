@@ -15,12 +15,12 @@ macro_rules! unit_newtype {
                 Self(val)
             }
             /// Returns the underlying `f64`.
-            pub fn value(self) -> f64 {
+            pub const fn value(self) -> f64 {
                 self.0
             }
             /// Returns the greater of two values.
             #[must_use]
-            pub fn max(self, other: Self) -> Self {
+            pub const fn max(self, other: Self) -> Self {
                 Self(self.0.max(other.0))
             }
         }

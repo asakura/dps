@@ -59,7 +59,7 @@ impl Ean {
     /// assert_relative_eq!(Ean::from_percent(32).unwrap().fo2(), 0.32);
     /// ```
     #[must_use]
-    pub fn fo2(self) -> f64 {
+    pub const fn fo2(self) -> f64 {
         self.fraction
     }
 

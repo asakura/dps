@@ -105,7 +105,7 @@ impl ModTab {
         self.move_row(1);
     }
 
-    fn move_left(&mut self) {
+    const fn move_left(&mut self) {
         self.ppo2_idx = self.ppo2_idx.saturating_sub(1);
     }
 
@@ -129,11 +129,11 @@ impl ModTab {
         self.move_row(super::PAGE_DELTA);
     }
 
-    fn goto_top(&mut self) {
+    const fn goto_top(&mut self) {
         self.table_state.select(Some(0));
     }
 
-    fn goto_bottom(&mut self) {
+    const fn goto_bottom(&mut self) {
         self.table_state.select(Some(self.mixes.len() - 1));
     }
 

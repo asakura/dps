@@ -209,7 +209,7 @@ impl Tui {
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
     #[must_use]
-    pub fn mouse(mut self, mouse: bool) -> Self {
+    pub const fn mouse(mut self, mouse: bool) -> Self {
         self.mouse = mouse;
         self
     }
@@ -224,7 +224,7 @@ impl Tui {
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
     #[must_use]
-    pub fn paste(mut self, paste: bool) -> Self {
+    pub const fn paste(mut self, paste: bool) -> Self {
         self.paste = paste;
         self
     }

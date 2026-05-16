@@ -69,7 +69,7 @@ impl WhichKey {
     /// let _ = WhichKey::new(&GLOBAL, &COMP);
     /// ```
     #[must_use]
-    pub fn new(global: &'static [KeyBinding], component: &'static [KeyBinding]) -> Self {
+    pub const fn new(global: &'static [KeyBinding], component: &'static [KeyBinding]) -> Self {
         Self { global, component }
     }
 }
