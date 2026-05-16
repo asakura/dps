@@ -13,7 +13,7 @@ pub static LOG_FILE: std::sync::LazyLock<String> =
 pub fn init(data_dir: &std::path::Path) -> color_eyre::Result<()> {
     std::fs::create_dir_all(data_dir)?;
 
-    let log_path = data_dir.join(LOG_FILE.clone());
+    let log_path = data_dir.join(LOG_FILE.as_str());
     let log_file = std::fs::File::create(log_path)?;
     let env_filter = EnvFilter::builder().with_default_directive(tracing::Level::INFO.into());
 
@@ -22,7 +22,7 @@ pub fn init(data_dir: &std::path::Path) -> color_eyre::Result<()> {
     // errors, then this will return an error.
     let env_filter = env_filter
         .try_from_env()
-        .or_else(|_| env_filter.with_env_var(LOG_ENV.clone()).from_env())?;
+        .or_else(|_| env_filter.with_env_var(LOG_ENV.as_str()).from_env())?;
 
     let file_subscriber = fmt::layer()
         .with_file(true)
