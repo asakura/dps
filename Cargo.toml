@@ -42,6 +42,26 @@ opt-level = 3
 panic = "abort"
 strip = "symbols"
 
+[lints.rust]
+# Safety - forbid means even #![allow(...)] can't override
+# unsafe_code = "forbid"
+# non_ascii_idents = "forbid"
+
+# Quality enforcement
+warnings = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+future_incompatible = { level = "deny", priority = -1 }
+nonstandard_style = { level = "deny", priority = -1 }
+
+# Documentation enforcement
+missing_docs = "deny"
+missing_debug_implementations = "deny"
+missing_copy_implementations = "deny"
+unfulfilled_lint_expectations = "deny"
+
+[lints.rustdoc]
+all = { level = "deny", priority = -1 }
+
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 unwrap_used = "deny"

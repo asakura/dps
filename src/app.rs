@@ -264,7 +264,7 @@ impl App {
     }
 
     /// Draws the tab bar, active component, status bar, and help line.
-    pub fn render(&mut self, f: &mut Frame) {
+    pub fn render(&mut self, f: &mut Frame<'_>) {
         f.render_widget(self, f.area());
     }
 }
