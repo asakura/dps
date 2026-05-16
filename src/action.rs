@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use strum::{Display, EnumString};
 
 /// Directional and positional navigation commands.
-#[derive(Debug, Clone, PartialEq, Eq, Display, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, EnumString)]
 pub enum Movement {
     Up,
     Down,
@@ -151,7 +151,7 @@ mod tests {
                 Movement::GotoTop,
                 Movement::GotoBottom,
             ] {
-                let action = Action::Move(mv.clone());
+                let action = Action::Move(mv);
                 assert_eq!(roundtrip(&action), action, "round-trip failed for {mv}");
             }
         }
