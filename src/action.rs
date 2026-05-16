@@ -50,10 +50,10 @@ pub enum Action {
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Action::Quit => write!(f, "Quit"),
-            Action::None => write!(f, "None"),
-            Action::Select => write!(f, "Select"),
-            Action::Move(mv) => write!(f, "{mv}"),
+            Self::Quit => write!(f, "Quit"),
+            Self::None => write!(f, "None"),
+            Self::Select => write!(f, "Select"),
+            Self::Move(mv) => write!(f, "{mv}"),
         }
     }
 }
@@ -68,10 +68,10 @@ impl<'de> Deserialize<'de> for Action {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;
         match s.as_str() {
-            "Quit" => Ok(Action::Quit),
-            "None" => Ok(Action::None),
-            "Select" => Ok(Action::Select),
-            s => Movement::from_str(s).map(Action::Move).map_err(|_| {
+            "Quit" => Ok(Self::Quit),
+            "None" => Ok(Self::None),
+            "Select" => Ok(Self::Select),
+            s => Movement::from_str(s).map(Self::Move).map_err(|_| {
                 de::Error::unknown_variant(
                     s,
                     &[
