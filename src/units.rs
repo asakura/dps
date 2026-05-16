@@ -113,7 +113,7 @@ pub struct Meters(f64);
 
 unit_newtype!(Meters, "m");
 
-/// Meters / MetersPerBar → Bar  (depth → gauge pressure)
+/// Meters / `MetersPerBar` → Bar  (depth → gauge pressure)
 ///
 /// ```
 /// use dps::units::{Bar, Meters, MetersPerBar};
@@ -154,7 +154,7 @@ pub struct Bar(f64);
 
 unit_newtype!(Bar, "bar");
 
-/// Bar × MetersPerBar → Meters  (gauge pressure → depth)
+/// Bar × `MetersPerBar` → Meters  (gauge pressure → depth)
 ///
 /// ```
 /// use dps::units::{Bar, Meters, MetersPerBar};

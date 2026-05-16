@@ -24,7 +24,7 @@ pub enum Movement {
 ///
 /// `Display` is implemented manually so that `Move(Down)` renders as `"Down"` rather than `"Move"`,
 /// keeping the display output consistent with the flat config format.
-/// TODO: wire `Display` output up once the WhichKey widget and status bar exist.
+/// TODO: wire `Display` output up once the `WhichKey` widget and status bar exist.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     /// Exit the application.

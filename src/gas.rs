@@ -63,7 +63,7 @@ impl Ean {
 
     /// Maximum Operating Depth for a given ppO₂ limit.
     ///
-    /// Formula: MOD = (ppO₂_max / FO₂ − 1 atm) × 10 m/bar  (seawater approximation)
+    /// Formula: MOD = (`ppO₂_max` / FO₂ − 1 atm) × 10 m/bar  (seawater approximation)
     ///
     /// ```
     /// # use approx::assert_relative_eq;
