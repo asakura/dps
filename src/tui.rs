@@ -94,6 +94,13 @@ pub struct Tui {
 }
 
 impl Default for Tui {
+    /// Creates a `Tui` with default settings.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the terminal backend cannot be initialised (e.g. no TTY is
+    /// attached or stdout is redirected). Prefer [`Tui::new`] in production
+    /// code so the error can be handled gracefully.
     fn default() -> Self {
         Self::new().expect("failed to initialise terminal backend")
     }
