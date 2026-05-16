@@ -438,8 +438,7 @@ impl Tui {
     /// # }
     /// ```
     pub fn resume(&mut self) -> color_eyre::Result<()> {
-        self.enter()?;
-        Ok(())
+        self.enter()
     }
 
     /// Receives the next event from the event loop, or `None` if the channel is closed.
