@@ -5,6 +5,11 @@ use std::fmt;
 
 use tracing::error;
 
+/// Installs the `color_eyre` panic and error hooks.
+///
+/// # Errors
+///
+/// Returns `Err` if the `color_eyre` hook is already installed.
 pub fn init() -> color_eyre::Result<()> {
     let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
         .panic_section(format!(

@@ -10,6 +10,12 @@ pub static LOG_ENV: std::sync::LazyLock<String> =
 pub static LOG_FILE: std::sync::LazyLock<String> =
     std::sync::LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
 
+/// Initialises file-based tracing for the application.
+///
+/// # Errors
+///
+/// Returns `Err` if the data directory cannot be created, the log file cannot
+/// be opened, or the tracing subscriber cannot be installed (e.g. already initialised).
 pub fn init(data_dir: &std::path::Path) -> color_eyre::Result<()> {
     std::fs::create_dir_all(data_dir)?;
 

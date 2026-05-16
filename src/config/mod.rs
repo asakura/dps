@@ -80,6 +80,11 @@ pub static CONFIG_FOLDER: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
 
 impl Config {
     /// Loads config from the env-var / platform-default directories.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the config source cannot be read or parsed; see
+    /// [`Config::from_dirs`].
     pub fn new() -> color_eyre::Result<Self, config::ConfigError> {
         Self::from_dirs(None, None)
     }

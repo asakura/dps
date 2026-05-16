@@ -67,6 +67,11 @@ impl App {
     /// `frame_rate` caps the render rate (Hz).  `config_dir` and `data_dir`
     /// override the env-var / platform defaults when `Some`.
     ///
+    /// # Errors
+    ///
+    /// Currently infallible; the `Result` return type is kept for forward
+    /// compatibility.
+    ///
     /// # Examples
     ///
     /// ```no_run
@@ -112,6 +117,11 @@ impl App {
     /// Enters the terminal (raw mode + alternate screen), then drives
     /// tick/render intervals and key input until [`Action::Quit`] is received
     /// or the event stream closes. Terminal state is restored on return.
+    ///
+    /// # Errors
+    ///
+    /// Propagates I/O errors from terminal setup ([`Tui::new`], [`Tui::enter`]),
+    /// frame rendering, and terminal teardown.
     ///
     /// # Examples
     ///

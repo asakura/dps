@@ -18,6 +18,8 @@ pub struct Ean {
 impl Ean {
     /// Construct from whole-percent O₂ value (10–100).
     ///
+    /// # Errors
+    ///
     /// Returns `Err` if `o2_pct` is outside `[10, 100]`.
     ///
     /// ```

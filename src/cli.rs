@@ -42,6 +42,10 @@ pub struct Cli {
 
 impl Cli {
     /// Returns a clap error if `frame_rate` is less than `tick_rate`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`clap::Error`] of kind `ArgumentConflict` if `frame_rate < tick_rate`.
     pub fn validate(&self) -> Result<(), clap::Error> {
         if self.frame_rate < self.tick_rate {
             return Err(Self::command().error(

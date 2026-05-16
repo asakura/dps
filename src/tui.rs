@@ -112,6 +112,11 @@ impl Tui {
     /// event loop. The terminal backend is initialised immediately so that
     /// [`draw`] can be called once raw mode is active.
     ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the terminal backend cannot be initialised (e.g. stdout
+    /// is not a TTY or is redirected).
+    ///
     /// [`enter`]: Tui::enter
     /// [`draw`]: ratatui::Terminal::draw
     pub fn new() -> color_eyre::Result<Self> {
@@ -132,6 +137,10 @@ impl Tui {
 
     /// Sets the application-logic timer rate in Hz (default 4.0).
     ///
+    /// # Panics
+    ///
+    /// Panics if `tick_rate` is not a positive finite number.
+    ///
     /// # Examples
     ///
     /// ```no_run
@@ -150,6 +159,10 @@ impl Tui {
     }
 
     /// Sets the render timer rate in Hz (default 60.0).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `frame_rate` is not a positive finite number.
     ///
     /// # Examples
     ///
@@ -203,6 +216,10 @@ impl Tui {
     /// Prefer [`enter`] for normal use; call `start` directly only when you
     /// need to manage raw mode yourself.  Any previously running loop is
     /// cancelled first.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `frame_rate` is less than `tick_rate`.
     ///
     /// [`enter`]: Tui::enter
     ///
@@ -337,6 +354,11 @@ impl Tui {
     ///
     /// Call [`exit`] (or let [`Drop`] handle it) to restore the terminal.
     ///
+    /// # Errors
+    ///
+    /// Returns `Err` if enabling raw mode or writing the escape sequences to
+    /// stdout fails.
+    ///
     /// [`exit`]: Tui::exit
     ///
     /// # Examples
@@ -372,6 +394,11 @@ impl Tui {
     ///
     /// Safe to call even if [`enter`] was never called; the raw-mode guard
     /// checks the terminal state before attempting to restore it.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if querying raw-mode status, flushing the terminal, or
+    /// writing the restore escape sequences fails.
     ///
     /// [`enter`]: Tui::enter
     ///
@@ -435,7 +462,12 @@ impl Tui {
     ///
     /// Call [`resume`] to re-enter the TUI after the process is foregrounded.
     ///
+    /// # Errors
+    ///
+    /// Returns `Err` if [`exit`] fails or (on Unix) if raising `SIGTSTP` fails.
+    ///
     /// [`resume`]: Tui::resume
+    /// [`exit`]: Tui::exit
     ///
     /// # Examples
     ///
@@ -460,7 +492,12 @@ impl Tui {
 
     /// Re-enters the TUI after a [`suspend`].
     ///
+    /// # Errors
+    ///
+    /// Returns `Err` if [`enter`] fails; see [`Tui::enter`] for details.
+    ///
     /// [`suspend`]: Tui::suspend
+    /// [`enter`]: Tui::enter
     ///
     /// # Examples
     ///
