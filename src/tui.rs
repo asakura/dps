@@ -82,7 +82,7 @@ pub enum Event {
 /// [`enter`]: Tui::enter
 pub struct Tui {
     terminal: Terminal<Backend<Stdout>>,
-    task: JoinHandle<()>,
+    task: Option<JoinHandle<()>>,
     cancellation_token: CancellationToken,
     event_rx: UnboundedReceiver<Event>,
     /// Inject a synthetic event into the loop (e.g. from tests or signal handlers).
@@ -120,7 +120,7 @@ impl Tui {
 
         Ok(Self {
             terminal: ratatui::Terminal::new(Backend::new(stdout()))?,
-            task: tokio::spawn(async {}),
+            task: None,
             cancellation_token: CancellationToken::new(),
             event_rx,
             event_tx,
@@ -232,9 +232,9 @@ impl Tui {
             self.frame_rate,
         );
 
-        self.task = tokio::spawn(async {
+        self.task = Some(tokio::spawn(async {
             event_loop.await;
-        });
+        }));
     }
 
     async fn event_loop(
@@ -305,12 +305,14 @@ impl Tui {
 
         tokio::task::block_in_place(|| {
             let mut counter = 0;
-            while !self.task.is_finished() {
+            while self.task.as_ref().map_or(false, |t| !t.is_finished()) {
                 std::thread::sleep(Duration::from_millis(1));
                 counter += 1;
 
                 if counter > TASK_ABORT_AFTER_MS {
-                    self.task.abort();
+                    if let Some(t) = &self.task {
+                        t.abort();
+                    }
                 }
 
                 if counter > TASK_GIVE_UP_AFTER_MS {
@@ -519,14 +521,14 @@ mod tests {
     mod new {
         use super::*;
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn succeeds_without_tty() {
+        #[test]
+        fn succeeds_without_tty() {
             // Terminal::new does not require a real TTY; only enter() does.
             assert!(Tui::new().is_ok());
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn default_rates() {
+        #[test]
+        fn default_rates() {
             let tui = Tui::default();
             assert_eq!(tui.tick_rate, 4.0);
             assert_eq!(tui.frame_rate, 60.0);
@@ -538,32 +540,32 @@ mod tests {
     mod builder {
         use super::*;
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn tick_rate_sets_value() {
+        #[test]
+        fn tick_rate_sets_value() {
             let tui = Tui::default().tick_rate(10.0);
             assert_eq!(tui.tick_rate, 10.0);
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn frame_rate_sets_value() {
+        #[test]
+        fn frame_rate_sets_value() {
             let tui = Tui::default().frame_rate(30.0);
             assert_eq!(tui.frame_rate, 30.0);
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn mouse_sets_value() {
+        #[test]
+        fn mouse_sets_value() {
             let tui = Tui::default().mouse(true);
             assert!(tui.mouse);
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn paste_sets_value() {
+        #[test]
+        fn paste_sets_value() {
             let tui = Tui::default().paste(true);
             assert!(tui.paste);
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn builder_chain() {
+        #[test]
+        fn builder_chain() {
             let tui = Tui::default()
                 .tick_rate(10.0)
                 .frame_rate(30.0)
@@ -584,7 +586,7 @@ mod tests {
             let mut tui = Tui::default();
             tui.start();
             assert!(tui.stop().is_ok());
-            assert!(tui.task.is_finished());
+            assert!(tui.task.as_ref().map_or(true, |t| t.is_finished()));
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -641,7 +643,7 @@ mod tests {
             tui.start();
             tui.cancel();
             assert!(tui.stop().is_ok());
-            assert!(tui.task.is_finished());
+            assert!(tui.task.as_ref().map_or(true, |t| t.is_finished()));
         }
 
         #[tokio::test(flavor = "multi_thread")]
