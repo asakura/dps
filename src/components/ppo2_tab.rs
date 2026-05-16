@@ -58,7 +58,7 @@ impl PpO2Tab {
 
     fn selected_mix(&self) -> Ean {
         Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[self.mix_idx])
-            .expect("PPO2_TABLE_MIX_PERCENTS values are valid")
+            .unwrap_or_else(|_| unreachable!("PPO2_TABLE_MIX_PERCENTS values are valid"))
     }
 
     /// Mix columns for a sliding window of `window_size` columns centred on the selected index.
@@ -68,7 +68,7 @@ impl PpO2Tab {
         (0..count)
             .map(|i| {
                 Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[start + i])
-                    .expect("PPO2_TABLE_MIX_PERCENTS values are valid")
+                    .unwrap_or_else(|_| unreachable!("PPO2_TABLE_MIX_PERCENTS values are valid"))
             })
             .collect()
     }

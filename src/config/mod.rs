@@ -105,8 +105,8 @@ impl Config {
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
     ) -> color_eyre::Result<Self, config::ConfigError> {
-        let default_config: Config =
-            json5::from_str(CONFIG).expect("embedded config.json5 is malformed");
+        let default_config: Config = json5::from_str(CONFIG)
+            .map_err(|e| config::ConfigError::Message(e.to_string()))?;
 
         let effective_data_dir = data_dir
             .map(|p| p.to_path_buf())

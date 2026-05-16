@@ -54,7 +54,7 @@ impl ModTab {
     /// Creates a `ModTab` pre-selected on EAN32 at 1.4 bar ppO₂.
     pub fn new() -> Self {
         let mixes: Vec<Ean> = (O2_PCT_MIN..=O2_PCT_MAX)
-            .map(|p| Ean::from_percent(p).expect("10..=100 is always valid"))
+            .filter_map(|p| Ean::from_percent(p).ok())
             .collect();
         let start_idx = mixes
             .iter()

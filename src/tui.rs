@@ -101,7 +101,7 @@ impl Default for Tui {
     /// attached or stdout is redirected). Prefer [`Tui::new`] in production
     /// code so the error can be handled gracefully.
     fn default() -> Self {
-        Self::new().expect("failed to initialise terminal backend")
+        Self::new().unwrap_or_else(|e| unreachable!("failed to initialise terminal backend: {e}"))
     }
 }
 
@@ -242,10 +242,10 @@ impl Tui {
         tick_rate: f64,
         frame_rate: f64,
     ) {
-        // if this fails, then it's likely a bug in the calling code
-        event_tx
-            .send(Event::Init)
-            .expect("failed to send init event");
+        // receiver dropped before Init could be sent — nothing left to drive
+        if event_tx.send(Event::Init).is_err() {
+            return;
+        }
 
         let mut event_stream = EventStream::new();
         let mut tick_interval = interval(Duration::from_secs_f64(1.0 / tick_rate));
