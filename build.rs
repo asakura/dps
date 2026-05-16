@@ -1,3 +1,5 @@
+//! Build script that embeds build-time metadata (date, git SHA) via vergen.
+
 use anyhow::Result;
 use vergen::{BuildBuilder, Emitter};
 use vergen_gix::GixBuilder;
