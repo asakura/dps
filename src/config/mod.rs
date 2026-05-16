@@ -115,7 +115,7 @@ impl Config {
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
     ) -> color_eyre::Result<Self, config::ConfigError> {
-        let default_config: Config =
+        let default_config: Self =
             json5::from_str(CONFIG).map_err(|e| config::ConfigError::Message(e.to_string()))?;
 
         let effective_data_dir = data_dir.map_or_else(get_data_dir, Path::to_path_buf);
@@ -265,7 +265,7 @@ impl<'de> Deserialize<'de> for KeyBindings {
             })
             .collect::<Result<HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>, D::Error>>()?;
 
-        Ok(KeyBindings(keybindings))
+        Ok(Self(keybindings))
     }
 }
 
@@ -274,7 +274,7 @@ impl<'de> Deserialize<'de> for Styles {
     where
         D: Deserializer<'de>,
     {
-        Ok(Styles())
+        Ok(Self())
     }
 }
 

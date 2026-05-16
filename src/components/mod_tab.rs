@@ -166,7 +166,7 @@ struct ModRow<'a> {
 }
 
 impl From<ModRow<'_>> for Row<'static> {
-    fn from(r: ModRow<'_>) -> Row<'static> {
+    fn from(r: ModRow<'_>) -> Self {
         let mut cells = vec![
             Cell::from(r.mix.label().unwrap_or("")),
             Cell::from(format!("{:>4}%", r.mix.o2_percent())),

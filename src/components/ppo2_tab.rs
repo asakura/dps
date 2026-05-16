@@ -153,7 +153,7 @@ struct PpO2Row<'a> {
 
 impl From<PpO2Row<'_>> for Row<'static> {
     #[expect(clippy::cast_precision_loss, reason = "depth is bounded by PPO2_TABLE_DEPTH_MAX = 80")]
-    fn from(r: PpO2Row<'_>) -> Row<'static> {
+    fn from(r: PpO2Row<'_>) -> Self {
         let depth = Meters::new(r.depth as f64);
         let mut cells = vec![Cell::from(format!("{:>3} m", r.depth))];
         for mix in r.mixes {
