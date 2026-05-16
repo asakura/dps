@@ -1,6 +1,6 @@
 //! Application state and tab routing.
 
-use std::path::Path;
+use std::{fmt, path::Path};
 
 use crate::{
     action::Action,
@@ -44,6 +44,18 @@ pub struct App {
     mode: Mode,
     tick_rate: f64,
     frame_rate: f64,
+}
+
+impl fmt::Debug for App {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("App")
+            .field("active", &self.active)
+            .field("show_which_key", &self.show_which_key)
+            .field("mode", &self.mode)
+            .field("tick_rate", &self.tick_rate)
+            .field("frame_rate", &self.frame_rate)
+            .finish_non_exhaustive()
+    }
 }
 
 enum MatchResult {

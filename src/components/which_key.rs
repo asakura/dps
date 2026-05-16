@@ -49,6 +49,7 @@ const MIN_DESC_W: u16 = 10;
 /// Merges `global` and `component` bindings into a dynamic column grid anchored
 /// to the bottom of the area it is rendered into. Pass the full terminal area so
 /// the popup is positioned at the screen bottom.
+#[derive(Debug)]
 pub struct WhichKey {
     global: &'static [KeyBinding],
     component: &'static [KeyBinding],

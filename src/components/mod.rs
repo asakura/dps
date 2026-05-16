@@ -9,6 +9,7 @@ use ratatui::{buffer::Buffer, layout::Rect, widgets::TableState};
 use crate::action::Action;
 
 /// A single key→action entry for the which-key popup and help line.
+#[derive(Debug, Clone, Copy)]
 pub struct KeyBinding {
     /// Key label shown in the popup (e.g. `"j/k"`, `"Enter"`).
     pub key: &'static str,

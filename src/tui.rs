@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     io::{Stdout, stdout},
     ops::{Deref, DerefMut},
     time::Duration,
@@ -90,6 +91,17 @@ pub struct Tui {
     tick_rate: f64,
     mouse: bool,
     paste: bool,
+}
+
+impl fmt::Debug for Tui {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Tui")
+            .field("frame_rate", &self.frame_rate)
+            .field("tick_rate", &self.tick_rate)
+            .field("mouse", &self.mouse)
+            .field("paste", &self.paste)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Default for Tui {

@@ -37,6 +37,7 @@ const MOD_RED_BELOW_M: f64 = 10.0;
 const MOD_YELLOW_BELOW_M: f64 = 20.0;
 
 /// MOD-by-ppO₂ table: maximum operating depth for each nitrox mix at the selected ppO₂ limit.
+#[derive(Debug)]
 pub struct ModTab {
     mixes: Vec<Ean>,
     table_state: TableState,
