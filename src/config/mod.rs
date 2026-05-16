@@ -202,13 +202,15 @@ fn project_directory() -> Option<ProjectDirs> {
 /// ```
 #[must_use]
 pub fn get_config_dir() -> PathBuf {
-    if let Ok(s) = env::var(format!("{}_CONFIG", *PROJECT_NAME)) {
-        PathBuf::from(s)
-    } else if let Some(proj_dirs) = project_directory() {
-        proj_dirs.config_local_dir().to_path_buf()
-    } else {
-        PathBuf::from(".").join(".config")
-    }
+    env::var(format!("{}_CONFIG", *PROJECT_NAME)).map_or_else(
+        |_| {
+            project_directory().map_or_else(
+                || PathBuf::from(".").join(".config"),
+                |d| d.config_local_dir().to_path_buf(),
+            )
+        },
+        PathBuf::from,
+    )
 }
 
 /// Returns the data directory used for logs and application state.
@@ -230,13 +232,15 @@ pub fn get_config_dir() -> PathBuf {
 /// ```
 #[must_use]
 pub fn get_data_dir() -> PathBuf {
-    if let Ok(s) = env::var(format!("{}_DATA", *PROJECT_NAME)) {
-        PathBuf::from(s)
-    } else if let Some(proj_dirs) = project_directory() {
-        proj_dirs.data_local_dir().to_path_buf()
-    } else {
-        PathBuf::from(".").join(".data")
-    }
+    env::var(format!("{}_DATA", *PROJECT_NAME)).map_or_else(
+        |_| {
+            project_directory().map_or_else(
+                || PathBuf::from(".").join(".data"),
+                |d| d.data_local_dir().to_path_buf(),
+            )
+        },
+        PathBuf::from,
+    )
 }
 
 impl<'de> Deserialize<'de> for KeyBindings {
