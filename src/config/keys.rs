@@ -57,7 +57,7 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
     }
 
     let mut keys = Vec::new();
-    let mut chars = raw.chars().peekable();
+    let mut chars = raw.chars();
 
     while let Some(c) = chars.next() {
         if c == '<' {
