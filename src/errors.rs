@@ -55,6 +55,7 @@ pub fn init() -> color_eyre::Result<()> {
                 .create_panic_handler()(panic_info);
         }
 
+        #[expect(clippy::exit, reason = "intentional in a panic hook; terminal cleanup is performed manually above")]
         std::process::exit(1);
     }));
     Ok(())
