@@ -134,7 +134,10 @@ impl Tui {
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
     pub fn tick_rate(mut self, tick_rate: f64) -> Self {
-        assert!(tick_rate > 0.0 && tick_rate.is_finite(), "tick_rate must be a positive finite number");
+        assert!(
+            tick_rate > 0.0 && tick_rate.is_finite(),
+            "tick_rate must be a positive finite number"
+        );
         self.tick_rate = tick_rate;
         self
     }
@@ -149,7 +152,10 @@ impl Tui {
     /// # Ok::<_, color_eyre::Report>(())
     /// ```
     pub fn frame_rate(mut self, frame_rate: f64) -> Self {
-        assert!(frame_rate > 0.0 && frame_rate.is_finite(), "frame_rate must be a positive finite number");
+        assert!(
+            frame_rate > 0.0 && frame_rate.is_finite(),
+            "frame_rate must be a positive finite number"
+        );
         self.frame_rate = frame_rate;
         self
     }
@@ -239,6 +245,9 @@ impl Tui {
         let mut tick_interval = interval(Duration::from_secs_f64(1.0 / tick_rate));
         let mut render_interval = interval(Duration::from_secs_f64(1.0 / frame_rate));
 
+        tick_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        render_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
         loop {
             let event = tokio::select! {
                 _ = cancellation_token.cancelled() => {
@@ -279,9 +288,12 @@ impl Tui {
     /// Cancels the event loop and waits for its task to finish.
     ///
     /// Blocks the calling thread via [`tokio::task::block_in_place`] for up to
-    /// ~100 ms; aborts the task if it hasn't exited by then.  Requires the
+    /// ~50 ms; aborts the task if it hasn't exited by then.  Requires the
     /// multi-threaded Tokio runtime.
     pub fn stop(&self) -> color_eyre::Result<()> {
+        const TASK_ABORT_AFTER_MS: u32 = 50;
+        const TASK_GIVE_UP_AFTER_MS: u32 = 100;
+
         self.cancel();
 
         tokio::task::block_in_place(|| {
@@ -290,11 +302,11 @@ impl Tui {
                 std::thread::sleep(Duration::from_millis(1));
                 counter += 1;
 
-                if counter == 51 {
+                if counter > TASK_ABORT_AFTER_MS {
                     self.task.abort();
                 }
 
-                if counter > 100 {
+                if counter > TASK_GIVE_UP_AFTER_MS {
                     error!("Failed to abort task in 100 milliseconds for unknown reason");
                     break;
                 }
