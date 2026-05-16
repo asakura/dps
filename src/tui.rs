@@ -351,11 +351,11 @@ impl Tui {
                 std::thread::sleep(Duration::from_millis(1));
                 counter += 1;
 
-                if counter == TASK_ABORT_AFTER_MS {
-                    if let Some(t) = &self.task {
-                        error!("Event loop did not stop gracefully after 50 ms; aborting");
-                        t.abort();
-                    }
+                if counter == TASK_ABORT_AFTER_MS
+                    && let Some(t) = &self.task
+                {
+                    error!("Event loop did not stop gracefully after 50 ms; aborting");
+                    t.abort();
                 }
             }
         });
