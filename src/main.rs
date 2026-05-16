@@ -1,3 +1,5 @@
+//! Entry point for the dps application.
+
 use std::path::Path;
 
 use clap::Parser;
