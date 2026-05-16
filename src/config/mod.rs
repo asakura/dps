@@ -281,30 +281,22 @@ impl<'de> Deserialize<'de> for Styles {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
-    use std::sync::Mutex;
-
-    // env::set_var / remove_var are process-global; serialize all env-touching
-    // tests through this lock so parallel test threads don't race each other.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     mod get_config_dir_fn {
         use super::*;
 
         #[test]
         fn env_var_overrides_platform_dir() {
-            let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-            unsafe { env::set_var("DPS_CONFIG", "/tmp/dps-test-config") };
-            let dir = get_config_dir();
-            unsafe { env::remove_var("DPS_CONFIG") };
-            assert_eq!(dir, PathBuf::from("/tmp/dps-test-config"));
+            temp_env::with_var("DPS_CONFIG", Some("/tmp/dps-test-config"), || {
+                assert_eq!(get_config_dir(), PathBuf::from("/tmp/dps-test-config"));
+            });
         }
 
         #[test]
         fn returns_nonempty_path_without_env_var() {
-            let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-            unsafe { env::remove_var("DPS_CONFIG") };
-            assert!(!get_config_dir().as_os_str().is_empty());
+            temp_env::with_var_unset("DPS_CONFIG", || {
+                assert!(!get_config_dir().as_os_str().is_empty());
+            });
         }
     }
 
@@ -313,18 +305,16 @@ mod tests {
 
         #[test]
         fn env_var_overrides_platform_dir() {
-            let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-            unsafe { env::set_var("DPS_DATA", "/tmp/dps-test-data") };
-            let dir = get_data_dir();
-            unsafe { env::remove_var("DPS_DATA") };
-            assert_eq!(dir, PathBuf::from("/tmp/dps-test-data"));
+            temp_env::with_var("DPS_DATA", Some("/tmp/dps-test-data"), || {
+                assert_eq!(get_data_dir(), PathBuf::from("/tmp/dps-test-data"));
+            });
         }
 
         #[test]
         fn returns_nonempty_path_without_env_var() {
-            let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-            unsafe { env::remove_var("DPS_DATA") };
-            assert!(!get_data_dir().as_os_str().is_empty());
+            temp_env::with_var_unset("DPS_DATA", || {
+                assert!(!get_data_dir().as_os_str().is_empty());
+            });
         }
     }
 
@@ -346,56 +336,48 @@ mod tests {
     }
 
     #[test]
-    fn user_config_adds_binding_and_defaults_merge_in() -> color_eyre::Result<()> {
+    fn user_config_adds_binding_and_defaults_merge_in() {
         use crate::action::Movement;
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
             dir.path().join("config.json5"),
             r#"{ keybindings: { Home: { x: "ScrollUp" } } }"#,
-        )?;
-        unsafe { env::set_var("DPS_CONFIG", dir.path()) };
-        let result = Config::new();
-        unsafe { env::remove_var("DPS_CONFIG") };
-
-        let c = result?;
-        let home = c.keybindings.0.get(&Mode::Home).unwrap();
-        assert_eq!(
-            home.get(&parse_key_sequence("x").unwrap()).unwrap(),
-            &Action::Move(Movement::ScrollUp),
-        );
-        // Default binding merged in alongside the user binding.
-        assert_eq!(
-            home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Move(Movement::Down),
-        );
-        Ok(())
+        )
+        .unwrap();
+        temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
+            let c = Config::new().unwrap();
+            let home = c.keybindings.0.get(&Mode::Home).unwrap();
+            assert_eq!(
+                home.get(&parse_key_sequence("x").unwrap()).unwrap(),
+                &Action::Move(Movement::ScrollUp),
+            );
+            // Default binding merged in alongside the user binding.
+            assert_eq!(
+                home.get(&parse_key_sequence("j").unwrap()).unwrap(),
+                &Action::Move(Movement::Down),
+            );
+        });
     }
 
     #[test]
-    fn user_config_override_wins_over_default() -> color_eyre::Result<()> {
+    fn user_config_override_wins_over_default() {
         use crate::action::Movement;
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-
         let dir = tempfile::tempdir().unwrap();
         // Remap 'j' from Down (default) to Up.
         std::fs::write(
             dir.path().join("config.json5"),
             r#"{ keybindings: { Home: { j: "Up" } } }"#,
-        )?;
-        unsafe { env::set_var("DPS_CONFIG", dir.path()) };
-        let result = Config::new();
-        unsafe { env::remove_var("DPS_CONFIG") };
-
-        let c = result?;
-        let home = c.keybindings.0.get(&Mode::Home).unwrap();
-        // User's remap wins — default must not overwrite it.
-        assert_eq!(
-            home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Move(Movement::Up),
-        );
-        Ok(())
+        )
+        .unwrap();
+        temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
+            let c = Config::new().unwrap();
+            let home = c.keybindings.0.get(&Mode::Home).unwrap();
+            // User's remap wins — default must not overwrite it.
+            assert_eq!(
+                home.get(&parse_key_sequence("j").unwrap()).unwrap(),
+                &Action::Move(Movement::Up),
+            );
+        });
     }
 
     #[test]
