@@ -206,7 +206,7 @@ impl Widget for &mut ModTab {
                 Cell::from("Name").style(THEME.header_cell()),
                 Cell::from("O\u{2082}%").style(THEME.header_cell()),
             ],
-            cols.iter().map(|c| c.to_string()),
+            cols.iter().map(ToString::to_string),
             Some(col_in_window),
         );
         let table = styled_table(self.build_rows(&cols), constraints, header, title);

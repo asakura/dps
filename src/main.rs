@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use clap::Parser;
 use color_eyre::Result;
 use dps::app::App;
@@ -14,7 +16,7 @@ async fn main() -> Result<()> {
     let effective_data_dir = args
         .data_dir
         .as_deref()
-        .map_or_else(get_data_dir, |p| p.to_path_buf());
+        .map_or_else(get_data_dir, Path::to_path_buf);
     logging::init(&effective_data_dir)?;
     let mut app = App::new(
         args.tick_rate,

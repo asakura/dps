@@ -114,10 +114,10 @@ impl Config {
             json5::from_str(CONFIG).map_err(|e| config::ConfigError::Message(e.to_string()))?;
 
         let effective_data_dir = data_dir
-            .map(|p| p.to_path_buf())
+            .map(Path::to_path_buf)
             .unwrap_or_else(get_data_dir);
         let effective_config_dir = config_dir
-            .map(|p| p.to_path_buf())
+            .map(Path::to_path_buf)
             .unwrap_or_else(get_config_dir);
 
         let mut builder = config::Config::builder()
