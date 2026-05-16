@@ -93,6 +93,12 @@ pub struct Tui {
     paste: bool,
 }
 
+impl Default for Tui {
+    fn default() -> Self {
+        Self::new().expect("failed to initialise terminal backend")
+    }
+}
+
 impl Tui {
     /// Creates a `Tui` with default rates (4 Hz tick, 60 Hz render).
     ///
@@ -499,7 +505,7 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn default_rates() {
-            let tui = Tui::new().unwrap();
+            let tui = Tui::default();
             assert_eq!(tui.tick_rate, 4.0);
             assert_eq!(tui.frame_rate, 60.0);
             assert!(!tui.mouse);
@@ -512,32 +518,31 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn tick_rate_sets_value() {
-            let tui = Tui::new().unwrap().tick_rate(10.0);
+            let tui = Tui::default().tick_rate(10.0);
             assert_eq!(tui.tick_rate, 10.0);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn frame_rate_sets_value() {
-            let tui = Tui::new().unwrap().frame_rate(30.0);
+            let tui = Tui::default().frame_rate(30.0);
             assert_eq!(tui.frame_rate, 30.0);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn mouse_sets_value() {
-            let tui = Tui::new().unwrap().mouse(true);
+            let tui = Tui::default().mouse(true);
             assert!(tui.mouse);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn paste_sets_value() {
-            let tui = Tui::new().unwrap().paste(true);
+            let tui = Tui::default().paste(true);
             assert!(tui.paste);
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn builder_chain() {
-            let tui = Tui::new()
-                .unwrap()
+            let tui = Tui::default()
                 .tick_rate(10.0)
                 .frame_rate(30.0)
                 .mouse(true)
@@ -554,7 +559,7 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn returns_ok_and_task_finishes() {
-            let mut tui = Tui::new().unwrap();
+            let mut tui = Tui::default();
             tui.start();
             assert!(tui.stop().is_ok());
             assert!(tui.task.is_finished());
@@ -562,7 +567,7 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn idempotent_on_already_stopped_tui() {
-            let mut tui = Tui::new().unwrap();
+            let mut tui = Tui::default();
             tui.start();
             assert!(tui.stop().is_ok());
             assert!(tui.stop().is_ok());
