@@ -51,6 +51,7 @@ pub trait Component {
 }
 
 #[cfg(test)]
+/// Utilities for testing components.
 pub mod test_utils {
     use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 
