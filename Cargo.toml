@@ -49,7 +49,7 @@ panic = "abort"
 strip = "symbols"
 
 [lints.rust]
-# Safety - forbid means even #![allow(...)] can't override
+# Safety — forbid means even #![allow(...)] can't override
 unsafe_code = "forbid"
 non_ascii_idents = "forbid"
 
@@ -69,13 +69,13 @@ unfulfilled_lint_expectations = "deny"
 all = { level = "deny", priority = -1 }
 
 [lints.clippy]
-# === ALL LINT GROUPS AT DENY ===
+# All lint groups
 all = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
 cargo = { level = "deny", priority = -1 }
 
-# === THE GUARDRAILS ===
+# Guardrails
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
@@ -90,27 +90,26 @@ unimplemented = "deny"
 print_stdout = "deny"
 print_stderr = "deny"
 
-# === ASYNC SAFETY ===
+# Async safety
 await_holding_lock = "deny"
 large_futures = "deny"
 
-# === PROCESS/MEMORY SAFETY ===
+# Process and memory safety
 exit = "deny"
 mem_forget = "deny"
 
-# === PERFORMANCE ===
+# Performance
 large_stack_arrays = "deny"
 large_types_passed_by_value = "deny"
 
-# === MINIMAL RELAXATIONS ===
-# Only the absolutely necessary ones
-multiple_crate_versions = "allow"   # Unavoidable with transitive deps
+# Minimal relaxations
+multiple_crate_versions = "allow"   # unavoidable with transitive deps
 
-# Cast lints - too many false positives even for strict projects
+# Cast lints — too many false positives even for strict projects
 cast_possible_truncation = "allow"
 cast_sign_loss = "allow"
 cast_precision_loss = "allow"
 cast_possible_wrap = "allow"
 
 # Nursery lints that have too many false positives
-cognitive_complexity = "allow"      # Use clippy.toml threshold instead
+cognitive_complexity = "allow"      # use clippy.toml threshold instead
