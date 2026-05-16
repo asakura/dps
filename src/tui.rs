@@ -31,7 +31,7 @@ use tracing::{error, warn};
 ///
 /// [`App::run`] receives these through an unbounded channel and dispatches
 /// them to the appropriate handler. All variants are serialisable so they can
-/// be injected via [`Tui::event_tx`] in tests or from external signal handlers.
+/// be injected via [`Tui::event_tx()`] in tests or from external signal handlers.
 ///
 /// [`App::run`]: crate::app::App::run
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -85,8 +85,7 @@ pub struct Tui {
     task: Option<JoinHandle<()>>,
     cancellation_token: CancellationToken,
     event_rx: UnboundedReceiver<Event>,
-    /// Inject a synthetic event into the loop (e.g. from tests or signal handlers).
-    pub event_tx: UnboundedSender<Event>,
+    event_tx: UnboundedSender<Event>,
     frame_rate: f64,
     tick_rate: f64,
     mouse: bool,
@@ -495,6 +494,25 @@ impl Tui {
     pub async fn next_event(&mut self) -> Option<Event> {
         self.event_rx.recv().await
     }
+
+    /// Returns a cloned sender for injecting synthetic events into the loop
+    /// (e.g. from tests or signal handlers).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main(flavor = "multi_thread")]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// # use dps::tui::{Event, Tui};
+    /// let mut tui = Tui::new()?;
+    /// tui.start();
+    /// tui.event_tx().send(Event::Quit).unwrap();
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn event_tx(&self) -> UnboundedSender<Event> {
+        self.event_tx.clone()
+    }
 }
 
 impl Deref for Tui {
@@ -622,7 +640,7 @@ mod tests {
         async fn injected_events_are_received() {
             let mut tui = Tui::default();
             tui.start();
-            tui.event_tx.send(Event::Quit).unwrap();
+            tui.event_tx().send(Event::Quit).unwrap();
             let found = tokio::time::timeout(Duration::from_millis(500), async {
                 loop {
                     match tui.next_event().await {
