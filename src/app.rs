@@ -190,7 +190,7 @@ impl App {
 
         for (seq, action) in bindings {
             if seq.as_slice() == self.key_buffer.as_slice() {
-                exact = Some(action.clone());
+                exact = Some(*action);
             } else if seq.starts_with(&self.key_buffer) {
                 has_prefix = true;
             }

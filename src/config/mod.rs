@@ -167,7 +167,7 @@ impl Config {
             for (key, cmd) in default_bindings {
                 user_bindings
                     .entry(key.clone())
-                    .or_insert_with(|| cmd.clone());
+                    .or_insert(*cmd);
             }
         }
 
