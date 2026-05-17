@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Row, Table},
 };
 
-use crate::theme::{Theme, THEME};
+use crate::theme::Theme;
 
 /// First visible index that keeps `idx` centred in the window without scrolling past either end.
 pub(crate) fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
@@ -42,17 +42,18 @@ pub(crate) fn styled_table(
     constraints: Vec<Constraint>,
     header: Row<'static>,
     title: String,
+    theme: &Theme,
 ) -> Table<'static> {
     Table::new(rows, constraints)
         .header(header)
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(THEME.border())
-                .title(Span::styled(title, THEME.title())),
+                .border_style(theme.border())
+                .title(Span::styled(title, theme.title())),
         )
-        .row_highlight_style(THEME.selection())
-        .column_highlight_style(THEME.column_focus())
+        .row_highlight_style(theme.selection())
+        .column_highlight_style(theme.column_focus())
         .highlight_symbol("▶ ")
 }
 
@@ -61,6 +62,7 @@ pub(crate) fn build_header_row(
     fixed: Vec<Cell<'static>>,
     labels: impl Iterator<Item = String>,
     highlighted: Option<usize>,
+    theme: &Theme,
 ) -> Row<'static> {
     let mut cells = fixed;
     for (i, label) in labels.enumerate() {
@@ -71,7 +73,7 @@ pub(crate) fn build_header_row(
         };
         cells.push(Cell::from(label).style(style));
     }
-    Row::new(cells).style(THEME.header())
+    Row::new(cells).style(theme.header())
 }
 
 #[cfg(test)]

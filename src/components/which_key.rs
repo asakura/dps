@@ -13,13 +13,14 @@
 //! ```no_run
 //! use ratatui::{Terminal, backend::TestBackend};
 //! use dps::components::{KeyBinding, which_key::WhichKey};
+//! use dps::theme::Theme;
 //!
 //! static BINDINGS: [KeyBinding; 1] = [KeyBinding { key: "?", desc: "help" }];
 //!
 //! let backend = TestBackend::new(80, 24);
 //! let mut terminal = Terminal::new(backend).unwrap();
 //! terminal.draw(|f| {
-//!     f.render_widget(WhichKey::new(&BINDINGS, &[]), f.area());
+//!     f.render_widget(WhichKey::new(&BINDINGS, &[], Theme::default()), f.area());
 //! }).unwrap();
 //! ```
 
@@ -29,7 +30,7 @@ use ratatui::{
     widgets::{Clear, Paragraph, Widget},
 };
 
-use crate::theme::THEME;
+use crate::theme::Theme;
 
 use super::KeyBinding;
 
@@ -53,6 +54,7 @@ const MIN_DESC_W: u16 = 10;
 pub struct WhichKey {
     global: &'static [KeyBinding],
     component: &'static [KeyBinding],
+    theme: Theme,
 }
 
 impl WhichKey {
@@ -62,15 +64,24 @@ impl WhichKey {
     ///
     /// ```no_run
     /// use dps::components::{KeyBinding, which_key::WhichKey};
+    /// use dps::theme::Theme;
     ///
     /// static GLOBAL: [KeyBinding; 1] = [KeyBinding { key: "?", desc: "help" }];
     /// static COMP: [KeyBinding; 1] = [KeyBinding { key: "q", desc: "quit" }];
     ///
-    /// let _ = WhichKey::new(&GLOBAL, &COMP);
+    /// let _ = WhichKey::new(&GLOBAL, &COMP, Theme::default());
     /// ```
     #[must_use]
-    pub const fn new(global: &'static [KeyBinding], component: &'static [KeyBinding]) -> Self {
-        Self { global, component }
+    pub const fn new(
+        global: &'static [KeyBinding],
+        component: &'static [KeyBinding],
+        theme: Theme,
+    ) -> Self {
+        Self {
+            global,
+            component,
+            theme,
+        }
     }
 }
 
@@ -92,7 +103,7 @@ impl Widget for WhichKey {
         let popup = bottom_rect(popup_h, area);
 
         Clear.render(popup, buf);
-        buf.set_style(popup, THEME.popup_surface());
+        buf.set_style(popup, self.theme.popup_surface());
 
         let col_rects = Layout::horizontal(vec![Constraint::Fill(1); cols])
             .spacing(COL_GAP)
@@ -103,7 +114,7 @@ impl Widget for WhichKey {
 
             for row in 0..rows {
                 if let Some(b) = all.get(col_idx * rows + row) {
-                    Entry(b).render(row_rects[row], buf);
+                    Entry(b, self.theme).render(row_rects[row], buf);
                 }
             }
         }
@@ -111,7 +122,7 @@ impl Widget for WhichKey {
 }
 
 /// [`Widget`] that renders one [`KeyBinding`] as a `LEAD | KEY_W | ENTRY_GAP | desc` row.
-struct Entry<'a>(&'a KeyBinding);
+struct Entry<'a>(&'a KeyBinding, Theme);
 
 impl Widget for Entry<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -124,11 +135,11 @@ impl Widget for Entry<'_> {
         .areas(area);
 
         Paragraph::new(self.0.key)
-            .style(THEME.key_label())
+            .style(self.1.key_label())
             .render(key_area, buf);
 
         Paragraph::new(self.0.desc)
-            .style(THEME.body_text())
+            .style(self.1.body_text())
             .render(desc_area, buf);
     }
 }
@@ -194,7 +205,7 @@ mod tests {
             let mut terminal = Terminal::new(backend).unwrap();
 
             terminal
-                .draw(|f| f.render_widget(Entry(b), f.area()))
+                .draw(|f| f.render_widget(Entry(b, Theme::default()), f.area()))
                 .unwrap();
             terminal.backend().buffer().clone()
         }
@@ -243,7 +254,7 @@ mod tests {
 
                 terminal
                     .draw(|f| {
-                        f.render_widget(WhichKey::new(&[], &[]), f.area());
+                        f.render_widget(WhichKey::new(&[], &[], Theme::default()), f.area());
                     })
                     .unwrap();
 
@@ -306,7 +317,7 @@ mod tests {
 
                 terminal
                     .draw(|f| {
-                        f.render_widget(WhichKey::new(&PAIR, &[]), f.area());
+                        f.render_widget(WhichKey::new(&PAIR, &[], Theme::default()), f.area());
                     })
                     .unwrap();
 
@@ -325,7 +336,7 @@ mod tests {
 
                 terminal
                     .draw(|f| {
-                        f.render_widget(WhichKey::new(&FOUR, &[]), f.area());
+                        f.render_widget(WhichKey::new(&FOUR, &[], Theme::default()), f.area());
                     })
                     .unwrap();
 
@@ -353,7 +364,7 @@ mod tests {
 
                 terminal
                     .draw(|f| {
-                        f.render_widget(WhichKey::new(&THREE, &[]), f.area());
+                        f.render_widget(WhichKey::new(&THREE, &[], Theme::default()), f.area());
                     })
                     .unwrap();
 
@@ -392,7 +403,7 @@ mod tests {
 
                 terminal
                     .draw(|f| {
-                        f.render_widget(WhichKey::new(&GLOBAL, &COMP), f.area());
+                        f.render_widget(WhichKey::new(&GLOBAL, &COMP, Theme::default()), f.area());
                     })
                     .unwrap();
 
@@ -438,7 +449,7 @@ mod tests {
 
                 terminal
                     .draw(|f| {
-                        f.render_widget(WhichKey::new(&FIVE, &[]), f.area());
+                        f.render_widget(WhichKey::new(&FIVE, &[], Theme::default()), f.area());
                     })
                     .unwrap();
 
@@ -463,7 +474,7 @@ mod tests {
 
                 terminal
                     .draw(|f| {
-                        f.render_widget(WhichKey::new(&LONG_DESC, &[]), f.area());
+                        f.render_widget(WhichKey::new(&LONG_DESC, &[], Theme::default()), f.area());
                     })
                     .unwrap();
 

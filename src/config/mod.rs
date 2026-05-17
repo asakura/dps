@@ -1,6 +1,7 @@
 //! Platform-aware configuration and data directory resolution.
 
 pub mod keys;
+mod theme;
 
 use std::{
     collections::HashMap,
@@ -14,7 +15,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, de::Deserializer};
 use tracing::error;
 
-use crate::{action::Action, mode::Mode};
+use crate::{action::Action, mode::Mode, theme::Theme};
 
 use keys::parse_key_sequence;
 
@@ -32,19 +33,60 @@ pub struct AppConfig {
     pub config_dir: PathBuf,
 }
 
-/// Top-level application configuration, deserialised from the user's config
-/// file and merged with the embedded defaults.
-#[derive(Clone, Debug, Default, Deserialize)]
+/// Intermediate deserialization view of the config file.
+///
+/// Holds raw theme and palette maps long enough for [`theme::resolve_theme`]
+/// to consume them; never exposed publicly.
+#[derive(Deserialize, Default)]
+struct RawConfig {
+    #[serde(default, flatten)]
+    config: AppConfig,
+    #[serde(default)]
+    keybindings: KeyBindings,
+    #[serde(default)]
+    styles: Styles,
+    #[serde(default, rename = "defaultTheme")]
+    default_theme: String,
+    #[serde(default)]
+    themes: HashMap<String, theme::ThemeConfig>,
+    #[serde(default)]
+    palettes: HashMap<String, theme::PaletteConfig>,
+}
+
+/// Top-level application configuration with all colours already resolved.
+#[derive(Clone, Debug)]
 pub struct Config {
     /// Resolved data and config directory paths.
-    #[serde(default, flatten)]
     pub config: AppConfig,
     /// Key-sequence–to–action mappings loaded from the config file.
-    #[serde(default)]
     pub keybindings: KeyBindings,
     /// Reserved for future per-component style overrides.
-    #[serde(default)]
     pub styles: Styles,
+    /// All colour themes resolved at load time, keyed by the name used in the
+    /// config file. The user can switch the active theme at runtime by updating
+    /// `default_theme` to a key present in this map.
+    ///
+    /// User-defined themes must supply all 15 slot mappings; partial overrides
+    /// of a built-in theme are not supported — define a new theme entry instead.
+    pub themes: HashMap<String, Theme>,
+    /// Name of the currently active theme; must always be a key in `themes`.
+    ///
+    /// Switch themes at runtime by assigning a new name that exists in `themes`.
+    /// Assigning an unknown name will cause [`active_theme`](Config::active_theme)
+    /// to panic.
+    pub default_theme: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            config: AppConfig::default(),
+            keybindings: KeyBindings::default(),
+            styles: Styles::default(),
+            themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
+            default_theme: "catpuccineFrappe".to_string(),
+        }
+    }
 }
 
 /// A two-level map from [`Mode`] → key sequence → [`Action`].
@@ -107,15 +149,21 @@ impl Config {
     /// Keybinding priority: user file overrides embedded defaults; missing
     /// keys are filled from the embedded defaults so partial user configs work.
     ///
+    /// Theme priority: embedded defaults supply all four Catppuccin flavours.
+    /// The user may add custom themes and palettes alongside them. All themes
+    /// are resolved eagerly; `defaultTheme` must match a resolved theme name.
+    ///
     /// # Errors
     ///
     /// Returns a [`config::ConfigError`] if a config file is present but
-    /// cannot be parsed or deserialised.
+    /// cannot be parsed or deserialised, if theme resolution fails (unknown
+    /// palette colour or missing palette), or if `defaultTheme` does not
+    /// match any resolved theme.
     pub fn from_dirs(
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
     ) -> color_eyre::Result<Self, config::ConfigError> {
-        let default_config: Self =
+        let default_raw: RawConfig =
             json5::from_str(CONFIG).map_err(|e| config::ConfigError::Message(e.to_string()))?;
 
         let effective_data_dir = data_dir.map_or_else(get_data_dir, Path::to_path_buf);
@@ -160,20 +208,70 @@ impl Config {
             builder = builder.set_override("config_dir", p.to_string_lossy().into_owned())?;
         }
 
-        let mut cfg: Self = builder.build()?.try_deserialize()?;
+        let mut raw: RawConfig = builder.build()?.try_deserialize()?;
 
-        for (mode, default_bindings) in &default_config.keybindings.0 {
-            let user_bindings = cfg.keybindings.0.entry(*mode).or_default();
+        for (mode, default_bindings) in &default_raw.keybindings.0 {
+            let user_bindings = raw.keybindings.0.entry(*mode).or_default();
             for (key, cmd) in default_bindings {
-                user_bindings
-                    .entry(key.clone())
-                    .or_insert(*cmd);
+                user_bindings.entry(key.clone()).or_insert(*cmd);
             }
         }
 
         // TODO: merge default styles once Styles carries real data.
 
-        Ok(cfg)
+        if raw.default_theme.is_empty() {
+            raw.default_theme.clone_from(&default_raw.default_theme);
+        }
+        for (name, t) in &default_raw.themes {
+            raw.themes.entry(name.clone()).or_insert_with(|| t.clone());
+        }
+        for (name, p) in &default_raw.palettes {
+            raw.palettes
+                .entry(name.clone())
+                .or_insert_with(|| p.clone());
+        }
+
+        let themes = theme::resolve_theme(&raw.themes, &raw.palettes)
+            .map_err(|e| config::ConfigError::Message(e.to_string()))?;
+
+        if !themes.contains_key(&raw.default_theme) {
+            return Err(config::ConfigError::Message(format!(
+                "defaultTheme '{}' does not match any resolved theme",
+                raw.default_theme,
+            )));
+        }
+
+        Ok(Self {
+            config: raw.config,
+            keybindings: raw.keybindings,
+            styles: raw.styles,
+            themes,
+            default_theme: raw.default_theme,
+        })
+    }
+
+    /// Returns the currently active theme.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `default_theme` is not a key in `themes`. This invariant
+    /// holds for any `Config` produced by [`Config::new`] or
+    /// [`Config::from_dirs`]; it can be violated by assigning a name to
+    /// `default_theme` that is not present in `themes`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::config::Config;
+    ///
+    /// let config = Config::default();
+    /// let _border_style = config.active_theme().border();
+    /// ```
+    #[must_use]
+    pub fn active_theme(&self) -> &Theme {
+        self.themes
+            .get(&self.default_theme)
+            .unwrap_or_else(|| unreachable!("invariant: default_theme is always a key in themes"))
     }
 }
 
@@ -409,6 +507,80 @@ mod tests {
         std::fs::write(
             dir.path().join("config.json5"),
             "{ this is not valid {{ json5 }",
+        )
+        .unwrap();
+        assert!(Config::from_dirs(Some(dir.path()), None).is_err());
+    }
+
+    #[test]
+    fn theme_resolved_from_embedded_config() -> color_eyre::Result<()> {
+        use ratatui::style::{Color, Modifier, Style};
+        let c = Config::new()?;
+        // Default is catpuccineFrappe; peach = #ef9f76 = Rgb(239, 159, 118).
+        let theme = c.themes.get(&c.default_theme).unwrap();
+        assert_eq!(
+            theme.key_label(),
+            Style::from((Color::Rgb(239, 159, 118), Modifier::BOLD)),
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn all_four_catppuccin_themes_resolved() -> color_eyre::Result<()> {
+        let c = Config::new()?;
+        for name in [
+            "catpuccineLatte",
+            "catpuccineFrappe",
+            "catpuccineMacchiato",
+            "catpuccineMocha",
+        ] {
+            assert!(c.themes.contains_key(name), "missing theme '{name}'");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn unknown_default_theme_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("config.json5"),
+            r#"{ defaultTheme: "doesNotExist" }"#,
+        )
+        .unwrap();
+        let err = Config::from_dirs(Some(dir.path()), None).unwrap_err();
+        assert!(
+            err.to_string().contains("doesNotExist"),
+            "error should name the unknown theme; got: {err}",
+        );
+    }
+
+    #[test]
+    fn theme_without_palette_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        // A fully-specified theme with no matching palette entry.
+        std::fs::write(
+            dir.path().join("config.json5"),
+            r#"{
+              themes: {
+                orphanTheme: {
+                  popupSurface: { fg: "text",     bg: "mantle"   },
+                  keyLabel:     { fg: "peach"                    },
+                  border:       { fg: "surface0"                 },
+                  title:        { fg: "lavender"                 },
+                  header:       { fg: "blue"                     },
+                  selection:    { fg: "base",     bg: "mauve"    },
+                  columnFocus:  { fg: "lavender"                 },
+                  navBar:       { fg: "subtext0", bg: "surface0" },
+                  statusActive: { fg: "text",     bg: "surface0" },
+                  statusEmpty:  { fg: "overlay0", bg: "surface0" },
+                  safe:         { fg: "green"                    },
+                  caution:      { fg: "yellow"                   },
+                  danger:       { fg: "red"                      },
+                  bodyText:     { fg: "text"                     },
+                  hint:         { fg: "subtext0"                 },
+                }
+              }
+            }"#,
         )
         .unwrap();
         assert!(Config::from_dirs(Some(dir.path()), None).is_err());

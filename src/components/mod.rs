@@ -7,6 +7,7 @@ pub mod which_key;
 use ratatui::{buffer::Buffer, layout::Rect, widgets::TableState};
 
 use crate::action::Action;
+use crate::theme::Theme;
 
 /// A single key→action entry for the which-key popup and help line.
 #[derive(Debug, Clone, Copy)]
@@ -24,7 +25,9 @@ pub const PAGE_DELTA: isize = 20;
 
 /// Moves the selected row by `delta`, clamping the result to `[0, max]`.
 pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
-    let next = state.selected().map_or(0, |i| i.saturating_add_signed(delta).min(max));
+    let next = state
+        .selected()
+        .map_or(0, |i| i.saturating_add_signed(delta).min(max));
     state.select(Some(next));
 }
 
@@ -34,9 +37,9 @@ pub trait Component {
     /// Short display name shown in the tab bar.
     fn title(&self) -> &'static str;
     /// Draw the component's content into `area`.
-    fn render(&mut self, area: Rect, buf: &mut Buffer);
+    fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &Theme);
     /// Render a one-line status bar below the main content area.
-    fn render_status(&self, area: Rect, buf: &mut Buffer);
+    fn render_status(&self, area: Rect, buf: &mut Buffer, theme: &Theme);
     /// Respond to a semantic action produced by the keybinding layer.
     ///
     /// Called when a configured key sequence resolves to an [`Action`] before

@@ -1,6 +1,6 @@
 //! Application colour theme. Assumes 24-bit ("true colour") terminal support.
 //!
-//! Palette data from <https://github.com/catppuccin/palette> (palette.json v1.8.0).
+//! Colour values sourced from <https://github.com/catppuccin/palette> (palette.json v1.8.0).
 //!
 //! # Styling guide
 //!
@@ -88,338 +88,235 @@
 
 use ratatui::style::{Color, Modifier, Style};
 
-/// Full Catppuccin palette with all 26 named colour slots.
+/// Application colour theme.
 ///
-/// Field names follow the canonical Catppuccin naming exactly.
-/// Prefer constructing a [`Theme`] and using its semantic style methods
-/// over accessing palette colours directly.
-#[derive(Debug, Clone, Copy)]
-pub struct Palette {
-    // ── Accents (accent: true) ───────────────────────────────────────────────
-    /// Catppuccin rosewater accent.
-    pub rosewater: Color,
-    /// Catppuccin flamingo accent.
-    pub flamingo: Color,
-    /// Catppuccin pink accent.
-    pub pink: Color,
-    /// Catppuccin mauve accent.
-    pub mauve: Color,
-    /// Catppuccin red accent.
-    pub red: Color,
-    /// Catppuccin maroon accent.
-    pub maroon: Color,
-    /// Catppuccin peach accent.
-    pub peach: Color,
-    /// Catppuccin yellow accent.
-    pub yellow: Color,
-    /// Catppuccin green accent.
-    pub green: Color,
-    /// Catppuccin teal accent.
-    pub teal: Color,
-    /// Catppuccin sky accent.
-    pub sky: Color,
-    /// Catppuccin sapphire accent.
-    pub sapphire: Color,
-    /// Catppuccin blue accent.
-    pub blue: Color,
-    /// Catppuccin lavender accent.
-    pub lavender: Color,
-    // ── Text ────────────────────────────────────────────────────────────────
-    /// Primary text colour.
-    pub text: Color,
-    /// Secondary text colour (slightly dimmed).
-    pub subtext1: Color,
-    /// Tertiary text colour (more dimmed).
-    pub subtext0: Color,
-    // ── Overlay ─────────────────────────────────────────────────────────────
-    /// Overlay level 2 (brightest).
-    pub overlay2: Color,
-    /// Overlay level 1.
-    pub overlay1: Color,
-    /// Overlay level 0 (darkest).
-    pub overlay0: Color,
-    // ── Surface ─────────────────────────────────────────────────────────────
-    /// Surface level 2 (lightest surface).
-    pub surface2: Color,
-    /// Surface level 1.
-    pub surface1: Color,
-    /// Surface level 0 (darkest surface).
-    pub surface0: Color,
-    // ── Base ────────────────────────────────────────────────────────────────
-    /// Base background colour.
-    pub base: Color,
-    /// Darker background layer (beneath base).
-    pub mantle: Color,
-    /// Darkest background layer (beneath mantle).
-    pub crust: Color,
-}
-
-impl Palette {
-    /// Catppuccin Latte — light flavour.
-    #[must_use]
-    pub const fn latte() -> Self {
-        Self {
-            rosewater: Color::Rgb(220, 138, 120), // #dc8a78
-            flamingo: Color::Rgb(221, 120, 120),  // #dd7878
-            pink: Color::Rgb(234, 118, 203),      // #ea76cb
-            mauve: Color::Rgb(136, 57, 239),      // #8839ef
-            red: Color::Rgb(210, 15, 57),         // #d20f39
-            maroon: Color::Rgb(230, 69, 83),      // #e64553
-            peach: Color::Rgb(254, 100, 11),      // #fe640b
-            yellow: Color::Rgb(223, 142, 29),     // #df8e1d
-            green: Color::Rgb(64, 160, 43),       // #40a02b
-            teal: Color::Rgb(23, 146, 153),       // #179299
-            sky: Color::Rgb(4, 165, 229),         // #04a5e5
-            sapphire: Color::Rgb(32, 159, 181),   // #209fb5
-            blue: Color::Rgb(30, 102, 245),       // #1e66f5
-            lavender: Color::Rgb(114, 135, 253),  // #7287fd
-            text: Color::Rgb(76, 79, 105),        // #4c4f69
-            subtext1: Color::Rgb(92, 95, 119),    // #5c5f77
-            subtext0: Color::Rgb(108, 111, 133),  // #6c6f85
-            overlay2: Color::Rgb(124, 127, 147),  // #7c7f93
-            overlay1: Color::Rgb(140, 143, 161),  // #8c8fa1
-            overlay0: Color::Rgb(156, 160, 176),  // #9ca0b0
-            surface2: Color::Rgb(172, 176, 190),  // #acb0be
-            surface1: Color::Rgb(188, 192, 204),  // #bcc0cc
-            surface0: Color::Rgb(204, 208, 218),  // #ccd0da
-            base: Color::Rgb(239, 241, 245),      // #eff1f5
-            mantle: Color::Rgb(230, 233, 239),    // #e6e9ef
-            crust: Color::Rgb(220, 224, 232),     // #dce0e8
-        }
-    }
-
-    /// Catppuccin Frappé — cool dark flavour.
-    #[must_use]
-    pub const fn frappe() -> Self {
-        Self {
-            rosewater: Color::Rgb(242, 213, 207), // #f2d5cf
-            flamingo: Color::Rgb(238, 190, 190),  // #eebebe
-            pink: Color::Rgb(244, 184, 228),      // #f4b8e4
-            mauve: Color::Rgb(202, 158, 230),     // #ca9ee6
-            red: Color::Rgb(231, 130, 132),       // #e78284
-            maroon: Color::Rgb(234, 153, 156),    // #ea999c
-            peach: Color::Rgb(239, 159, 118),     // #ef9f76
-            yellow: Color::Rgb(229, 200, 144),    // #e5c890
-            green: Color::Rgb(166, 209, 137),     // #a6d189
-            teal: Color::Rgb(129, 200, 190),      // #81c8be
-            sky: Color::Rgb(153, 209, 219),       // #99d1db
-            sapphire: Color::Rgb(133, 193, 220),  // #85c1dc
-            blue: Color::Rgb(140, 170, 238),      // #8caaee
-            lavender: Color::Rgb(186, 187, 241),  // #babbf1
-            text: Color::Rgb(198, 208, 245),      // #c6d0f5
-            subtext1: Color::Rgb(181, 191, 226),  // #b5bfe2
-            subtext0: Color::Rgb(165, 173, 206),  // #a5adce
-            overlay2: Color::Rgb(148, 156, 187),  // #949cbb
-            overlay1: Color::Rgb(131, 139, 167),  // #838ba7
-            overlay0: Color::Rgb(115, 121, 148),  // #737994
-            surface2: Color::Rgb(98, 104, 128),   // #626880
-            surface1: Color::Rgb(81, 87, 109),    // #51576d
-            surface0: Color::Rgb(65, 69, 89),     // #414559
-            base: Color::Rgb(48, 52, 70),         // #303446
-            mantle: Color::Rgb(41, 44, 60),       // #292c3c
-            crust: Color::Rgb(35, 38, 52),        // #232634
-        }
-    }
-
-    /// Catppuccin Macchiato — medium dark flavour.
-    #[must_use]
-    pub const fn macchiato() -> Self {
-        Self {
-            rosewater: Color::Rgb(244, 219, 214), // #f4dbd6
-            flamingo: Color::Rgb(240, 198, 198),  // #f0c6c6
-            pink: Color::Rgb(245, 189, 230),      // #f5bde6
-            mauve: Color::Rgb(198, 160, 246),     // #c6a0f6
-            red: Color::Rgb(237, 135, 150),       // #ed8796
-            maroon: Color::Rgb(238, 153, 160),    // #ee99a0
-            peach: Color::Rgb(245, 169, 127),     // #f5a97f
-            yellow: Color::Rgb(238, 212, 159),    // #eed49f
-            green: Color::Rgb(166, 218, 149),     // #a6da95
-            teal: Color::Rgb(139, 213, 202),      // #8bd5ca
-            sky: Color::Rgb(145, 215, 227),       // #91d7e3
-            sapphire: Color::Rgb(125, 196, 228),  // #7dc4e4
-            blue: Color::Rgb(138, 173, 244),      // #8aadf4
-            lavender: Color::Rgb(183, 189, 248),  // #b7bdf8
-            text: Color::Rgb(202, 211, 245),      // #cad3f5
-            subtext1: Color::Rgb(184, 192, 224),  // #b8c0e0
-            subtext0: Color::Rgb(165, 173, 203),  // #a5adcb
-            overlay2: Color::Rgb(147, 154, 183),  // #939ab7
-            overlay1: Color::Rgb(128, 135, 162),  // #8087a2
-            overlay0: Color::Rgb(110, 115, 141),  // #6e738d
-            surface2: Color::Rgb(91, 96, 120),    // #5b6078
-            surface1: Color::Rgb(73, 77, 100),    // #494d64
-            surface0: Color::Rgb(54, 58, 79),     // #363a4f
-            base: Color::Rgb(36, 39, 58),         // #24273a
-            mantle: Color::Rgb(30, 32, 48),       // #1e2030
-            crust: Color::Rgb(24, 25, 38),        // #181926
-        }
-    }
-
-    /// Catppuccin Mocha — darkest flavour.
-    #[must_use]
-    pub const fn mocha() -> Self {
-        Self {
-            rosewater: Color::Rgb(245, 224, 220), // #f5e0dc
-            flamingo: Color::Rgb(242, 205, 205),  // #f2cdcd
-            pink: Color::Rgb(245, 194, 231),      // #f5c2e7
-            mauve: Color::Rgb(203, 166, 247),     // #cba6f7
-            red: Color::Rgb(243, 139, 168),       // #f38ba8
-            maroon: Color::Rgb(235, 160, 172),    // #eba0ac
-            peach: Color::Rgb(250, 179, 135),     // #fab387
-            yellow: Color::Rgb(249, 226, 175),    // #f9e2af
-            green: Color::Rgb(166, 227, 161),     // #a6e3a1
-            teal: Color::Rgb(148, 226, 213),      // #94e2d5
-            sky: Color::Rgb(137, 220, 235),       // #89dceb
-            sapphire: Color::Rgb(116, 199, 236),  // #74c7ec
-            blue: Color::Rgb(137, 180, 250),      // #89b4fa
-            lavender: Color::Rgb(180, 190, 254),  // #b4befe
-            text: Color::Rgb(205, 214, 244),      // #cdd6f4
-            subtext1: Color::Rgb(186, 194, 222),  // #bac2de
-            subtext0: Color::Rgb(166, 173, 200),  // #a6adc8
-            overlay2: Color::Rgb(147, 153, 178),  // #9399b2
-            overlay1: Color::Rgb(127, 132, 156),  // #7f849c
-            overlay0: Color::Rgb(108, 112, 134),  // #6c7086
-            surface2: Color::Rgb(88, 91, 112),    // #585b70
-            surface1: Color::Rgb(69, 71, 90),     // #45475a
-            surface0: Color::Rgb(49, 50, 68),     // #313244
-            base: Color::Rgb(30, 30, 46),         // #1e1e2e
-            mantle: Color::Rgb(24, 24, 37),       // #181825
-            crust: Color::Rgb(17, 17, 27),        // #11111b
-        }
-    }
-}
-
-/// Application colour theme backed by a [`Palette`].
+/// Each semantic slot stores the resolved [`Color`]s directly, so that config-
+/// driven themes (where slot → palette-colour-name mappings are read from the
+/// config file) and the hard-coded Catppuccin constructors share the same type.
+///
+/// Fields are private; use [`Theme::default`] for the built-in Frappé theme,
+/// or obtain the active config-driven theme via
+/// [`crate::config::Config::active_theme`]. Config code constructs themes via
+/// [`Theme::new`] in `crate::config::theme`.
 ///
 /// All colours are accessed through semantic style methods (`danger()`,
-/// `safe()`, `selection()`, …). The palette field is private; use
-/// [`Theme::latte`] / [`Theme::frappe`] / … to construct a theme.
+/// `safe()`, `selection()`, …).
 #[derive(Debug, Clone, Copy)]
 pub struct Theme {
-    palette: Palette,
+    // Which-key popup
+    popup_surface_fg: Color,
+    popup_surface_bg: Color,
+    key_label_fg: Color,
+    // Table chrome
+    border_fg: Color,
+    title_fg: Color,
+    header_fg: Color,
+    selection_fg: Color,
+    selection_bg: Color,
+    column_focus_fg: Color,
+    // Tab bar
+    nav_bar_fg: Color,
+    nav_bar_bg: Color,
+    // Status bar
+    status_active_fg: Color,
+    status_active_bg: Color,
+    status_empty_fg: Color,
+    status_empty_bg: Color,
+    // Safety levels
+    safe_fg: Color,
+    caution_fg: Color,
+    danger_fg: Color,
+    // Text
+    body_text_fg: Color,
+    hint_fg: Color,
 }
 
 impl Theme {
-    /// Catppuccin Latte — light flavour.
-    #[must_use]
-    pub const fn latte() -> Self {
-        Self { palette: Palette::latte() }
-    }
-
-    /// Catppuccin Frappé — cool dark flavour.
-    #[must_use]
-    pub const fn frappe() -> Self {
-        Self { palette: Palette::frappe() }
-    }
-
-    /// Catppuccin Macchiato — medium dark flavour.
-    #[must_use]
-    pub const fn macchiato() -> Self {
-        Self { palette: Palette::macchiato() }
-    }
-
-    /// Catppuccin Mocha — darkest flavour.
-    #[must_use]
-    pub const fn mocha() -> Self {
-        Self { palette: Palette::mocha() }
-    }
-
-    // ── Which-key popup ──────────────────────────────────────────────────────
+    // Which-key popup
     /// Popup surface: text-on-mantle background.
     #[must_use]
     pub fn popup_surface(&self) -> Style {
-        Style::from((self.palette.text, self.palette.mantle))
+        Style::from((self.popup_surface_fg, self.popup_surface_bg))
     }
+
     /// Key label: bold peach.
     #[must_use]
     pub fn key_label(&self) -> Style {
-        Style::from((self.palette.peach, Modifier::BOLD))
+        Style::from((self.key_label_fg, Modifier::BOLD))
     }
 
-    // ── Table chrome ─────────────────────────────────────────────────────────
+    // Table chrome
     /// Table border.
     #[must_use]
     pub fn border(&self) -> Style {
-        Style::from(self.palette.surface0)
+        Style::from(self.border_fg)
     }
+
     /// Block title above a table.
     #[must_use]
     pub fn title(&self) -> Style {
-        Style::from(self.palette.lavender)
+        Style::from(self.title_fg)
     }
+
     /// Header row text.
     #[must_use]
     pub fn header(&self) -> Style {
-        Style::from(self.palette.blue)
+        Style::from(self.header_fg)
     }
+
     /// Non-highlighted header cell.
     #[must_use]
     pub fn header_cell() -> Style {
         Style::from(Modifier::BOLD)
     }
+
     /// Highlighted (selected column) header cell.
     #[must_use]
     pub fn header_cell_active() -> Style {
         Style::from(Modifier::BOLD | Modifier::UNDERLINED)
     }
+
     /// Selected row / active element (Catppuccin Selection Rule: mauve bg + base fg).
     #[must_use]
     pub fn selection(&self) -> Style {
-        Style::from((self.palette.base, self.palette.mauve, Modifier::BOLD))
+        Style::from((self.selection_fg, self.selection_bg, Modifier::BOLD))
     }
+
     /// Focused column highlight.
     #[must_use]
     pub fn column_focus(&self) -> Style {
-        Style::from((self.palette.lavender, Modifier::BOLD))
+        Style::from((self.column_focus_fg, Modifier::BOLD))
     }
 
-    // ── Tab bar ───────────────────────────────────────────────────────────────
+    // Tab bar
     /// Inactive tab bar background.
     #[must_use]
     pub fn nav_bar(&self) -> Style {
-        Style::from((self.palette.subtext0, self.palette.surface0))
+        Style::from((self.nav_bar_fg, self.nav_bar_bg))
     }
 
-    // ── Status bar ────────────────────────────────────────────────────────────
+    // Status bar
     /// Status bar with an active selection.
     #[must_use]
     pub fn status_active(&self) -> Style {
-        Style::from((self.palette.text, self.palette.surface0, Modifier::BOLD))
+        Style::from((self.status_active_fg, self.status_active_bg, Modifier::BOLD))
     }
+
     /// Status bar empty / placeholder state.
     #[must_use]
     pub fn status_empty(&self) -> Style {
-        Style::from((self.palette.overlay0, self.palette.surface0))
+        Style::from((self.status_empty_fg, self.status_empty_bg))
     }
 
-    // ── Safety levels ─────────────────────────────────────────────────────────
+    // Safety levels
     /// Safe dive condition (green).
     #[must_use]
     pub fn safe(&self) -> Style {
-        Style::from(self.palette.green)
+        Style::from(self.safe_fg)
     }
+
     /// Caution dive condition (yellow).
     #[must_use]
     pub fn caution(&self) -> Style {
-        Style::from(self.palette.yellow)
+        Style::from(self.caution_fg)
     }
+
     /// Danger dive condition (red).
     #[must_use]
     pub fn danger(&self) -> Style {
-        Style::from(self.palette.red)
+        Style::from(self.danger_fg)
     }
 
-    // ── Text ──────────────────────────────────────────────────────────────────
+    // Text
     /// Body text: plain text fg.
     #[must_use]
     pub fn body_text(&self) -> Style {
-        Style::from(self.palette.text)
+        Style::from(self.body_text_fg)
     }
+
     /// Hint / help line text.
     #[must_use]
     pub fn hint(&self) -> Style {
-        Style::from(self.palette.subtext0)
+        Style::from(self.hint_fg)
+    }
+
+    /// Constructs a theme from pre-resolved colours.
+    ///
+    /// This is the single construction path for config-driven themes; call sites
+    /// live in [`crate::config::theme`]. Hard-coded themes use [`Theme::default`].
+    #[expect(clippy::too_many_arguments, reason = "one argument per semantic colour slot")]
+    #[must_use]
+    pub(crate) fn new(
+        popup_surface_fg: Color,
+        popup_surface_bg: Color,
+        key_label_fg: Color,
+        border_fg: Color,
+        title_fg: Color,
+        header_fg: Color,
+        selection_fg: Color,
+        selection_bg: Color,
+        column_focus_fg: Color,
+        nav_bar_fg: Color,
+        nav_bar_bg: Color,
+        status_active_fg: Color,
+        status_active_bg: Color,
+        status_empty_fg: Color,
+        status_empty_bg: Color,
+        safe_fg: Color,
+        caution_fg: Color,
+        danger_fg: Color,
+        body_text_fg: Color,
+        hint_fg: Color,
+    ) -> Self {
+        Self {
+            popup_surface_fg,
+            popup_surface_bg,
+            key_label_fg,
+            border_fg,
+            title_fg,
+            header_fg,
+            selection_fg,
+            selection_bg,
+            column_focus_fg,
+            nav_bar_fg,
+            nav_bar_bg,
+            status_active_fg,
+            status_active_bg,
+            status_empty_fg,
+            status_empty_bg,
+            safe_fg,
+            caution_fg,
+            danger_fg,
+            body_text_fg,
+            hint_fg,
+        }
     }
 }
 
-/// The active theme — shared across all rendering code.
-pub const THEME: Theme = Theme::frappe();
+impl Default for Theme {
+    /// Catppuccin Frappé — cool dark flavour.
+    fn default() -> Self {
+        Self {
+            popup_surface_fg: Color::Rgb(198, 208, 245), // text
+            popup_surface_bg: Color::Rgb(41, 44, 60),    // mantle
+            key_label_fg: Color::Rgb(239, 159, 118),     // peach
+            border_fg: Color::Rgb(65, 69, 89),           // surface0
+            title_fg: Color::Rgb(186, 187, 241),         // lavender
+            header_fg: Color::Rgb(140, 170, 238),        // blue
+            selection_fg: Color::Rgb(48, 52, 70),        // base
+            selection_bg: Color::Rgb(202, 158, 230),     // mauve
+            column_focus_fg: Color::Rgb(186, 187, 241),  // lavender
+            nav_bar_fg: Color::Rgb(165, 173, 206),       // subtext0
+            nav_bar_bg: Color::Rgb(65, 69, 89),          // surface0
+            status_active_fg: Color::Rgb(198, 208, 245), // text
+            status_active_bg: Color::Rgb(65, 69, 89),    // surface0
+            status_empty_fg: Color::Rgb(115, 121, 148),  // overlay0
+            status_empty_bg: Color::Rgb(65, 69, 89),     // surface0
+            safe_fg: Color::Rgb(166, 209, 137),          // green
+            caution_fg: Color::Rgb(229, 200, 144),       // yellow
+            danger_fg: Color::Rgb(231, 130, 132),        // red
+            body_text_fg: Color::Rgb(198, 208, 245),     // text
+            hint_fg: Color::Rgb(165, 173, 206),          // subtext0
+        }
+    }
+}

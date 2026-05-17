@@ -7,7 +7,7 @@ use crate::{
     components::{Component, KeyBinding, mod_tab::ModTab, ppo2_tab::PpO2Tab, which_key::WhichKey},
     config::{Config, KeyBindings},
     mode::Mode,
-    theme::THEME,
+    theme::Theme,
     tui::{Event, Tui},
 };
 use crossterm::event::{KeyCode, KeyEvent};
@@ -44,6 +44,7 @@ pub struct App {
     mode: Mode,
     tick_rate: f64,
     frame_rate: f64,
+    theme: Theme,
 }
 
 impl fmt::Debug for App {
@@ -112,6 +113,7 @@ impl App {
     }
 
     fn from_config(tick_rate: f64, frame_rate: f64, config: Config) -> Self {
+        let theme = *config.active_theme();
         Self {
             tabs: vec![Box::new(ModTab::new()), Box::new(PpO2Tab::new())],
             active: 0,
@@ -121,6 +123,7 @@ impl App {
             mode: Mode::Home,
             tick_rate,
             frame_rate,
+            theme,
         }
     }
 
@@ -285,6 +288,7 @@ impl App {
 struct HintBar<'a> {
     component: &'a [KeyBinding],
     global: &'a [KeyBinding],
+    theme: Theme,
 }
 
 impl Widget for HintBar<'_> {
@@ -297,7 +301,7 @@ impl Widget for HintBar<'_> {
             .collect::<Vec<_>>()
             .join("   ");
         Paragraph::new(format!(" {hint}"))
-            .style(THEME.hint())
+            .style(self.theme.hint())
             .render(area, buf);
     }
 }
@@ -315,22 +319,28 @@ impl Widget for &mut App {
         let titles: Vec<&str> = self.tabs.iter().map(|t| t.title()).collect();
         Tabs::new(titles)
             .select(self.active)
-            .style(THEME.nav_bar())
-            .highlight_style(THEME.selection())
+            .style(self.theme.nav_bar())
+            .highlight_style(self.theme.selection())
             .divider("│")
             .render(chunks[0], buf);
 
-        self.tabs[self.active].render(chunks[1], buf);
-        self.tabs[self.active].render_status(chunks[2], buf);
+        self.tabs[self.active].render(chunks[1], buf, &self.theme);
+        self.tabs[self.active].render_status(chunks[2], buf, &self.theme);
 
         HintBar {
             component: self.tabs[self.active].key_bindings(),
             global: GLOBAL_BINDINGS,
+            theme: self.theme,
         }
         .render(chunks[3], buf);
 
         if self.show_which_key {
-            WhichKey::new(GLOBAL_BINDINGS, self.tabs[self.active].key_bindings()).render(area, buf);
+            WhichKey::new(
+                GLOBAL_BINDINGS,
+                self.tabs[self.active].key_bindings(),
+                self.theme,
+            )
+            .render(area, buf);
         }
     }
 }
@@ -397,6 +407,8 @@ mod tests {
                 config: AppConfig::default(),
                 keybindings: KeyBindings(mode_map),
                 styles: Styles(),
+                themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
+                default_theme: "catpuccineFrappe".to_string(),
             }
         }
 
@@ -600,6 +612,7 @@ mod tests {
                 HintBar {
                     component: COMP,
                     global: GLOB,
+                    theme: Theme::default(),
                 },
                 60,
             );
@@ -614,6 +627,7 @@ mod tests {
                 HintBar {
                     component: COMP,
                     global: GLOB,
+                    theme: Theme::default(),
                 },
                 60,
             );
@@ -627,6 +641,7 @@ mod tests {
                 HintBar {
                     component: &[],
                     global: &[],
+                    theme: Theme::default(),
                 },
                 40,
             );

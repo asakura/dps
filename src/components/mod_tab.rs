@@ -10,7 +10,7 @@ use ratatui::{
 use crate::{
     action::{Action, Movement},
     gas::Ean,
-    theme::{Theme, THEME},
+    theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Bar,
 };
@@ -72,13 +72,19 @@ impl ModTab {
         }
     }
 
-    #[expect(clippy::cast_precision_loss, reason = "ppo2_idx is bounded by PPO2_MAX_IDX = 8")]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "ppo2_idx is bounded by PPO2_MAX_IDX = 8"
+    )]
     const fn ppo2(&self) -> Bar {
         Bar::new((self.ppo2_idx as f64).mul_add(PPO2_STEP, PPO2_MIN))
     }
 
     /// ppO₂ column values for a sliding window of `window_size` columns centred on the selected index.
-    #[expect(clippy::cast_precision_loss, reason = "start + i is bounded by PPO2_COUNT = 9")]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "start + i is bounded by PPO2_COUNT = 9"
+    )]
     fn visible_columns(&self, window_size: usize) -> Vec<Bar> {
         let start = window_start(self.ppo2_idx, PPO2_COUNT, window_size);
         let count = window_size.min(PPO2_COUNT);
@@ -152,10 +158,10 @@ impl ModTab {
         }
     }
 
-    fn build_rows(&self, cols: &[Bar]) -> Vec<Row<'static>> {
+    fn build_rows(&self, cols: &[Bar], theme: Theme) -> Vec<Row<'static>> {
         self.mixes
             .iter()
-            .map(|mix| ModRow { mix, cols }.into())
+            .map(|mix| ModRow { mix, cols, theme }.into())
             .collect()
     }
 }
@@ -163,6 +169,7 @@ impl ModTab {
 struct ModRow<'a> {
     mix: &'a Ean,
     cols: &'a [Bar],
+    theme: Theme,
 }
 
 impl From<ModRow<'_>> for Row<'static> {
@@ -173,53 +180,30 @@ impl From<ModRow<'_>> for Row<'static> {
         ];
         for &col in r.cols {
             let depth = r.mix.mod_at(col);
-            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth.value())));
+            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth.value(), &r.theme)));
         }
         Row::new(cells)
     }
 }
 
-fn mod_color(depth_m: f64) -> Style {
+fn mod_color(depth_m: f64, theme: &Theme) -> Style {
     if depth_m < MOD_RED_BELOW_M {
-        THEME.danger()
+        theme.danger()
     } else if depth_m < MOD_YELLOW_BELOW_M {
-        THEME.caution()
+        theme.caution()
     } else {
-        THEME.safe()
+        theme.safe()
     }
 }
 
-impl Widget for &mut ModTab {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let window_size = col_window_size(area.width, TABLE_OVERHEAD_W, COL_MOD_W, PPO2_COUNT);
-        let col_in_window = self.ppo2_window_col(window_size);
-        self.table_state
-            .select_column(Some(col_in_window + FIXED_COL_COUNT));
-        let cols = self.visible_columns(window_size);
-        let title = format!(" DPS — MOD Table   ppO\u{2082} {} ", self.ppo2());
-        let constraints = trailing_constraints(
-            &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
-            cols.len(),
-            COL_MOD_W,
-        );
-        let header = build_header_row(
-            vec![
-                Cell::from("Name").style(Theme::header_cell()),
-                Cell::from("O\u{2082}%").style(Theme::header_cell()),
-            ],
-            cols.iter().map(ToString::to_string),
-            Some(col_in_window),
-        );
-        let table = styled_table(self.build_rows(&cols), constraints, header, title);
-        StatefulWidget::render(table, area, buf, &mut self.table_state);
-    }
+struct ModTabStatus<'a> {
+    tab: &'a ModTab,
+    theme: Theme,
 }
-
-struct ModTabStatus<'a>(&'a ModTab);
 
 impl Widget for ModTabStatus<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        match self.0.selection {
+        match self.tab.selection {
             Some((mix, ppo2)) => {
                 let depth = mix.mod_at(ppo2);
                 let name = mix.label().map(|s| format!("{s} ")).unwrap_or_default();
@@ -231,11 +215,11 @@ impl Widget for ModTabStatus<'_> {
                     ppo2,
                 );
                 Paragraph::new(text)
-                    .style(THEME.status_active())
+                    .style(self.theme.status_active())
                     .render(area, buf);
             }
             None => Paragraph::new(" No gas selected — press Enter to select")
-                .style(THEME.status_empty())
+                .style(self.theme.status_empty())
                 .render(area, buf),
         }
     }
@@ -258,12 +242,39 @@ impl Component for ModTab {
         }
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer) {
-        Widget::render(self, area, buf);
+    fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &Theme) {
+        let window_size = col_window_size(area.width, TABLE_OVERHEAD_W, COL_MOD_W, PPO2_COUNT);
+        let col_in_window = self.ppo2_window_col(window_size);
+        self.table_state
+            .select_column(Some(col_in_window + FIXED_COL_COUNT));
+        let cols = self.visible_columns(window_size);
+        let title = format!(" DPS — MOD Table   ppO\u{2082} {} ", self.ppo2());
+        let constraints = trailing_constraints(
+            &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
+            cols.len(),
+            COL_MOD_W,
+        );
+        let header = build_header_row(
+            vec![
+                Cell::from("Name").style(Theme::header_cell()),
+                Cell::from("O\u{2082}%").style(Theme::header_cell()),
+            ],
+            cols.iter().map(ToString::to_string),
+            Some(col_in_window),
+            theme,
+        );
+        let table = styled_table(
+            self.build_rows(&cols, *theme),
+            constraints,
+            header,
+            title,
+            theme,
+        );
+        StatefulWidget::render(table, area, buf, &mut self.table_state);
     }
 
-    fn render_status(&self, area: Rect, buf: &mut Buffer) {
-        ModTabStatus(self).render(area, buf);
+    fn render_status(&self, area: Rect, buf: &mut Buffer, theme: &Theme) {
+        ModTabStatus { tab: self, theme: *theme }.render(area, buf);
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
@@ -345,28 +356,34 @@ mod tests {
 
         #[test]
         fn below_10m_is_red() {
-            assert_eq!(mod_color(9.9), THEME.danger());
-            assert_eq!(mod_color(0.0), THEME.danger());
+            assert_eq!(mod_color(9.9, &Theme::default()), Theme::default().danger());
+            assert_eq!(mod_color(0.0, &Theme::default()), Theme::default().danger());
         }
 
         #[test]
         fn exactly_10m_is_yellow() {
-            assert_eq!(mod_color(10.0), THEME.caution());
+            assert_eq!(
+                mod_color(10.0, &Theme::default()),
+                Theme::default().caution()
+            );
         }
 
         #[test]
         fn between_thresholds_is_yellow() {
-            assert_eq!(mod_color(15.0), THEME.caution());
+            assert_eq!(
+                mod_color(15.0, &Theme::default()),
+                Theme::default().caution()
+            );
         }
 
         #[test]
         fn exactly_20m_is_green() {
-            assert_eq!(mod_color(20.0), THEME.safe());
+            assert_eq!(mod_color(20.0, &Theme::default()), Theme::default().safe());
         }
 
         #[test]
         fn above_20m_is_green() {
-            assert_eq!(mod_color(33.75), THEME.safe());
+            assert_eq!(mod_color(33.75, &Theme::default()), Theme::default().safe());
         }
     }
 
@@ -376,7 +393,7 @@ mod tests {
         #[test]
         fn no_selection_shows_prompt() {
             let tab = ModTab::new();
-            let text = widget_text(ModTabStatus(&tab), 60);
+            let text = widget_text(ModTabStatus { tab: &tab, theme: Theme::default() }, 60);
             assert!(text.contains("No gas"));
         }
 
@@ -384,7 +401,7 @@ mod tests {
         fn selection_shows_mix_percent_and_mod() {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Select);
-            let text = widget_text(ModTabStatus(&tab), 60);
+            let text = widget_text(ModTabStatus { tab: &tab, theme: Theme::default() }, 60);
             assert!(text.contains("32"));
             assert!(text.contains("MOD"));
         }

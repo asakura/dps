@@ -10,7 +10,7 @@ use ratatui::{
 use crate::{
     action::{Action, Movement},
     gas::Ean,
-    theme::{Theme, THEME},
+    theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Meters,
 };
@@ -139,9 +139,16 @@ impl PpO2Tab {
         }
     }
 
-    fn build_rows(mixes: &[Ean]) -> Vec<Row<'static>> {
+    fn build_rows(mixes: &[Ean], theme: Theme) -> Vec<Row<'static>> {
         (0..=PPO2_TABLE_DEPTH_MAX)
-            .map(|d| PpO2Row { depth: d, mixes }.into())
+            .map(|d| {
+                PpO2Row {
+                    depth: d,
+                    mixes,
+                    theme,
+                }
+                .into()
+            })
             .collect()
     }
 }
@@ -149,35 +156,89 @@ impl PpO2Tab {
 struct PpO2Row<'a> {
     depth: usize,
     mixes: &'a [Ean],
+    theme: Theme,
 }
 
 impl From<PpO2Row<'_>> for Row<'static> {
-    #[expect(clippy::cast_precision_loss, reason = "depth is bounded by PPO2_TABLE_DEPTH_MAX = 80")]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "depth is bounded by PPO2_TABLE_DEPTH_MAX = 80"
+    )]
     fn from(r: PpO2Row<'_>) -> Self {
         let depth = Meters::new(r.depth as f64);
         let mut cells = vec![Cell::from(format!("{:>3} m", r.depth))];
         for mix in r.mixes {
             let ppo2 = mix.ppo2_at(depth);
             cells.push(
-                Cell::from(format!("{:.2}", ppo2.value())).style(ppo2_cell_color(ppo2.value())),
+                Cell::from(format!("{:.2}", ppo2.value()))
+                    .style(ppo2_cell_color(ppo2.value(), &r.theme)),
             );
         }
         Row::new(cells)
     }
 }
 
-fn ppo2_cell_color(ppo2: f64) -> Style {
+fn ppo2_cell_color(ppo2: f64, theme: &Theme) -> Style {
     if !(PPO2_HYPOXIC_BELOW..PPO2_DANGER_FROM).contains(&ppo2) {
-        THEME.danger()
+        theme.danger()
     } else if ppo2 >= PPO2_CAUTION_FROM {
-        THEME.caution()
+        theme.caution()
     } else {
-        THEME.safe()
+        theme.safe()
     }
 }
 
-impl Widget for &mut PpO2Tab {
+struct PpO2TabStatus<'a> {
+    tab: &'a PpO2Tab,
+    theme: Theme,
+}
+
+impl Widget for PpO2TabStatus<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        match self.tab.selection {
+            Some((depth, mix)) => {
+                let ppo2 = mix.ppo2_at(depth);
+                let name = mix.label().map(|s| format!("{s} ")).unwrap_or_default();
+                let text = format!(
+                    " \u{25c6} {}({}%)  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
+                    name,
+                    mix.o2_percent(),
+                    depth,
+                    ppo2.value(),
+                );
+                Paragraph::new(text)
+                    .style(self.theme.status_active())
+                    .render(area, buf);
+            }
+            None => Paragraph::new(" No depth selected — press Enter to select")
+                .style(self.theme.status_empty())
+                .render(area, buf),
+        }
+    }
+}
+
+impl Component for PpO2Tab {
+    fn title(&self) -> &'static str {
+        "ppO₂ by Depth"
+    }
+
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "depth_m is bounded by PPO2_TABLE_DEPTH_MAX = 80"
+    )]
+    fn handle_action(&mut self, action: Action) {
+        match action {
+            Action::Move(mv) => self.handle_movement(mv),
+            Action::Select => {
+                if let Some(depth_m) = self.table_state.selected() {
+                    self.selection = Some((Meters::new(depth_m as f64), self.selected_mix()));
+                }
+            }
+            Action::Quit | Action::None => {}
+        }
+    }
+
+    fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &Theme) {
         let window_size = col_window_size(
             area.width,
             PPO2_TABLE_OVERHEAD_W,
@@ -199,62 +260,20 @@ impl Widget for &mut PpO2Tab {
             vec![Cell::from("Depth").style(Theme::header_cell())],
             mixes.iter().map(|m| format!("{:>3}%", m.o2_percent())),
             Some(col_in_window),
+            theme,
         );
-        let table = styled_table(PpO2Tab::build_rows(&mixes), constraints, header, title);
+        let table = styled_table(
+            Self::build_rows(&mixes, *theme),
+            constraints,
+            header,
+            title,
+            theme,
+        );
         StatefulWidget::render(table, area, buf, &mut self.table_state);
     }
-}
 
-struct PpO2TabStatus<'a>(&'a PpO2Tab);
-
-impl Widget for PpO2TabStatus<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        match self.0.selection {
-            Some((depth, mix)) => {
-                let ppo2 = mix.ppo2_at(depth);
-                let name = mix.label().map(|s| format!("{s} ")).unwrap_or_default();
-                let text = format!(
-                    " \u{25c6} {}({}%)  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
-                    name,
-                    mix.o2_percent(),
-                    depth,
-                    ppo2.value(),
-                );
-                Paragraph::new(text)
-                    .style(THEME.status_active())
-                    .render(area, buf);
-            }
-            None => Paragraph::new(" No depth selected — press Enter to select")
-                .style(THEME.status_empty())
-                .render(area, buf),
-        }
-    }
-}
-
-impl Component for PpO2Tab {
-    fn title(&self) -> &'static str {
-        "ppO₂ by Depth"
-    }
-
-    #[expect(clippy::cast_precision_loss, reason = "depth_m is bounded by PPO2_TABLE_DEPTH_MAX = 80")]
-    fn handle_action(&mut self, action: Action) {
-        match action {
-            Action::Move(mv) => self.handle_movement(mv),
-            Action::Select => {
-                if let Some(depth_m) = self.table_state.selected() {
-                    self.selection = Some((Meters::new(depth_m as f64), self.selected_mix()));
-                }
-            }
-            Action::Quit | Action::None => {}
-        }
-    }
-
-    fn render(&mut self, area: Rect, buf: &mut Buffer) {
-        Widget::render(self, area, buf);
-    }
-
-    fn render_status(&self, area: Rect, buf: &mut Buffer) {
-        PpO2TabStatus(self).render(area, buf);
+    fn render_status(&self, area: Rect, buf: &mut Buffer, theme: &Theme) {
+        PpO2TabStatus { tab: self, theme: *theme }.render(area, buf);
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
@@ -328,37 +347,58 @@ mod tests {
 
         #[test]
         fn hypoxic_below_threshold_is_red() {
-            assert_eq!(ppo2_cell_color(0.10), THEME.danger());
+            assert_eq!(
+                ppo2_cell_color(0.10, &Theme::default()),
+                Theme::default().danger()
+            );
         }
 
         #[test]
         fn at_hypoxic_threshold_is_green() {
-            assert_eq!(ppo2_cell_color(0.18), THEME.safe());
+            assert_eq!(
+                ppo2_cell_color(0.18, &Theme::default()),
+                Theme::default().safe()
+            );
         }
 
         #[test]
         fn normal_range_is_green() {
-            assert_eq!(ppo2_cell_color(1.0), THEME.safe());
+            assert_eq!(
+                ppo2_cell_color(1.0, &Theme::default()),
+                Theme::default().safe()
+            );
         }
 
         #[test]
         fn at_caution_threshold_is_yellow() {
-            assert_eq!(ppo2_cell_color(1.4), THEME.caution());
+            assert_eq!(
+                ppo2_cell_color(1.4, &Theme::default()),
+                Theme::default().caution()
+            );
         }
 
         #[test]
         fn caution_range_is_yellow() {
-            assert_eq!(ppo2_cell_color(1.5), THEME.caution());
+            assert_eq!(
+                ppo2_cell_color(1.5, &Theme::default()),
+                Theme::default().caution()
+            );
         }
 
         #[test]
         fn at_danger_threshold_is_red() {
-            assert_eq!(ppo2_cell_color(1.6), THEME.danger());
+            assert_eq!(
+                ppo2_cell_color(1.6, &Theme::default()),
+                Theme::default().danger()
+            );
         }
 
         #[test]
         fn above_danger_is_red() {
-            assert_eq!(ppo2_cell_color(2.0), THEME.danger());
+            assert_eq!(
+                ppo2_cell_color(2.0, &Theme::default()),
+                Theme::default().danger()
+            );
         }
     }
 
@@ -369,7 +409,7 @@ mod tests {
         #[test]
         fn no_selection_shows_prompt() {
             let tab = PpO2Tab::new();
-            let text = widget_text(PpO2TabStatus(&tab), 60);
+            let text = widget_text(PpO2TabStatus { tab: &tab, theme: Theme::default() }, 60);
             assert!(text.contains("No depth selected"));
         }
 
@@ -380,7 +420,7 @@ mod tests {
                 tab.handle_action(Action::Move(Movement::Down));
             }
             tab.handle_action(Action::Select);
-            let text = widget_text(PpO2TabStatus(&tab), 80);
+            let text = widget_text(PpO2TabStatus { tab: &tab, theme: Theme::default() }, 80);
             assert!(text.contains("10.0 m"));
             assert!(text.contains("21")); // Air (EAN21)
         }
