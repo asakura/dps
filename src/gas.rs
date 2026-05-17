@@ -1,5 +1,7 @@
 //! Gas mix types and named presets for dive planning.
 
+use color_eyre::Result;
+
 use crate::errors::InvalidO2Percent;
 use crate::units::{Bar, Meters, MetersPerBar};
 
@@ -33,6 +35,7 @@ impl Ean {
         if !(10..=100).contains(&o2_pct) {
             return Err(InvalidO2Percent(o2_pct));
         }
+
         Ok(Self {
             fraction: f64::from(o2_pct) / 100.0,
         })
@@ -172,19 +175,28 @@ mod tests {
 
         #[test]
         fn from_percent_error_carries_the_bad_value() {
-            let err = Ean::from_percent(5).unwrap_err();
-            assert_eq!(err.0, 5);
+            let result = Ean::from_percent(5);
+
+            assert!(matches!(result, Err(InvalidO2Percent(5))));
         }
     }
 
     mod o2_percent {
         use super::*;
+        use rstest::rstest;
 
-        #[test]
-        fn o2_percent_roundtrips() {
-            for pct in [10u8, 21, 32, 36, 40, 80, 100] {
-                assert_eq!(Ean::from_percent(pct).unwrap().o2_percent(), pct);
-            }
+        #[rstest]
+        #[case(10)]
+        #[case(21)]
+        #[case(32)]
+        #[case(36)]
+        #[case(40)]
+        #[case(80)]
+        #[case(100)]
+        fn o2_percent_roundtrips(#[case] pct: u8) -> Result<()> {
+            assert_eq!(Ean::from_percent(pct)?.o2_percent(), pct);
+
+            Ok(())
         }
     }
 
@@ -192,10 +204,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn fo2_matches_fraction() {
-            assert_relative_eq!(Ean::from_percent(21).unwrap().fo2(), 0.21);
-            assert_relative_eq!(Ean::from_percent(32).unwrap().fo2(), 0.32);
-            assert_relative_eq!(Ean::from_percent(100).unwrap().fo2(), 1.0);
+        fn fo2_matches_fraction() -> Result<()> {
+            assert_relative_eq!(Ean::from_percent(21)?.fo2(), 0.21);
+            assert_relative_eq!(Ean::from_percent(32)?.fo2(), 0.32);
+            assert_relative_eq!(Ean::from_percent(100)?.fo2(), 1.0);
+
+            Ok(())
         }
     }
 
@@ -205,31 +219,43 @@ mod tests {
         // Formula: MOD = (ppO2_max / FO2 − 1 bar) × 10 m/bar
 
         #[test]
-        fn mod_at_eanx32_1_4_bar() {
-            let ean32 = Ean::from_percent(32).unwrap();
+        fn mod_at_eanx32_1_4_bar() -> Result<()> {
+            let ean32 = Ean::from_percent(32)?;
             let expected = (1.4_f64 / 0.32 - 1.0) * 10.0; // ≈ 33.75 m
+
             assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).value(), expected);
+
+            Ok(())
         }
 
         #[test]
-        fn mod_at_eanx40_1_4_bar() {
-            let ean40 = Ean::from_percent(40).unwrap();
+        fn mod_at_eanx40_1_4_bar() -> Result<()> {
+            let ean40 = Ean::from_percent(40)?;
             let expected = (1.4_f64 / 0.40 - 1.0) * 10.0; // 25.0 m
+
             assert_relative_eq!(ean40.mod_at(Bar::new(1.4)).value(), expected);
+
+            Ok(())
         }
 
         #[test]
-        fn mod_at_pure_o2_1_6_bar() {
-            let o2 = Ean::from_percent(100).unwrap();
+        fn mod_at_pure_o2_1_6_bar() -> Result<()> {
+            let o2 = Ean::from_percent(100)?;
             let expected = (1.6_f64 / 1.0 - 1.0) * 10.0; // 6.0 m
+
             assert_relative_eq!(o2.mod_at(Bar::new(1.6)).value(), expected);
+
+            Ok(())
         }
 
         #[test]
-        fn mod_at_clamps_to_zero_when_negative() {
+        fn mod_at_clamps_to_zero_when_negative() -> Result<()> {
             // Pure O2 at 0.5 bar ppO2 limit: (0.5/1.0 - 1) * 10 = -5.0 m → 0.0
-            let o2 = Ean::from_percent(100).unwrap();
+            let o2 = Ean::from_percent(100)?;
+
             assert_relative_eq!(o2.mod_at(Bar::new(0.5)).value(), 0.0, epsilon = 1e-9);
+
+            Ok(())
         }
     }
 
@@ -239,23 +265,32 @@ mod tests {
         // Formula: ppO2 = (depth_m / 10 + 1) × FO2
 
         #[test]
-        fn ppo2_at_surface_equals_fo2() {
-            let ean32 = Ean::from_percent(32).unwrap();
+        fn ppo2_at_surface_equals_fo2() -> Result<()> {
+            let ean32 = Ean::from_percent(32)?;
+
             assert_relative_eq!(ean32.ppo2_at(Meters::new(0.0)).value(), 0.32);
+
+            Ok(())
         }
 
         #[test]
-        fn ppo2_at_air_30m() {
-            let air = Ean::from_percent(21).unwrap();
+        fn ppo2_at_air_30m() -> Result<()> {
+            let air = Ean::from_percent(21)?;
             let expected = (30.0_f64 / 10.0 + 1.0) * 0.21; // 0.84 bar
+
             assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).value(), expected);
+
+            Ok(())
         }
 
         #[test]
-        fn ppo2_at_eanx40_10m() {
-            let ean40 = Ean::from_percent(40).unwrap();
+        fn ppo2_at_eanx40_10m() -> Result<()> {
+            let ean40 = Ean::from_percent(40)?;
             let expected = (10.0_f64 / 10.0 + 1.0) * 0.40; // 0.80 bar
+
             assert_relative_eq!(ean40.ppo2_at(Meters::new(10.0)).value(), expected);
+
+            Ok(())
         }
     }
 
@@ -263,43 +298,55 @@ mod tests {
         use super::*;
 
         #[test]
-        fn label_air() {
-            assert_eq!(Ean::from_percent(21).unwrap().label(), Some("Air"));
+        fn label_air() -> Result<()> {
+            assert_eq!(Ean::from_percent(21)?.label(), Some("Air"));
+
+            Ok(())
         }
 
         #[test]
-        fn label_named_nitrox_mixes() {
-            assert_eq!(Ean::from_percent(28).unwrap().label(), Some("EANx 28"));
-            assert_eq!(Ean::from_percent(30).unwrap().label(), Some("EANx 30"));
-            assert_eq!(Ean::from_percent(32).unwrap().label(), Some("EANx 32"));
-            assert_eq!(Ean::from_percent(36).unwrap().label(), Some("EANx 36"));
-            assert_eq!(Ean::from_percent(40).unwrap().label(), Some("EANx 40"));
+        fn label_named_nitrox_mixes() -> Result<()> {
+            assert_eq!(Ean::from_percent(28)?.label(), Some("EANx 28"));
+            assert_eq!(Ean::from_percent(30)?.label(), Some("EANx 30"));
+            assert_eq!(Ean::from_percent(32)?.label(), Some("EANx 32"));
+            assert_eq!(Ean::from_percent(36)?.label(), Some("EANx 36"));
+            assert_eq!(Ean::from_percent(40)?.label(), Some("EANx 40"));
+
+            Ok(())
         }
 
         #[test]
-        fn label_high_o2_mixes() {
-            assert_eq!(Ean::from_percent(50).unwrap().label(), Some("O₂ 50%"));
-            assert_eq!(Ean::from_percent(80).unwrap().label(), Some("O₂ 80%"));
+        fn label_high_o2_mixes() -> Result<()> {
+            assert_eq!(Ean::from_percent(50)?.label(), Some("O₂ 50%"));
+            assert_eq!(Ean::from_percent(80)?.label(), Some("O₂ 80%"));
+
+            Ok(())
         }
 
         #[test]
-        fn label_hypoxic_mixes() {
-            assert_eq!(Ean::from_percent(10).unwrap().label(), Some("Hypoxic 10"));
-            assert_eq!(Ean::from_percent(12).unwrap().label(), Some("Hypoxic 12"));
-            assert_eq!(Ean::from_percent(14).unwrap().label(), Some("Hypoxic 14"));
-            assert_eq!(Ean::from_percent(16).unwrap().label(), Some("Hypoxic 16"));
-            assert_eq!(Ean::from_percent(18).unwrap().label(), Some("Hypoxic 18"));
+        fn label_hypoxic_mixes() -> Result<()> {
+            assert_eq!(Ean::from_percent(10)?.label(), Some("Hypoxic 10"));
+            assert_eq!(Ean::from_percent(12)?.label(), Some("Hypoxic 12"));
+            assert_eq!(Ean::from_percent(14)?.label(), Some("Hypoxic 14"));
+            assert_eq!(Ean::from_percent(16)?.label(), Some("Hypoxic 16"));
+            assert_eq!(Ean::from_percent(18)?.label(), Some("Hypoxic 18"));
+
+            Ok(())
         }
 
         #[test]
-        fn label_pure_o2() {
-            assert_eq!(Ean::from_percent(100).unwrap().label(), Some("Pure O₂"));
+        fn label_pure_o2() -> Result<()> {
+            assert_eq!(Ean::from_percent(100)?.label(), Some("Pure O₂"));
+
+            Ok(())
         }
 
         #[test]
-        fn label_unlabelled_mix_returns_none() {
-            assert_eq!(Ean::from_percent(25).unwrap().label(), None);
-            assert_eq!(Ean::from_percent(33).unwrap().label(), None);
+        fn label_unlabelled_mix_returns_none() -> Result<()> {
+            assert_eq!(Ean::from_percent(25)?.label(), None);
+            assert_eq!(Ean::from_percent(33)?.label(), None);
+
+            Ok(())
         }
     }
 
@@ -309,7 +356,7 @@ mod tests {
         #[test]
         fn invalid_o2_percent_display() {
             let msg = format!("{}", InvalidO2Percent(5));
-            assert!(msg.contains("5"));
+            assert!(msg.contains('5'));
             assert!(msg.contains("10"));
             assert!(msg.contains("100"));
         }
