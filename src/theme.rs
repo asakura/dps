@@ -88,73 +88,44 @@
 
 use ratatui::style::{Color, Modifier, Style};
 
-/// Full Catppuccin palette with all 26 named colour slots.
+/// Application colour theme backed by the Catppuccin palette.
 ///
-/// Prefer the semantic style methods (`danger()`, `safe()`, `selection()`, …)
-/// over direct field access. Raw fields are public for the `accents()` array
-/// and for future flavour-switching infrastructure.
-///
-/// The first 14 fields (`rosewater` → `lavender`) are accent colours (`"accent": true`
-/// in palette.json). The remaining 12 (`text` → `crust`) are non-accent neutrals.
+/// All colours are accessed through semantic style methods (`danger()`,
+/// `safe()`, `selection()`, …). The raw palette fields are private.
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub struct Theme {
     // ── Accents (accent: true) ───────────────────────────────────────────────
-    /// Catppuccin rosewater accent colour.
-    pub rosewater: Color,
-    /// Catppuccin flamingo accent colour.
-    pub flamingo: Color,
-    /// Catppuccin pink accent colour.
-    pub pink: Color,
-    /// Catppuccin mauve accent colour.
-    pub mauve: Color,
-    /// Catppuccin red accent colour.
-    pub red: Color,
-    /// Catppuccin maroon accent colour.
-    pub maroon: Color,
-    /// Catppuccin peach accent colour.
-    pub peach: Color,
-    /// Catppuccin yellow accent colour.
-    pub yellow: Color,
-    /// Catppuccin green accent colour.
-    pub green: Color,
-    /// Catppuccin teal accent colour.
-    pub teal: Color,
-    /// Catppuccin sky accent colour.
-    pub sky: Color,
-    /// Catppuccin sapphire accent colour.
-    pub sapphire: Color,
-    /// Catppuccin blue accent colour.
-    pub blue: Color,
-    /// Catppuccin lavender accent colour.
-    pub lavender: Color,
+    rosewater: Color,
+    flamingo: Color,
+    pink: Color,
+    mauve: Color,
+    red: Color,
+    maroon: Color,
+    peach: Color,
+    yellow: Color,
+    green: Color,
+    teal: Color,
+    sky: Color,
+    sapphire: Color,
+    blue: Color,
+    lavender: Color,
     // ── Text ────────────────────────────────────────────────────────────────
-    /// Primary text colour.
-    pub text: Color,
-    /// Secondary text colour (slightly dimmed).
-    pub subtext1: Color,
-    /// Tertiary text colour (more dimmed).
-    pub subtext0: Color,
+    text: Color,
+    subtext1: Color,
+    subtext0: Color,
     // ── Overlay ─────────────────────────────────────────────────────────────
-    /// Overlay colour level 2 (brightest).
-    pub overlay2: Color,
-    /// Overlay colour level 1.
-    pub overlay1: Color,
-    /// Overlay colour level 0 (darkest).
-    pub overlay0: Color,
+    overlay2: Color,
+    overlay1: Color,
+    overlay0: Color,
     // ── Surface ─────────────────────────────────────────────────────────────
-    /// Surface colour level 2 (lightest surface).
-    pub surface2: Color,
-    /// Surface colour level 1.
-    pub surface1: Color,
-    /// Surface colour level 0 (darkest surface).
-    pub surface0: Color,
+    surface2: Color,
+    surface1: Color,
+    surface0: Color,
     // ── Base ────────────────────────────────────────────────────────────────
-    /// Base background colour.
-    pub base: Color,
-    /// Darker background layer (beneath base).
-    pub mantle: Color,
-    /// Darkest background layer (beneath mantle).
-    pub crust: Color,
+    base: Color,
+    mantle: Color,
+    crust: Color,
 }
 
 impl Theme {
@@ -387,34 +358,6 @@ impl Theme {
         Style::from(self.subtext0)
     }
 
-    /// The 14 accent colours in canonical order (rosewater → lavender).
-    ///
-    /// ```
-    /// use dps::theme::THEME;
-    /// let accents = THEME.accents();
-    /// assert_eq!(accents.len(), 14);
-    /// assert_eq!(accents[0], THEME.rosewater);
-    /// assert_eq!(accents[13], THEME.lavender);
-    /// ```
-    #[must_use]
-    pub const fn accents(&self) -> [Color; 14] {
-        [
-            self.rosewater,
-            self.flamingo,
-            self.pink,
-            self.mauve,
-            self.red,
-            self.maroon,
-            self.peach,
-            self.yellow,
-            self.green,
-            self.teal,
-            self.sky,
-            self.sapphire,
-            self.blue,
-            self.lavender,
-        ]
-    }
 }
 
 /// The active theme — shared across all rendering code.
