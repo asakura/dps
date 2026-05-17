@@ -93,7 +93,7 @@ use ratatui::style::{Color, Modifier, Style};
 /// All colours are accessed through semantic style methods (`danger()`,
 /// `safe()`, `selection()`, …). The raw palette fields are private.
 #[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "full Catppuccin palette retained for future semantic methods")]
 pub struct Theme {
     // ── Accents (accent: true) ───────────────────────────────────────────────
     rosewater: Color,
