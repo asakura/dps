@@ -1,4 +1,15 @@
 {
+  // Active theme flavour: latte | frappe | macchiato | mocha
+  theme: "frappe",
+
+  // Optional per-slot palette overrides (hex strings, applied on top of the
+  // selected flavour). Omit any slot to keep the flavour default.
+  palette: {
+    // mauve: "#ca9ee6",
+    // red:   "#e78284",
+    // green: "#a6d189",
+  },
+
   keybindings: {
     Home: {
       // select
