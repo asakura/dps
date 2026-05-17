@@ -319,12 +319,12 @@ impl Theme {
     }
     /// Non-highlighted header cell.
     #[must_use]
-    pub fn header_cell(&self) -> Style {
+    pub fn header_cell() -> Style {
         Style::from(Modifier::BOLD)
     }
     /// Highlighted (selected column) header cell.
     #[must_use]
-    pub fn header_cell_active(&self) -> Style {
+    pub fn header_cell_active() -> Style {
         Style::from(Modifier::BOLD | Modifier::UNDERLINED)
     }
     /// Selected row / active element (Catppuccin Selection Rule: mauve bg + base fg).
@@ -355,6 +355,23 @@ impl Theme {
     #[must_use]
     pub fn status_empty(&self) -> Style {
         Style::from((self.overlay0, self.surface0))
+    }
+
+    // ── Safety levels ─────────────────────────────────────────────────────────
+    /// Safe dive condition (green).
+    #[must_use]
+    pub fn safe(&self) -> Style {
+        Style::from(self.green)
+    }
+    /// Caution dive condition (yellow).
+    #[must_use]
+    pub fn caution(&self) -> Style {
+        Style::from(self.yellow)
+    }
+    /// Danger dive condition (red).
+    #[must_use]
+    pub fn danger(&self) -> Style {
+        Style::from(self.red)
     }
 
     // ── Text ──────────────────────────────────────────────────────────────────
@@ -400,4 +417,4 @@ impl Theme {
 }
 
 /// The active theme — shared across all rendering code.
-pub static THEME: Theme = Theme::frappe();
+pub const THEME: Theme = Theme::frappe();

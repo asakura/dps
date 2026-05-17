@@ -3,14 +3,14 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
-    style::Color,
+    style::Style,
     widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
 };
 
 use crate::{
     action::{Action, Movement},
     gas::Ean,
-    theme::THEME,
+    theme::{Theme, THEME},
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Meters,
 };
@@ -166,13 +166,13 @@ impl From<PpO2Row<'_>> for Row<'static> {
     }
 }
 
-fn ppo2_cell_color(ppo2: f64) -> Color {
+fn ppo2_cell_color(ppo2: f64) -> Style {
     if !(PPO2_HYPOXIC_BELOW..PPO2_DANGER_FROM).contains(&ppo2) {
-        THEME.red
+        THEME.danger()
     } else if ppo2 >= PPO2_CAUTION_FROM {
-        THEME.yellow
+        THEME.caution()
     } else {
-        THEME.green
+        THEME.safe()
     }
 }
 
@@ -196,7 +196,7 @@ impl Widget for &mut PpO2Tab {
             COL_PPO2_MIX_W,
         );
         let header = build_header_row(
-            vec![Cell::from("Depth").style(THEME.header_cell())],
+            vec![Cell::from("Depth").style(Theme::header_cell())],
             mixes.iter().map(|m| format!("{:>3}%", m.o2_percent())),
             Some(col_in_window),
         );
@@ -328,37 +328,37 @@ mod tests {
 
         #[test]
         fn hypoxic_below_threshold_is_red() {
-            assert_eq!(ppo2_cell_color(0.10), THEME.red);
+            assert_eq!(ppo2_cell_color(0.10), THEME.danger());
         }
 
         #[test]
         fn at_hypoxic_threshold_is_green() {
-            assert_eq!(ppo2_cell_color(0.18), THEME.green);
+            assert_eq!(ppo2_cell_color(0.18), THEME.safe());
         }
 
         #[test]
         fn normal_range_is_green() {
-            assert_eq!(ppo2_cell_color(1.0), THEME.green);
+            assert_eq!(ppo2_cell_color(1.0), THEME.safe());
         }
 
         #[test]
         fn at_caution_threshold_is_yellow() {
-            assert_eq!(ppo2_cell_color(1.4), THEME.yellow);
+            assert_eq!(ppo2_cell_color(1.4), THEME.caution());
         }
 
         #[test]
         fn caution_range_is_yellow() {
-            assert_eq!(ppo2_cell_color(1.5), THEME.yellow);
+            assert_eq!(ppo2_cell_color(1.5), THEME.caution());
         }
 
         #[test]
         fn at_danger_threshold_is_red() {
-            assert_eq!(ppo2_cell_color(1.6), THEME.red);
+            assert_eq!(ppo2_cell_color(1.6), THEME.danger());
         }
 
         #[test]
         fn above_danger_is_red() {
-            assert_eq!(ppo2_cell_color(2.0), THEME.red);
+            assert_eq!(ppo2_cell_color(2.0), THEME.danger());
         }
     }
 

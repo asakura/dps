@@ -6,7 +6,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Row, Table},
 };
 
-use crate::theme::THEME;
+use crate::theme::{Theme, THEME};
 
 /// First visible index that keeps `idx` centred in the window without scrolling past either end.
 pub(crate) fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
@@ -65,9 +65,9 @@ pub(crate) fn build_header_row(
     let mut cells = fixed;
     for (i, label) in labels.enumerate() {
         let style = if highlighted == Some(i) {
-            THEME.header_cell_active()
+            Theme::header_cell_active()
         } else {
-            THEME.header_cell()
+            Theme::header_cell()
         };
         cells.push(Cell::from(label).style(style));
     }

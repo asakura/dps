@@ -3,14 +3,14 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Rect},
-    style::Color,
+    style::Style,
     widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
 };
 
 use crate::{
     action::{Action, Movement},
     gas::Ean,
-    theme::THEME,
+    theme::{Theme, THEME},
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::Bar,
 };
@@ -179,13 +179,13 @@ impl From<ModRow<'_>> for Row<'static> {
     }
 }
 
-fn mod_color(depth_m: f64) -> Color {
+fn mod_color(depth_m: f64) -> Style {
     if depth_m < MOD_RED_BELOW_M {
-        THEME.red
+        THEME.danger()
     } else if depth_m < MOD_YELLOW_BELOW_M {
-        THEME.yellow
+        THEME.caution()
     } else {
-        THEME.green
+        THEME.safe()
     }
 }
 
@@ -204,8 +204,8 @@ impl Widget for &mut ModTab {
         );
         let header = build_header_row(
             vec![
-                Cell::from("Name").style(THEME.header_cell()),
-                Cell::from("O\u{2082}%").style(THEME.header_cell()),
+                Cell::from("Name").style(Theme::header_cell()),
+                Cell::from("O\u{2082}%").style(Theme::header_cell()),
             ],
             cols.iter().map(ToString::to_string),
             Some(col_in_window),
@@ -345,28 +345,28 @@ mod tests {
 
         #[test]
         fn below_10m_is_red() {
-            assert_eq!(mod_color(9.9), THEME.red);
-            assert_eq!(mod_color(0.0), THEME.red);
+            assert_eq!(mod_color(9.9), THEME.danger());
+            assert_eq!(mod_color(0.0), THEME.danger());
         }
 
         #[test]
         fn exactly_10m_is_yellow() {
-            assert_eq!(mod_color(10.0), THEME.yellow);
+            assert_eq!(mod_color(10.0), THEME.caution());
         }
 
         #[test]
         fn between_thresholds_is_yellow() {
-            assert_eq!(mod_color(15.0), THEME.yellow);
+            assert_eq!(mod_color(15.0), THEME.caution());
         }
 
         #[test]
         fn exactly_20m_is_green() {
-            assert_eq!(mod_color(20.0), THEME.green);
+            assert_eq!(mod_color(20.0), THEME.safe());
         }
 
         #[test]
         fn above_20m_is_green() {
-            assert_eq!(mod_color(33.75), THEME.green);
+            assert_eq!(mod_color(33.75), THEME.safe());
         }
     }
 
