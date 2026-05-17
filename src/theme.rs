@@ -88,47 +88,73 @@
 
 use ratatui::style::{Color, Modifier, Style};
 
-/// Application colour theme backed by the Catppuccin palette.
+/// Full Catppuccin palette with all 26 named colour slots.
 ///
-/// All colours are accessed through semantic style methods (`danger()`,
-/// `safe()`, `selection()`, …). The raw palette fields are private.
+/// Field names follow the canonical Catppuccin naming exactly.
+/// Prefer constructing a [`Theme`] and using its semantic style methods
+/// over accessing palette colours directly.
 #[derive(Debug, Clone, Copy)]
-#[expect(dead_code, reason = "full Catppuccin palette retained for future semantic methods")]
-pub struct Theme {
+pub struct Palette {
     // ── Accents (accent: true) ───────────────────────────────────────────────
-    rosewater: Color,
-    flamingo: Color,
-    pink: Color,
-    mauve: Color,
-    red: Color,
-    maroon: Color,
-    peach: Color,
-    yellow: Color,
-    green: Color,
-    teal: Color,
-    sky: Color,
-    sapphire: Color,
-    blue: Color,
-    lavender: Color,
+    /// Catppuccin rosewater accent.
+    pub rosewater: Color,
+    /// Catppuccin flamingo accent.
+    pub flamingo: Color,
+    /// Catppuccin pink accent.
+    pub pink: Color,
+    /// Catppuccin mauve accent.
+    pub mauve: Color,
+    /// Catppuccin red accent.
+    pub red: Color,
+    /// Catppuccin maroon accent.
+    pub maroon: Color,
+    /// Catppuccin peach accent.
+    pub peach: Color,
+    /// Catppuccin yellow accent.
+    pub yellow: Color,
+    /// Catppuccin green accent.
+    pub green: Color,
+    /// Catppuccin teal accent.
+    pub teal: Color,
+    /// Catppuccin sky accent.
+    pub sky: Color,
+    /// Catppuccin sapphire accent.
+    pub sapphire: Color,
+    /// Catppuccin blue accent.
+    pub blue: Color,
+    /// Catppuccin lavender accent.
+    pub lavender: Color,
     // ── Text ────────────────────────────────────────────────────────────────
-    text: Color,
-    subtext1: Color,
-    subtext0: Color,
+    /// Primary text colour.
+    pub text: Color,
+    /// Secondary text colour (slightly dimmed).
+    pub subtext1: Color,
+    /// Tertiary text colour (more dimmed).
+    pub subtext0: Color,
     // ── Overlay ─────────────────────────────────────────────────────────────
-    overlay2: Color,
-    overlay1: Color,
-    overlay0: Color,
+    /// Overlay level 2 (brightest).
+    pub overlay2: Color,
+    /// Overlay level 1.
+    pub overlay1: Color,
+    /// Overlay level 0 (darkest).
+    pub overlay0: Color,
     // ── Surface ─────────────────────────────────────────────────────────────
-    surface2: Color,
-    surface1: Color,
-    surface0: Color,
+    /// Surface level 2 (lightest surface).
+    pub surface2: Color,
+    /// Surface level 1.
+    pub surface1: Color,
+    /// Surface level 0 (darkest surface).
+    pub surface0: Color,
     // ── Base ────────────────────────────────────────────────────────────────
-    base: Color,
-    mantle: Color,
-    crust: Color,
+    /// Base background colour.
+    pub base: Color,
+    /// Darker background layer (beneath base).
+    pub mantle: Color,
+    /// Darkest background layer (beneath mantle).
+    pub crust: Color,
 }
 
-impl Theme {
+impl Palette {
     /// Catppuccin Latte — light flavour.
     #[must_use]
     pub const fn latte() -> Self {
@@ -260,34 +286,70 @@ impl Theme {
             crust: Color::Rgb(17, 17, 27),        // #11111b
         }
     }
+}
+
+/// Application colour theme backed by a [`Palette`].
+///
+/// All colours are accessed through semantic style methods (`danger()`,
+/// `safe()`, `selection()`, …). The palette field is private; use
+/// [`Theme::latte`] / [`Theme::frappe`] / … to construct a theme.
+#[derive(Debug, Clone, Copy)]
+pub struct Theme {
+    palette: Palette,
+}
+
+impl Theme {
+    /// Catppuccin Latte — light flavour.
+    #[must_use]
+    pub const fn latte() -> Self {
+        Self { palette: Palette::latte() }
+    }
+
+    /// Catppuccin Frappé — cool dark flavour.
+    #[must_use]
+    pub const fn frappe() -> Self {
+        Self { palette: Palette::frappe() }
+    }
+
+    /// Catppuccin Macchiato — medium dark flavour.
+    #[must_use]
+    pub const fn macchiato() -> Self {
+        Self { palette: Palette::macchiato() }
+    }
+
+    /// Catppuccin Mocha — darkest flavour.
+    #[must_use]
+    pub const fn mocha() -> Self {
+        Self { palette: Palette::mocha() }
+    }
 
     // ── Which-key popup ──────────────────────────────────────────────────────
     /// Popup surface: text-on-mantle background.
     #[must_use]
     pub fn popup_surface(&self) -> Style {
-        Style::from((self.text, self.mantle))
+        Style::from((self.palette.text, self.palette.mantle))
     }
     /// Key label: bold peach.
     #[must_use]
     pub fn key_label(&self) -> Style {
-        Style::from((self.peach, Modifier::BOLD))
+        Style::from((self.palette.peach, Modifier::BOLD))
     }
 
     // ── Table chrome ─────────────────────────────────────────────────────────
     /// Table border.
     #[must_use]
     pub fn border(&self) -> Style {
-        Style::from(self.surface0)
+        Style::from(self.palette.surface0)
     }
     /// Block title above a table.
     #[must_use]
     pub fn title(&self) -> Style {
-        Style::from(self.lavender)
+        Style::from(self.palette.lavender)
     }
     /// Header row text.
     #[must_use]
     pub fn header(&self) -> Style {
-        Style::from(self.blue)
+        Style::from(self.palette.blue)
     }
     /// Non-highlighted header cell.
     #[must_use]
@@ -302,62 +364,61 @@ impl Theme {
     /// Selected row / active element (Catppuccin Selection Rule: mauve bg + base fg).
     #[must_use]
     pub fn selection(&self) -> Style {
-        Style::from((self.base, self.mauve, Modifier::BOLD))
+        Style::from((self.palette.base, self.palette.mauve, Modifier::BOLD))
     }
     /// Focused column highlight.
     #[must_use]
     pub fn column_focus(&self) -> Style {
-        Style::from((self.lavender, Modifier::BOLD))
+        Style::from((self.palette.lavender, Modifier::BOLD))
     }
 
     // ── Tab bar ───────────────────────────────────────────────────────────────
     /// Inactive tab bar background.
     #[must_use]
     pub fn nav_bar(&self) -> Style {
-        Style::from((self.subtext0, self.surface0))
+        Style::from((self.palette.subtext0, self.palette.surface0))
     }
 
     // ── Status bar ────────────────────────────────────────────────────────────
     /// Status bar with an active selection.
     #[must_use]
     pub fn status_active(&self) -> Style {
-        Style::from((self.text, self.surface0, Modifier::BOLD))
+        Style::from((self.palette.text, self.palette.surface0, Modifier::BOLD))
     }
     /// Status bar empty / placeholder state.
     #[must_use]
     pub fn status_empty(&self) -> Style {
-        Style::from((self.overlay0, self.surface0))
+        Style::from((self.palette.overlay0, self.palette.surface0))
     }
 
     // ── Safety levels ─────────────────────────────────────────────────────────
     /// Safe dive condition (green).
     #[must_use]
     pub fn safe(&self) -> Style {
-        Style::from(self.green)
+        Style::from(self.palette.green)
     }
     /// Caution dive condition (yellow).
     #[must_use]
     pub fn caution(&self) -> Style {
-        Style::from(self.yellow)
+        Style::from(self.palette.yellow)
     }
     /// Danger dive condition (red).
     #[must_use]
     pub fn danger(&self) -> Style {
-        Style::from(self.red)
+        Style::from(self.palette.red)
     }
 
     // ── Text ──────────────────────────────────────────────────────────────────
     /// Body text: plain text fg.
     #[must_use]
     pub fn body_text(&self) -> Style {
-        Style::from(self.text)
+        Style::from(self.palette.text)
     }
     /// Hint / help line text.
     #[must_use]
     pub fn hint(&self) -> Style {
-        Style::from(self.subtext0)
+        Style::from(self.palette.subtext0)
     }
-
 }
 
 /// The active theme — shared across all rendering code.
