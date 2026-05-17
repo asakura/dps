@@ -1,5 +1,8 @@
 //! Vim-style key sequence parsing and serialization.
 
+// TODO: make real error types instead of using String
+
+use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKeyCode};
 
 /// Parses a Vim-style key sequence into a [`Vec<KeyEvent>`].
@@ -238,6 +241,7 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
 fn parse_key_event(raw: &str) -> Result<KeyEvent, String> {
     let raw_lower = raw.to_ascii_lowercase();
     let (remaining, modifiers) = extract_modifiers(&raw_lower);
+
     parse_key_code_with_modifiers(remaining, modifiers)
 }
 
@@ -357,208 +361,207 @@ fn parse_key_code_with_modifiers(
 mod tests {
     use super::*;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use rstest::rstest;
 
-    #[test]
-    fn simple_chars_and_named_keys() {
-        assert_eq!(
-            parse_key_event("a").unwrap(),
-            KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())
-        );
-        assert_eq!(
-            parse_key_event("enter").unwrap(),
-            KeyEvent::new(KeyCode::Enter, KeyModifiers::empty())
-        );
-        assert_eq!(
-            parse_key_event("esc").unwrap(),
-            KeyEvent::new(KeyCode::Esc, KeyModifiers::empty())
-        );
+    mod parse_key_event {
+        use super::*;
+
+        #[rstest]
+        #[case("a", KeyCode::Char('a'))]
+        #[case("enter", KeyCode::Enter)]
+        #[case("esc", KeyCode::Esc)]
+        fn simple_chars_and_named_keys(#[case] key: &str, #[case] code: KeyCode) -> Result<(), String> {
+            assert_eq!(
+                parse_key_event(key)?,
+                KeyEvent::new(code, KeyModifiers::empty())
+            );
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case("c-a", KeyCode::Char('a'), KeyModifiers::CONTROL)]
+        #[case("a-enter", KeyCode::Enter, KeyModifiers::ALT)]
+        #[case("m-x", KeyCode::Char('x'), KeyModifiers::ALT)]
+        #[case("s-esc", KeyCode::Esc, KeyModifiers::SHIFT)]
+        fn single_modifier(
+            #[case] key: &str,
+            #[case] code: KeyCode,
+            #[case] modifier: KeyModifiers,
+        ) -> Result<(), String> {
+            assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifier));
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case("C-A", KeyCode::Char('a'), KeyModifiers::CONTROL)]
+        #[case("A-Enter", KeyCode::Enter, KeyModifiers::ALT)]
+        fn case_insensitive(
+            #[case] key: &str,
+            #[case] code: KeyCode,
+            #[case] modifier: KeyModifiers,
+        ) -> Result<(), String> {
+            assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifier));
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case("f1", 1u8)]
+        #[case("f12", 12u8)]
+        fn f_keys(#[case] key: &str, #[case] n: u8) -> Result<(), String> {
+            assert_eq!(
+                parse_key_event(key)?,
+                KeyEvent::new(KeyCode::F(n), KeyModifiers::NONE)
+            );
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case("invalid-key")]
+        #[case("ctrl-invalid-key")]
+        fn invalid_keys_return_error(#[case] input: &str) {
+            assert!(parse_key_event(input).is_err());
+        }
+
+        #[rstest]
+        #[case("c-a-a", KeyCode::Char('a'), KeyModifiers::CONTROL | KeyModifiers::ALT)]
+        #[case("c-s-enter", KeyCode::Enter, KeyModifiers::CONTROL | KeyModifiers::SHIFT)]
+        fn stacked_modifiers(
+            #[case] key: &str,
+            #[case] code: KeyCode,
+            #[case] modifiers: KeyModifiers,
+        ) -> Result<(), String> {
+            assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifiers));
+
+            Ok(())
+        }
+
+        #[test]
+        fn backtab_inserts_shift() -> Result<(), String> {
+            assert_eq!(
+                parse_key_event("backtab")?,
+                KeyEvent::new(KeyCode::BackTab, KeyModifiers::SHIFT)
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn shift_prefix_uppercases_char() -> Result<(), String> {
+            assert_eq!(
+                parse_key_event("s-g")?,
+                KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT)
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn f0_is_rejected() {
+            assert!(parse_key_event("f0").is_err());
+        }
     }
 
-    #[test]
-    fn single_modifier() {
-        // Vim short-form prefixes: c- (Ctrl), a-/m- (Alt), s- (Shift).
-        assert_eq!(
-            parse_key_event("c-a").unwrap(),
-            KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)
-        );
-        assert_eq!(
-            parse_key_event("a-enter").unwrap(),
-            KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT)
-        );
-        assert_eq!(
-            parse_key_event("m-x").unwrap(),
-            KeyEvent::new(KeyCode::Char('x'), KeyModifiers::ALT)
-        );
-        assert_eq!(
-            parse_key_event("s-esc").unwrap(),
-            KeyEvent::new(KeyCode::Esc, KeyModifiers::SHIFT)
-        );
+    mod key_to_string {
+        use super::*;
+
+        #[rstest]
+        #[case(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL | KeyModifiers::ALT), "<C-M-a>")]
+        #[case(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE), "j")]
+        #[case(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE), "<Esc>")]
+        #[case(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE), "<CR>")]
+        #[case(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE), "<BS>")]
+        #[case(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE), "<Tab>")]
+        #[case(KeyEvent::new(KeyCode::Delete, KeyModifiers::NONE), "<Del>")]
+        fn formats_correctly(#[case] event: KeyEvent, #[case] expected: &str) {
+            assert_eq!(key_event_to_string(&event), expected);
+        }
+
+        #[test]
+        fn shift_char_normalizes_to_uppercase() {
+            let lower = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::SHIFT);
+            assert_eq!(key_event_to_string(&lower), "<S-G>");
+
+            let upper = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT);
+            assert_eq!(key_event_to_string(&upper), "<S-G>");
+        }
     }
 
-    #[test]
-    fn stacked_modifiers() {
-        assert_eq!(
-            parse_key_event("c-a-a").unwrap(),
-            KeyEvent::new(
-                KeyCode::Char('a'),
-                KeyModifiers::CONTROL | KeyModifiers::ALT
-            )
-        );
-        assert_eq!(
-            parse_key_event("c-s-enter").unwrap(),
-            KeyEvent::new(KeyCode::Enter, KeyModifiers::CONTROL | KeyModifiers::SHIFT)
-        );
-    }
+    mod key_sequence {
+        use super::*;
 
-    #[test]
-    fn key_event_to_string_formats() {
-        assert_eq!(
-            key_event_to_string(&KeyEvent::new(
-                KeyCode::Char('a'),
-                KeyModifiers::CONTROL | KeyModifiers::ALT
-            )),
-            "<C-M-a>"
-        );
-        assert_eq!(
-            key_event_to_string(&KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)),
-            "j"
-        );
-        assert_eq!(
-            key_event_to_string(&KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
-            "<Esc>"
-        );
-    }
+        #[rstest]
+        #[case("")]
+        #[case("<C-d")]
+        #[case("<nope>")]
+        fn errors(#[case] input: &str) {
+            assert!(parse_key_sequence(input).is_err());
+        }
 
-    #[test]
-    fn case_insensitive_modifier_prefix() {
-        // parse_key_event lowercases input, so C-A and c-a are equivalent.
-        assert_eq!(
-            parse_key_event("C-A").unwrap(),
-            KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL)
-        );
-        assert_eq!(
-            parse_key_event("A-Enter").unwrap(),
-            KeyEvent::new(KeyCode::Enter, KeyModifiers::ALT)
-        );
-    }
+        #[test]
+        fn round_trip() -> Result<(), String> {
+            let seq = parse_key_sequence("<C-w>j")?;
 
-    #[test]
-    fn backtab_inserts_shift() {
-        assert_eq!(
-            parse_key_event("backtab").unwrap(),
-            KeyEvent::new(KeyCode::BackTab, KeyModifiers::SHIFT)
-        );
-    }
+            assert_eq!(seq.len(), 2);
+            assert_eq!(key_event_to_string(&seq[0]), "<C-w>");
+            assert_eq!(key_event_to_string(&seq[1]), "j");
 
-    #[test]
-    fn f_keys() {
-        assert_eq!(
-            parse_key_event("f1").unwrap(),
-            KeyEvent::new(KeyCode::F(1), KeyModifiers::NONE)
-        );
-        assert_eq!(
-            parse_key_event("f12").unwrap(),
-            KeyEvent::new(KeyCode::F(12), KeyModifiers::NONE)
-        );
-    }
+            Ok(())
+        }
 
-    #[test]
-    fn invalid_keys_return_error() {
-        assert!(parse_key_event("invalid-key").is_err());
-        // "ctrl-" is not a recognised prefix; the whole string is treated as a key name.
-        assert!(parse_key_event("ctrl-invalid-key").is_err());
-    }
+        #[test]
+        fn two_consecutive_angle_bracket_specs() -> Result<(), String> {
+            let seq = parse_key_sequence("<C-w><C-j>")?;
 
-    #[test]
-    fn parse_key_sequence_errors() {
-        assert!(parse_key_sequence("").is_err());
-        assert!(parse_key_sequence("<C-d").is_err());
-        assert!(parse_key_sequence("<nope>").is_err());
-    }
+            assert_eq!(seq.len(), 2);
+            assert_eq!(
+                seq[0],
+                KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL)
+            );
+            assert_eq!(
+                seq[1],
+                KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL)
+            );
 
-    #[test]
-    fn parse_key_sequence_round_trip() {
-        let seq = parse_key_sequence("<C-w>j").unwrap();
-        assert_eq!(seq.len(), 2);
-        assert_eq!(key_event_to_string(&seq[0]), "<C-w>");
-        assert_eq!(key_event_to_string(&seq[1]), "j");
-    }
+            Ok(())
+        }
 
-    #[test]
-    fn shift_prefix_uppercases_char() {
-        assert_eq!(
-            parse_key_event("s-g").unwrap(),
-            KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT)
-        );
-    }
+        #[test]
+        fn space_key_parses_and_round_trips() -> Result<(), String> {
+            let seq = parse_key_sequence("<Space>")?;
 
-    #[test]
-    fn f0_is_rejected() {
-        assert!(parse_key_event("f0").is_err());
-    }
+            assert_eq!(seq, [KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)]);
+            assert_eq!(key_event_to_string(&seq[0]), "<Space>");
 
-    #[test]
-    fn two_consecutive_angle_bracket_specs() {
-        let seq = parse_key_sequence("<C-w><C-j>").unwrap();
-        assert_eq!(seq.len(), 2);
-        assert_eq!(
-            seq[0],
-            KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL)
-        );
-        assert_eq!(
-            seq[1],
-            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::CONTROL)
-        );
-    }
+            Ok(())
+        }
 
-    #[test]
-    fn space_key_parses_and_round_trips() {
-        let seq = parse_key_sequence("<Space>").unwrap();
-        assert_eq!(seq, [KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)]);
-        assert_eq!(key_event_to_string(&seq[0]), "<Space>");
-    }
+        #[test]
+        fn bare_and_bracketed_mixed_sequence() -> Result<(), String> {
+            let seq = parse_key_sequence("j<Down>")?;
 
-    #[test]
-    fn shift_char_normalizes_to_uppercase_and_round_trips() {
-        // Lowercase input with SHIFT is normalized to uppercase in the string form.
-        let lower = KeyEvent::new(KeyCode::Char('g'), KeyModifiers::SHIFT);
-        assert_eq!(key_event_to_string(&lower), "<S-G>");
+            assert_eq!(seq.len(), 2);
+            assert_eq!(
+                seq[0],
+                KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)
+            );
+            assert_eq!(seq[1], KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
 
-        // The canonical uppercase form round-trips cleanly.
-        let upper = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT);
-        let s = key_event_to_string(&upper);
-        assert_eq!(s, "<S-G>");
-        assert_eq!(&parse_key_sequence(&s).unwrap()[0], &upper);
-    }
+            Ok(())
+        }
 
-    #[test]
-    fn special_keys_format_correctly() {
-        assert_eq!(
-            key_event_to_string(&KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
-            "<CR>"
-        );
-        assert_eq!(
-            key_event_to_string(&KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
-            "<BS>"
-        );
-        assert_eq!(
-            key_event_to_string(&KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)),
-            "<Tab>"
-        );
-        assert_eq!(
-            key_event_to_string(&KeyEvent::new(KeyCode::Delete, KeyModifiers::NONE)),
-            "<Del>"
-        );
-    }
+        #[test]
+        fn shift_char_round_trips() -> Result<(), String> {
+            let upper = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT);
+            let s = key_event_to_string(&upper);
 
-    #[test]
-    fn bare_and_bracketed_mixed_sequence() {
-        let seq = parse_key_sequence("j<Down>").unwrap();
-        assert_eq!(seq.len(), 2);
-        assert_eq!(
-            seq[0],
-            KeyEvent::new(KeyCode::Char('j'), KeyModifiers::NONE)
-        );
-        assert_eq!(seq[1], KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+            assert_eq!(s, "<S-G>");
+            assert_eq!(&parse_key_sequence(&s)?[0], &upper);
+
+            Ok(())
+        }
     }
 }
