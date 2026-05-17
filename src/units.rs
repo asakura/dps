@@ -14,69 +14,88 @@ macro_rules! unit_newtype {
             pub const fn new(val: f64) -> Self {
                 Self(val)
             }
+
             /// Returns the underlying `f64`.
             pub const fn value(self) -> f64 {
                 self.0
             }
+
             /// Returns the greater of two values.
             #[must_use]
             pub const fn max(self, other: Self) -> Self {
                 Self(self.0.max(other.0))
             }
         }
+
         impl fmt::Display for $ty {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "{:.1} {}", self.0, $suffix)
             }
         }
+
         impl From<f64> for $ty {
             fn from(v: f64) -> Self {
                 Self(v)
             }
         }
+
         impl From<$ty> for f64 {
             fn from(v: $ty) -> Self {
                 v.0
             }
         }
+
         impl Add for $ty {
             type Output = Self;
+
             fn add(self, rhs: Self) -> Self {
                 Self(self.0 + rhs.0)
             }
         }
+
         impl Sub for $ty {
             type Output = Self;
+
             fn sub(self, rhs: Self) -> Self {
                 Self(self.0 - rhs.0)
             }
         }
+
         impl Mul<f64> for $ty {
             type Output = Self;
+
             fn mul(self, rhs: f64) -> Self {
                 Self(self.0 * rhs)
             }
         }
+
         impl Div<f64> for $ty {
             type Output = Self;
+
             fn div(self, rhs: f64) -> Self {
                 Self(self.0 / rhs)
             }
         }
+
         impl Mul<$ty> for f64 {
             type Output = $ty;
+
             fn mul(self, rhs: $ty) -> $ty {
                 $ty(self * rhs.0)
             }
         }
+
         impl Div for $ty {
             type Output = f64;
+
             fn div(self, rhs: Self) -> f64 {
                 self.0 / rhs.0
             }
         }
+
         impl Neg for $ty {
             type Output = Self;
+
             fn neg(self) -> Self {
                 Self(-self.0)
             }
@@ -123,6 +142,7 @@ unit_newtype!(Meters, "m");
 /// ```
 impl Div<MetersPerBar> for Meters {
     type Output = Bar;
+
     fn div(self, rhs: MetersPerBar) -> Bar {
         Bar(self.0 / rhs.0)
     }
@@ -164,6 +184,7 @@ unit_newtype!(Bar, "bar");
 /// ```
 impl Mul<MetersPerBar> for Bar {
     type Output = Meters;
+
     fn mul(self, rhs: MetersPerBar) -> Meters {
         Meters(self.0 * rhs.0)
     }
