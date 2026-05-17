@@ -90,8 +90,9 @@ use ratatui::style::{Color, Modifier, Style};
 
 /// Full Catppuccin palette with all 26 named colour slots.
 ///
-/// Field names follow the canonical Catppuccin naming exactly, so callers can
-/// express intent directly (e.g. `THEME.red` for danger, `THEME.green` for safe).
+/// Prefer the semantic style methods (`danger()`, `safe()`, `selection()`, …)
+/// over direct field access. Raw fields are public for the `accents()` array
+/// and for future flavour-switching infrastructure.
 ///
 /// The first 14 fields (`rosewater` → `lavender`) are accent colours (`"accent": true`
 /// in palette.json). The remaining 12 (`text` → `crust`) are non-accent neutrals.
