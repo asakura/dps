@@ -5,6 +5,7 @@ use std::{
     time::Duration,
 };
 
+use color_eyre::Result;
 use crossterm::{
     cursor,
     event::{
@@ -72,7 +73,7 @@ pub enum Event {
 ///
 /// ```no_run
 /// # #[tokio::main]
-/// # async fn main() -> color_eyre::Result<()> {
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use dps::tui::Tui;
 ///
 /// let mut tui = Tui::new()?
@@ -137,7 +138,7 @@ impl Tui {
     ///
     /// [`enter`]: Tui::enter
     /// [`draw`]: ratatui::Terminal::draw
-    pub fn new() -> color_eyre::Result<Self> {
+    pub fn new() -> Result<Self> {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         Ok(Self {
@@ -164,7 +165,7 @@ impl Tui {
     /// ```no_run
     /// # use dps::tui::Tui;
     /// let tui = Tui::new()?.tick_rate(10.0);
-    /// # Ok::<_, color_eyre::Report>(())
+    /// # Ok::<_, Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn tick_rate(mut self, tick_rate: f64) -> Self {
@@ -187,7 +188,7 @@ impl Tui {
     /// ```no_run
     /// # use dps::tui::Tui;
     /// let tui = Tui::new()?.frame_rate(30.0);
-    /// # Ok::<_, color_eyre::Report>(())
+    /// # Ok::<_, Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub fn frame_rate(mut self, frame_rate: f64) -> Self {
@@ -206,7 +207,7 @@ impl Tui {
     /// ```no_run
     /// # use dps::tui::Tui;
     /// let tui = Tui::new()?.mouse(true);
-    /// # Ok::<_, color_eyre::Report>(())
+    /// # Ok::<_, Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub const fn mouse(mut self, mouse: bool) -> Self {
@@ -221,7 +222,7 @@ impl Tui {
     /// ```no_run
     /// # use dps::tui::Tui;
     /// let tui = Tui::new()?.paste(true);
-    /// # Ok::<_, color_eyre::Report>(())
+    /// # Ok::<_, Box<dyn std::error::Error>>(())
     /// ```
     #[must_use]
     pub const fn paste(mut self, paste: bool) -> Self {
@@ -245,7 +246,7 @@ impl Tui {
     ///
     /// ```no_run
     /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use dps::tui::Tui;
     /// let mut tui = Tui::new()?;
     /// tui.start();
@@ -340,7 +341,7 @@ impl Tui {
     ///
     /// Currently always returns `Ok(())`; the `Result` return type is kept for
     /// forward-compatibility should cancellation ever become fallible.
-    pub fn stop(&self) -> color_eyre::Result<()> {
+    pub fn stop(&self) -> Result<()> {
         const TASK_ABORT_AFTER_MS: u32 = 50;
 
         self.cancel();
@@ -378,7 +379,7 @@ impl Tui {
     ///
     /// ```no_run
     /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use dps::tui::Tui;
     /// let mut tui = Tui::new()?;
     /// tui.enter()?;
@@ -386,7 +387,7 @@ impl Tui {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn enter(&mut self) -> color_eyre::Result<()> {
+    pub fn enter(&mut self) -> Result<()> {
         enable_raw_mode()?;
         execute!(stdout(), EnterAlternateScreen, cursor::Hide)?;
 
@@ -419,7 +420,7 @@ impl Tui {
     ///
     /// ```no_run
     /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use dps::tui::Tui;
     /// let mut tui = Tui::new()?;
     /// tui.enter()?;
@@ -427,7 +428,7 @@ impl Tui {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn exit(&mut self) -> color_eyre::Result<()> {
+    pub fn exit(&mut self) -> Result<()> {
         self.stop()?;
 
         if is_raw_mode_enabled()? {
@@ -459,7 +460,7 @@ impl Tui {
     ///
     /// ```no_run
     /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use dps::tui::Tui;
     /// let mut tui = Tui::new()?;
     /// tui.start();
@@ -471,61 +472,31 @@ impl Tui {
         self.cancellation_token.cancel();
     }
 
-    /// Exits the TUI and suspends the process with `SIGTSTP` (Unix only).
+    /// Re-enters the alternate screen and restarts the event loop after a suspend.
     ///
-    /// Call [`resume`] to re-enter the TUI after the process is foregrounded.
-    ///
-    /// # Errors
-    ///
-    /// Returns `Err` if [`exit`] fails or (on Unix) if raising `SIGTSTP` fails.
-    ///
-    /// [`resume`]: Tui::resume
-    /// [`exit`]: Tui::exit
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
-    /// # use dps::tui::Tui;
-    /// let mut tui = Tui::new()?;
-    /// tui.enter()?;
-    /// tui.suspend()?; // process receives SIGTSTP here
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn suspend(&mut self) -> color_eyre::Result<()> {
-        self.exit()?;
-
-        #[cfg(not(windows))]
-        signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
-
-        Ok(())
-    }
-
-    /// Re-enters the TUI after a [`suspend`].
+    /// Equivalent to calling [`enter`] again; intended to be called after the
+    /// process is foregrounded following a `SIGTSTP`.
     ///
     /// # Errors
     ///
-    /// Returns `Err` if [`enter`] fails; see [`Tui::enter`] for details.
+    /// Returns `Err` if [`enter`] fails (e.g. enabling raw mode fails).
     ///
-    /// [`suspend`]: Tui::suspend
     /// [`enter`]: Tui::enter
     ///
     /// # Examples
     ///
     /// ```no_run
     /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use dps::tui::Tui;
     /// let mut tui = Tui::new()?;
     /// tui.enter()?;
-    /// tui.suspend()?;
+    /// tui.exit()?;
     /// tui.resume()?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn resume(&mut self) -> color_eyre::Result<()> {
+    pub fn resume(&mut self) -> Result<()> {
         self.enter()
     }
 
@@ -535,7 +506,7 @@ impl Tui {
     ///
     /// ```no_run
     /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use dps::tui::Tui;
     /// let mut tui = Tui::new()?;
     /// tui.start();
@@ -556,7 +527,7 @@ impl Tui {
     ///
     /// ```no_run
     /// # #[tokio::main(flavor = "multi_thread")]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # use dps::tui::{Event, Tui};
     /// let mut tui = Tui::new()?;
     /// tui.start();
@@ -595,6 +566,7 @@ impl Drop for Tui {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
 
     mod new {
         use super::*;
@@ -608,8 +580,10 @@ mod tests {
         #[test]
         fn default_rates() {
             let tui = Tui::default();
-            assert_eq!(tui.tick_rate, 4.0);
-            assert_eq!(tui.frame_rate, 60.0);
+
+            assert_relative_eq!(tui.tick_rate, 4.0);
+            assert_relative_eq!(tui.frame_rate, 60.0);
+
             assert!(!tui.mouse);
             assert!(!tui.paste);
         }
@@ -621,13 +595,13 @@ mod tests {
         #[test]
         fn tick_rate_sets_value() {
             let tui = Tui::default().tick_rate(10.0);
-            assert_eq!(tui.tick_rate, 10.0);
+            assert_relative_eq!(tui.tick_rate, 10.0);
         }
 
         #[test]
         fn frame_rate_sets_value() {
             let tui = Tui::default().frame_rate(30.0);
-            assert_eq!(tui.frame_rate, 30.0);
+            assert_relative_eq!(tui.frame_rate, 30.0);
         }
 
         #[test]
@@ -649,8 +623,10 @@ mod tests {
                 .frame_rate(30.0)
                 .mouse(true)
                 .paste(true);
-            assert_eq!(tui.tick_rate, 10.0);
-            assert_eq!(tui.frame_rate, 30.0);
+
+            assert_relative_eq!(tui.tick_rate, 10.0);
+            assert_relative_eq!(tui.frame_rate, 30.0);
+
             assert!(tui.mouse);
             assert!(tui.paste);
         }
@@ -664,7 +640,11 @@ mod tests {
             let mut tui = Tui::default();
             tui.start();
             assert!(tui.stop().is_ok());
-            assert!(tui.task.as_ref().map_or(true, |t| t.is_finished()));
+            assert!(
+                tui.task
+                    .as_ref()
+                    .is_none_or(tokio::task::JoinHandle::is_finished)
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
@@ -680,35 +660,43 @@ mod tests {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn sends_init_event() {
+        async fn sends_init_event() -> Result<()> {
             let mut tui = Tui::default();
+
             tui.start();
-            let event = tokio::time::timeout(Duration::from_millis(500), tui.next_event())
-                .await
-                .expect("timed out waiting for Init")
-                .expect("channel closed unexpectedly");
-            assert!(matches!(event, Event::Init));
-            tui.stop().unwrap();
+
+            let option = tokio::time::timeout(Duration::from_millis(500), tui.next_event()).await?;
+
+            assert!(matches!(option, Some(Event::Init)));
+
+            tui.stop()?;
+
+            Ok(())
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn injected_events_are_received() {
+        async fn injected_events_are_received() -> Result<()> {
             let mut tui = Tui::default();
+
             tui.start();
-            tui.event_tx().send(Event::Quit).unwrap();
+            tui.event_tx().send(Event::Quit)?;
+
             let found = tokio::time::timeout(Duration::from_millis(500), async {
                 loop {
                     match tui.next_event().await {
                         Some(Event::Quit) => break true,
                         None => break false,
-                        _ => continue,
+                        _ => {}
                     }
                 }
             })
-            .await
-            .expect("timed out waiting for injected event");
+            .await?;
+
             assert!(found);
-            tui.stop().unwrap();
+
+            tui.stop()?;
+
+            Ok(())
         }
     }
 
@@ -718,23 +706,34 @@ mod tests {
         #[tokio::test(flavor = "multi_thread")]
         async fn task_finishes_after_cancel() {
             let mut tui = Tui::default();
+
             tui.start();
             tui.cancel();
+
             assert!(tui.stop().is_ok());
-            assert!(tui.task.as_ref().map_or(true, |t| t.is_finished()));
+            assert!(
+                tui.task
+                    .as_ref()
+                    .is_none_or(tokio::task::JoinHandle::is_finished)
+            );
         }
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn does_not_emit_closed() {
+        async fn does_not_emit_closed() -> Result<()> {
             let mut tui = Tui::default();
+
             tui.start();
+
             // drain Init
             let _ = tokio::time::timeout(Duration::from_millis(100), tui.next_event()).await;
+
             tui.cancel();
-            tui.stop().unwrap();
+            tui.stop()?;
+
             // after cancellation the channel still has senders alive (self.event_tx),
             // so we just verify no Closed event was queued by the loop
             let mut saw_closed = false;
+
             while let Ok(Some(ev)) =
                 tokio::time::timeout(Duration::from_millis(50), tui.next_event()).await
             {
@@ -742,7 +741,10 @@ mod tests {
                     saw_closed = true;
                 }
             }
+
             assert!(!saw_closed);
+
+            Ok(())
         }
     }
 
@@ -750,39 +752,44 @@ mod tests {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
-        async fn compiles_and_returns_result() {
-            let mut tui = Tui::new().unwrap();
+        async fn compiles_and_returns_result() -> Result<()> {
+            let mut tui = Tui::new()?;
+
             // enter() requires a real TTY, so resume() will err in CI; we only
             // assert it doesn't panic.
             let _ = tui.resume();
+
+            Ok(())
         }
     }
 
     mod event {
         use super::*;
+        use crossterm::event::{KeyCode, KeyEventState, KeyModifiers, MouseEventKind};
 
         #[test]
-        fn unit_variants_serialize_as_strings() {
-            assert_eq!(serde_json::to_string(&Event::Tick).unwrap(), r#""Tick""#);
-            assert_eq!(
-                serde_json::to_string(&Event::Render).unwrap(),
-                r#""Render""#
-            );
-            assert_eq!(serde_json::to_string(&Event::Init).unwrap(), r#""Init""#);
-            assert_eq!(serde_json::to_string(&Event::Quit).unwrap(), r#""Quit""#);
+        fn unit_variants_serialize_as_strings() -> Result<()> {
+            assert_eq!(serde_json::to_string(&Event::Tick)?, r#""Tick""#);
+            assert_eq!(serde_json::to_string(&Event::Render)?, r#""Render""#);
+            assert_eq!(serde_json::to_string(&Event::Init)?, r#""Init""#);
+            assert_eq!(serde_json::to_string(&Event::Quit)?, r#""Quit""#);
+
+            Ok(())
         }
 
         #[test]
-        fn tuple_variants_serialize_as_objects() {
-            let json = serde_json::to_string(&Event::Paste("hello".into())).unwrap();
+        fn tuple_variants_serialize_as_objects() -> Result<()> {
+            let json = serde_json::to_string(&Event::Paste("hello".into()))?;
             assert_eq!(json, r#"{"Paste":"hello"}"#);
 
-            let json = serde_json::to_string(&Event::Resize(80, 24)).unwrap();
+            let json = serde_json::to_string(&Event::Resize(80, 24))?;
             assert_eq!(json, r#"{"Resize":[80,24]}"#);
+
+            Ok(())
         }
 
         #[test]
-        fn round_trips_via_json() {
+        fn round_trips_via_json() -> Result<()> {
             for event in [
                 Event::Init,
                 Event::Tick,
@@ -795,41 +802,47 @@ mod tests {
                 Event::Paste("x".into()),
                 Event::Resize(100, 50),
             ] {
-                let json = serde_json::to_string(&event).unwrap();
-                let _: Event = serde_json::from_str(&json).unwrap();
+                let json = serde_json::to_string(&event)?;
+                let _: Event = serde_json::from_str(&json)?;
             }
+
+            Ok(())
         }
 
         #[test]
-        fn key_event_round_trips_via_json() {
-            use crossterm::event::{KeyCode, KeyEventState, KeyModifiers};
-
+        fn key_event_round_trips_via_json() -> Result<()> {
             let key = KeyEvent {
                 code: KeyCode::Char('a'),
                 modifiers: KeyModifiers::NONE,
                 kind: KeyEventKind::Press,
                 state: KeyEventState::NONE,
             };
+
             let event = Event::Key(key);
-            let json = serde_json::to_string(&event).unwrap();
-            let decoded: Event = serde_json::from_str(&json).unwrap();
+            let json = serde_json::to_string(&event)?;
+            let decoded: Event = serde_json::from_str(&json)?;
+
             assert!(matches!(decoded, Event::Key(_)));
+
+            Ok(())
         }
 
         #[test]
-        fn mouse_event_round_trips_via_json() {
-            use crossterm::event::{KeyModifiers, MouseEventKind};
-
+        fn mouse_event_round_trips_via_json() -> Result<()> {
             let mouse = MouseEvent {
                 kind: MouseEventKind::Moved,
                 column: 10,
                 row: 5,
                 modifiers: KeyModifiers::NONE,
             };
+
             let event = Event::Mouse(mouse);
-            let json = serde_json::to_string(&event).unwrap();
-            let decoded: Event = serde_json::from_str(&json).unwrap();
+            let json = serde_json::to_string(&event)?;
+            let decoded: Event = serde_json::from_str(&json)?;
+
             assert!(matches!(decoded, Event::Mouse(_)));
+
+            Ok(())
         }
     }
 }
