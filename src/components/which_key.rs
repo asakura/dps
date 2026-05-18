@@ -157,6 +157,7 @@ fn bottom_rect(height: u16, area: Rect) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use color_eyre::Result;
     use ratatui::{Terminal, backend::TestBackend, layout::Position};
 
     mod bottom_rect {
@@ -200,44 +201,74 @@ mod tests {
             desc: "d",
         };
 
-        fn render_entry(b: &'static KeyBinding, width: u16) -> ratatui::buffer::Buffer {
+        fn render_entry(b: &'static KeyBinding, width: u16) -> Result<ratatui::buffer::Buffer> {
             let backend = TestBackend::new(width, 1);
-            let mut terminal = Terminal::new(backend).unwrap();
+            let mut terminal = Terminal::new(backend)?;
 
-            terminal
-                .draw(|f| f.render_widget(Entry(b, Theme::default()), f.area()))
-                .unwrap();
-            terminal.backend().buffer().clone()
+            terminal.draw(|f| f.render_widget(Entry(b, Theme::default()), f.area()))?;
+
+            Ok(terminal.backend().buffer().clone())
         }
 
         #[test]
-        fn key_placed_after_lead() {
-            let buf = render_entry(&BINDING, 30);
-            assert_eq!(buf.cell(Position::new(LEAD, 0)).unwrap().symbol(), "?");
+        fn key_placed_after_lead() -> Result<(), Box<dyn std::error::Error>> {
+            let buf = render_entry(&BINDING, 30)?;
+            assert_eq!(
+                buf.cell(Position::new(LEAD, 0))
+                    .ok_or("cell out of bounds")?
+                    .symbol(),
+                "?"
+            );
+
+            Ok(())
         }
 
         #[test]
-        fn desc_placed_after_lead_key_gap() {
-            let buf = render_entry(&BINDING, 30);
+        fn desc_placed_after_lead_key_gap() -> Result<(), Box<dyn std::error::Error>> {
+            let buf = render_entry(&BINDING, 30)?;
             let x = LEAD + KEY_W + ENTRY_GAP;
 
-            assert_eq!(buf.cell(Position::new(x, 0)).unwrap().symbol(), "z");
-            assert_eq!(buf.cell(Position::new(x + 1, 0)).unwrap().symbol(), "i");
-            assert_eq!(buf.cell(Position::new(x + 2, 0)).unwrap().symbol(), "g");
+            assert_eq!(
+                buf.cell(Position::new(x, 0))
+                    .ok_or("cell out of bounds")?
+                    .symbol(),
+                "z"
+            );
+            assert_eq!(
+                buf.cell(Position::new(x + 1, 0))
+                    .ok_or("cell out of bounds")?
+                    .symbol(),
+                "i"
+            );
+            assert_eq!(
+                buf.cell(Position::new(x + 2, 0))
+                    .ok_or("cell out of bounds")?
+                    .symbol(),
+                "g"
+            );
+
+            Ok(())
         }
 
         #[test]
-        fn long_key_clipped_to_key_width() {
+        fn long_key_clipped_to_key_width() -> Result<(), Box<dyn std::error::Error>> {
             // Key longer than KEY_W is clipped by the layout rect; desc starts at the correct offset.
-            let buf = render_entry(&LONG_KEY, 30);
+            let buf = render_entry(&LONG_KEY, 30)?;
 
-            assert_eq!(buf.cell(Position::new(LEAD, 0)).unwrap().symbol(), "t");
+            assert_eq!(
+                buf.cell(Position::new(LEAD, 0))
+                    .ok_or("cell out of bounds")?
+                    .symbol(),
+                "t"
+            );
             assert_eq!(
                 buf.cell(Position::new(LEAD + KEY_W + ENTRY_GAP, 0))
-                    .unwrap()
+                    .ok_or("cell out of bounds")?
                     .symbol(),
                 "d"
             );
+
+            Ok(())
         }
     }
 
@@ -248,25 +279,28 @@ mod tests {
             use super::*;
 
             #[test]
-            fn bindings_is_noop() {
+            fn bindings_is_noop() -> Result<(), Box<dyn std::error::Error>> {
                 let backend = TestBackend::new(40, 5);
-                let mut terminal = Terminal::new(backend).unwrap();
+                let mut terminal = Terminal::new(backend)?;
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&[], &[], Theme::default()), f.area());
-                    })
-                    .unwrap();
+                terminal.draw(|f| {
+                    f.render_widget(
+                        WhichKey::new([].as_slice(), [].as_slice(), Theme::default()),
+                        f.area(),
+                    );
+                })?;
 
                 let buf = terminal.backend().buffer().clone();
                 assert!(buf.content.iter().all(|c| c.symbol() == " "));
+
+                Ok(())
             }
         }
 
         mod column_major {
             use super::*;
 
-            static PAIR: [KeyBinding; 2] = [
+            static PAIR: &[KeyBinding] = [
                 KeyBinding {
                     key: "q",
                     desc: "quit",
@@ -275,8 +309,9 @@ mod tests {
                     key: "j",
                     desc: "down",
                 },
-            ];
-            static THREE: [KeyBinding; 3] = [
+            ]
+            .as_slice();
+            static THREE: &[KeyBinding] = [
                 KeyBinding {
                     key: "a",
                     desc: "alpha",
@@ -289,8 +324,9 @@ mod tests {
                     key: "c",
                     desc: "gamma",
                 },
-            ];
-            static FOUR: [KeyBinding; 4] = [
+            ]
+            .as_slice();
+            static FOUR: &[KeyBinding] = [
                 KeyBinding {
                     key: "a",
                     desc: "alpha",
@@ -307,117 +343,167 @@ mod tests {
                     key: "d",
                     desc: "delta",
                 },
-            ];
+            ]
+            .as_slice();
 
             #[test]
-            fn two_bindings_stacked_in_one_column() {
+            fn two_bindings_stacked_in_one_column() -> Result<(), Box<dyn std::error::Error>> {
                 // area 30×5: 2 bindings, 1 col, 2 rows → popup at y=3..4.
                 let backend = TestBackend::new(30, 5);
-                let mut terminal = Terminal::new(backend).unwrap();
+                let mut terminal = Terminal::new(backend)?;
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&PAIR, &[], Theme::default()), f.area());
-                    })
-                    .unwrap();
+                terminal.draw(|f| {
+                    f.render_widget(
+                        WhichKey::new(PAIR, [].as_slice(), Theme::default()),
+                        f.area(),
+                    );
+                })?;
 
                 let buf = terminal.backend().buffer();
 
-                assert_eq!(buf.cell(Position::new(LEAD, 3)).unwrap().symbol(), "q");
-                assert_eq!(buf.cell(Position::new(LEAD, 4)).unwrap().symbol(), "j");
+                assert_eq!(
+                    buf.cell(Position::new(LEAD, 3))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "q"
+                );
+                assert_eq!(
+                    buf.cell(Position::new(LEAD, 4))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "j"
+                );
+
+                Ok(())
             }
 
             #[test]
-            fn across_two_columns() {
+            fn across_two_columns() -> Result<(), Box<dyn std::error::Error>> {
                 // area 44×3: cols = ((44+4)/(min_col_w+4)).max(1) = 2, rows = 4/2 = 2.
                 // Each Fill(1) column = (44 - COL_GAP) / 2 = min_col_w; col 1 starts at min_col_w + COL_GAP.
                 let backend = TestBackend::new(44, 3);
-                let mut terminal = Terminal::new(backend).unwrap();
+                let mut terminal = Terminal::new(backend)?;
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&FOUR, &[], Theme::default()), f.area());
-                    })
-                    .unwrap();
+                terminal.draw(|f| {
+                    f.render_widget(
+                        WhichKey::new(FOUR, [].as_slice(), Theme::default()),
+                        f.area(),
+                    );
+                })?;
 
                 let buf = terminal.backend().buffer();
                 let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
                 let col1_key_x = min_col_w + COL_GAP + LEAD;
 
-                assert_eq!(buf.cell(Position::new(LEAD, 1)).unwrap().symbol(), "a");
-                assert_eq!(buf.cell(Position::new(LEAD, 2)).unwrap().symbol(), "b");
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 1)).unwrap().symbol(),
+                    buf.cell(Position::new(LEAD, 1))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "a"
+                );
+                assert_eq!(
+                    buf.cell(Position::new(LEAD, 2))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "b"
+                );
+                assert_eq!(
+                    buf.cell(Position::new(col1_key_x, 1))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
                     "c"
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 2)).unwrap().symbol(),
+                    buf.cell(Position::new(col1_key_x, 2))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
                     "d"
                 );
+
+                Ok(())
             }
 
             #[test]
-            fn partial_last_column_leaves_row_empty() {
+            fn partial_last_column_leaves_row_empty() -> Result<(), Box<dyn std::error::Error>> {
                 // area 44×3: cols=2, rows=ceil(3/2)=2. col 1 has only 1 entry; its second row is empty.
                 let backend = TestBackend::new(44, 3);
-                let mut terminal = Terminal::new(backend).unwrap();
+                let mut terminal = Terminal::new(backend)?;
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&THREE, &[], Theme::default()), f.area());
-                    })
-                    .unwrap();
+                terminal.draw(|f| {
+                    f.render_widget(
+                        WhichKey::new(THREE, [].as_slice(), Theme::default()),
+                        f.area(),
+                    );
+                })?;
 
                 let buf = terminal.backend().buffer();
                 let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
                 let col1_key_x = min_col_w + COL_GAP + LEAD;
 
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 1)).unwrap().symbol(),
+                    buf.cell(Position::new(col1_key_x, 1))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
                     "c"
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 2)).unwrap().symbol(),
+                    buf.cell(Position::new(col1_key_x, 2))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
                     " "
                 );
+
+                Ok(())
             }
         }
 
         mod merging {
             use super::*;
 
-            static GLOBAL: [KeyBinding; 1] = [KeyBinding {
+            static GLOBAL: &[KeyBinding] = [KeyBinding {
                 key: "g",
                 desc: "global",
-            }];
-            static COMP: [KeyBinding; 1] = [KeyBinding {
+            }]
+            .as_slice();
+            static COMP: &[KeyBinding] = [KeyBinding {
                 key: "c",
                 desc: "comp",
-            }];
+            }]
+            .as_slice();
 
             #[test]
-            fn global_and_component_bindings() {
+            fn global_and_component_bindings() -> Result<(), Box<dyn std::error::Error>> {
                 // area 30×5: 2 total bindings, 1 col, 2 rows → popup at y=3..4.
                 let backend = TestBackend::new(30, 5);
-                let mut terminal = Terminal::new(backend).unwrap();
+                let mut terminal = Terminal::new(backend)?;
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&GLOBAL, &COMP, Theme::default()), f.area());
-                    })
-                    .unwrap();
+                terminal.draw(|f| {
+                    f.render_widget(WhichKey::new(GLOBAL, COMP, Theme::default()), f.area());
+                })?;
 
                 let buf = terminal.backend().buffer();
 
-                assert_eq!(buf.cell(Position::new(LEAD, 3)).unwrap().symbol(), "g");
-                assert_eq!(buf.cell(Position::new(LEAD, 4)).unwrap().symbol(), "c");
+                assert_eq!(
+                    buf.cell(Position::new(LEAD, 3))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "g"
+                );
+                assert_eq!(
+                    buf.cell(Position::new(LEAD, 4))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "c"
+                );
+
+                Ok(())
             }
         }
 
         mod height_cap {
             use super::*;
 
-            static FIVE: [KeyBinding; 5] = [
+            static FIVE: &[KeyBinding] = [
                 KeyBinding {
                     key: "a",
                     desc: "one",
@@ -438,50 +524,68 @@ mod tests {
                     key: "e",
                     desc: "five",
                 },
-            ];
+            ]
+            .as_slice();
 
             #[test]
-            fn bounded_by_area() {
+            fn bounded_by_area() -> Result<(), Box<dyn std::error::Error>> {
                 // 5 bindings in a 30×3 area: rows=5 would exceed area height=3,
                 // so popup_h is clamped to 3 and fills the whole terminal.
                 let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend).unwrap();
+                let mut terminal = Terminal::new(backend)?;
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&FIVE, &[], Theme::default()), f.area());
-                    })
-                    .unwrap();
+                terminal.draw(|f| {
+                    f.render_widget(
+                        WhichKey::new(FIVE, [].as_slice(), Theme::default()),
+                        f.area(),
+                    );
+                })?;
 
                 let buf = terminal.backend().buffer();
-                assert_eq!(buf.cell(Position::new(LEAD, 0)).unwrap().symbol(), "a");
+                assert_eq!(
+                    buf.cell(Position::new(LEAD, 0))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "a"
+                );
+
+                Ok(())
             }
         }
 
         mod clipping {
             use super::*;
 
-            static LONG_DESC: [KeyBinding; 1] = [KeyBinding {
+            static LONG_DESC: &[KeyBinding] = [KeyBinding {
                 key: "k",
                 desc: "averylongdescriptionthatwontfit",
-            }];
+            }]
+            .as_slice();
 
             #[test]
-            fn long_desc_clipped_to_column_width() {
+            fn long_desc_clipped_to_column_width() -> Result<(), Box<dyn std::error::Error>> {
                 // Desc longer than the available Fill(1) width is clipped; nothing bleeds past the column.
                 let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend).unwrap();
+                let mut terminal = Terminal::new(backend)?;
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(&LONG_DESC, &[], Theme::default()), f.area());
-                    })
-                    .unwrap();
+                terminal.draw(|f| {
+                    f.render_widget(
+                        WhichKey::new(LONG_DESC, [].as_slice(), Theme::default()),
+                        f.area(),
+                    );
+                })?;
 
                 let buf = terminal.backend().buffer();
                 let desc_x = LEAD + KEY_W + ENTRY_GAP;
 
-                assert_eq!(buf.cell(Position::new(desc_x, 2)).unwrap().symbol(), "a");
+                assert_eq!(
+                    buf.cell(Position::new(desc_x, 2))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "a"
+                );
+
+                Ok(())
             }
         }
     }
