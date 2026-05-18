@@ -10,6 +10,7 @@ use std::{
     sync::LazyLock,
 };
 
+use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use directories::ProjectDirs;
 use serde::{Deserialize, de::Deserializer};
@@ -132,7 +133,7 @@ impl Config {
     ///
     /// Returns `Err` if the config source cannot be read or parsed; see
     /// [`Config::from_dirs`].
-    pub fn new() -> color_eyre::Result<Self, config::ConfigError> {
+    pub fn new() -> Result<Self, config::ConfigError> {
         Self::from_dirs(None, None)
     }
 
@@ -162,7 +163,7 @@ impl Config {
     pub fn from_dirs(
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
-    ) -> color_eyre::Result<Self, config::ConfigError> {
+    ) -> Result<Self, config::ConfigError> {
         let default_raw: RawConfig =
             json5::from_str(CONFIG).map_err(|e| config::ConfigError::Message(e.to_string()))?;
 
@@ -216,8 +217,6 @@ impl Config {
                 user_bindings.entry(key.clone()).or_insert(*cmd);
             }
         }
-
-        // TODO: merge default styles once Styles carries real data.
 
         if raw.default_theme.is_empty() {
             raw.default_theme.clone_from(&default_raw.default_theme);
@@ -342,7 +341,7 @@ pub fn get_data_dir() -> PathBuf {
 }
 
 impl<'de> Deserialize<'de> for KeyBindings {
-    fn deserialize<D>(deserializer: D) -> color_eyre::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -416,173 +415,233 @@ mod tests {
         }
     }
 
-    #[test]
-    fn default_keybindings_loaded_from_embedded_config() -> color_eyre::Result<()> {
+    mod keybindings {
+        use super::*;
         use crate::action::Movement;
-        let c = Config::new()?;
-        let home = c.keybindings.0.get(&Mode::Home).unwrap();
-        // Spot-check a few bindings that must come from the embedded config.json5.
-        assert_eq!(
-            home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Move(Movement::Down)
-        );
-        assert_eq!(
-            home.get(&parse_key_sequence("gg").unwrap()).unwrap(),
-            &Action::Move(Movement::GotoTop)
-        );
-        Ok(())
-    }
 
-    #[test]
-    fn user_config_adds_binding_and_defaults_merge_in() {
-        use crate::action::Movement;
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(
-            dir.path().join("config.json5"),
-            r#"{ keybindings: { Home: { x: "ScrollUp" } } }"#,
-        )
-        .unwrap();
-        temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
-            let c = Config::new().unwrap();
-            let home = c.keybindings.0.get(&Mode::Home).unwrap();
+        #[test]
+        fn default_keybindings_loaded_from_embedded_config()
+        -> Result<(), Box<dyn std::error::Error>> {
+            temp_env::with_var_unset("DPS_CONFIG", || {
+                let c = Config::new()?;
+                let home = c
+                    .keybindings
+                    .0
+                    .get(&Mode::Home)
+                    .ok_or("no Home bindings in config")?;
+
+                assert_eq!(
+                    home.get(&parse_key_sequence("j")?)
+                        .ok_or("no binding for 'j'")?,
+                    &Action::Move(Movement::Down)
+                );
+                assert_eq!(
+                    home.get(&parse_key_sequence("gg")?)
+                        .ok_or("no binding for 'gg'")?,
+                    &Action::Move(Movement::GotoTop)
+                );
+
+                Ok(())
+            })
+        }
+
+        #[test]
+        fn user_config_adds_binding_and_defaults_merge_in() -> Result<(), Box<dyn std::error::Error>>
+        {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                r#"{ keybindings: { Home: { x: "ScrollUp" } } }"#,
+            )?;
+
+            temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
+                let c = Config::new()?;
+                let home = c
+                    .keybindings
+                    .0
+                    .get(&Mode::Home)
+                    .ok_or("no Home bindings in config")?;
+
+                assert_eq!(
+                    home.get(&parse_key_sequence("x")?)
+                        .ok_or("no binding for 'x'")?,
+                    &Action::Move(Movement::ScrollUp),
+                );
+
+                assert_eq!(
+                    home.get(&parse_key_sequence("j")?)
+                        .ok_or("no binding for 'j'")?,
+                    &Action::Move(Movement::Down),
+                );
+
+                Ok(())
+            })
+        }
+
+        #[test]
+        fn user_config_override_wins_over_default() -> Result<(), Box<dyn std::error::Error>> {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                r#"{ keybindings: { Home: { j: "Up" } } }"#,
+            )?;
+
+            temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
+                let c = Config::new()?;
+                let home = c
+                    .keybindings
+                    .0
+                    .get(&Mode::Home)
+                    .ok_or("no Home bindings in config")?;
+
+                assert_eq!(
+                    home.get(&parse_key_sequence("j")?)
+                        .ok_or("no binding for 'j'")?,
+                    &Action::Move(Movement::Up),
+                );
+
+                Ok(())
+            })
+        }
+
+        #[test]
+        fn from_dirs_loads_file_from_given_directory() -> Result<(), Box<dyn std::error::Error>> {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                r#"{ keybindings: { Home: { x: "ScrollUp" } } }"#,
+            )?;
+
+            let c = Config::from_dirs(Some(dir.path()), None)?;
+            let home = c
+                .keybindings
+                .0
+                .get(&Mode::Home)
+                .ok_or("no Home bindings in config")?;
+
             assert_eq!(
-                home.get(&parse_key_sequence("x").unwrap()).unwrap(),
+                home.get(&parse_key_sequence("x")?)
+                    .ok_or("no binding for 'x'")?,
                 &Action::Move(Movement::ScrollUp),
             );
-            // Default binding merged in alongside the user binding.
+
             assert_eq!(
-                home.get(&parse_key_sequence("j").unwrap()).unwrap(),
+                home.get(&parse_key_sequence("j")?)
+                    .ok_or("no binding for 'j'")?,
                 &Action::Move(Movement::Down),
             );
-        });
-    }
 
-    #[test]
-    fn user_config_override_wins_over_default() {
-        use crate::action::Movement;
-        let dir = tempfile::tempdir().unwrap();
-        // Remap 'j' from Down (default) to Up.
-        std::fs::write(
-            dir.path().join("config.json5"),
-            r#"{ keybindings: { Home: { j: "Up" } } }"#,
-        )
-        .unwrap();
-        temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
-            let c = Config::new().unwrap();
-            let home = c.keybindings.0.get(&Mode::Home).unwrap();
-            // User's remap wins — default must not overwrite it.
-            assert_eq!(
-                home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-                &Action::Move(Movement::Up),
-            );
-        });
-    }
-
-    #[test]
-    fn from_dirs_loads_file_from_given_directory() -> color_eyre::Result<()> {
-        use crate::action::Movement;
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(
-            dir.path().join("config.json5"),
-            r#"{ keybindings: { Home: { x: "ScrollUp" } } }"#,
-        )?;
-        let c = Config::from_dirs(Some(dir.path()), None)?;
-        let home = c.keybindings.0.get(&Mode::Home).unwrap();
-        // User-added binding present.
-        assert_eq!(
-            home.get(&parse_key_sequence("x").unwrap()).unwrap(),
-            &Action::Move(Movement::ScrollUp),
-        );
-        // Embedded default still merged in.
-        assert_eq!(
-            home.get(&parse_key_sequence("j").unwrap()).unwrap(),
-            &Action::Move(Movement::Down),
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn malformed_config_returns_error() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(
-            dir.path().join("config.json5"),
-            "{ this is not valid {{ json5 }",
-        )
-        .unwrap();
-        assert!(Config::from_dirs(Some(dir.path()), None).is_err());
-    }
-
-    #[test]
-    fn theme_resolved_from_embedded_config() -> color_eyre::Result<()> {
-        use ratatui::style::{Color, Modifier, Style};
-        let c = Config::new()?;
-        // Default is catpuccineFrappe; peach = #ef9f76 = Rgb(239, 159, 118).
-        let theme = c.themes.get(&c.default_theme).unwrap();
-        assert_eq!(
-            theme.key_label(),
-            Style::from((Color::Rgb(239, 159, 118), Modifier::BOLD)),
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn all_four_catppuccin_themes_resolved() -> color_eyre::Result<()> {
-        let c = Config::new()?;
-        for name in [
-            "catpuccineLatte",
-            "catpuccineFrappe",
-            "catpuccineMacchiato",
-            "catpuccineMocha",
-        ] {
-            assert!(c.themes.contains_key(name), "missing theme '{name}'");
+            Ok(())
         }
-        Ok(())
+
+        #[test]
+        fn malformed_config_returns_error() -> Result<()> {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                "{ this is not valid {{ json5 }",
+            )?;
+
+            assert!(Config::from_dirs(Some(dir.path()), None).is_err());
+
+            Ok(())
+        }
     }
 
-    #[test]
-    fn unknown_default_theme_is_rejected() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(
-            dir.path().join("config.json5"),
-            r#"{ defaultTheme: "doesNotExist" }"#,
-        )
-        .unwrap();
-        let err = Config::from_dirs(Some(dir.path()), None).unwrap_err();
-        assert!(
-            err.to_string().contains("doesNotExist"),
-            "error should name the unknown theme; got: {err}",
-        );
-    }
+    mod themes {
+        use super::*;
+        use ratatui::style::{Color, Modifier, Style};
+        use rstest::rstest;
 
-    #[test]
-    fn theme_without_palette_is_rejected() {
-        let dir = tempfile::tempdir().unwrap();
-        // A fully-specified theme with no matching palette entry.
-        std::fs::write(
-            dir.path().join("config.json5"),
-            r#"{
-              themes: {
-                orphanTheme: {
-                  popupSurface: { fg: "text",     bg: "mantle"   },
-                  keyLabel:     { fg: "peach"                    },
-                  border:       { fg: "surface0"                 },
-                  title:        { fg: "lavender"                 },
-                  header:       { fg: "blue"                     },
-                  selection:    { fg: "base",     bg: "mauve"    },
-                  columnFocus:  { fg: "lavender"                 },
-                  navBar:       { fg: "subtext0", bg: "surface0" },
-                  statusActive: { fg: "text",     bg: "surface0" },
-                  statusEmpty:  { fg: "overlay0", bg: "surface0" },
-                  safe:         { fg: "green"                    },
-                  caution:      { fg: "yellow"                   },
-                  danger:       { fg: "red"                      },
-                  bodyText:     { fg: "text"                     },
-                  hint:         { fg: "subtext0"                 },
-                }
-              }
-            }"#,
-        )
-        .unwrap();
-        assert!(Config::from_dirs(Some(dir.path()), None).is_err());
+        #[test]
+        fn theme_resolved_from_embedded_config() -> Result<(), Box<dyn std::error::Error>> {
+            temp_env::with_var_unset("DPS_CONFIG", || {
+                let c = Config::new()?;
+                let theme = c
+                    .themes
+                    .get(&c.default_theme)
+                    .ok_or("default theme not in themes map")?;
+
+                assert_eq!(
+                    theme.key_label(),
+                    // Default is catpuccineFrappe; peach = #ef9f76 = Rgb(239, 159, 118).
+                    Style::from((Color::Rgb(239, 159, 118), Modifier::BOLD)),
+                );
+
+                Ok(())
+            })
+        }
+
+        #[rstest]
+        #[case("catpuccineLatte")]
+        #[case("catpuccineFrappe")]
+        #[case("catpuccineMacchiato")]
+        #[case("catpuccineMocha")]
+        fn all_four_catppuccin_themes_resolved(#[case] name: &str) -> Result<()> {
+            temp_env::with_var_unset("DPS_CONFIG", || {
+                let c = Config::new()?;
+
+                assert!(c.themes.contains_key(name), "missing theme '{name}'");
+
+                Ok(())
+            })
+        }
+
+        #[test]
+        fn unknown_default_theme_is_rejected() -> Result<()> {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                r#"{ defaultTheme: "doesNotExist" }"#,
+            )?;
+
+            let result = Config::from_dirs(Some(dir.path()), None);
+
+            assert!(matches!(
+                result,
+                Err(config::ConfigError::Message(ref s)) if s.contains("doesNotExist")
+            ));
+
+            Ok(())
+        }
+
+        #[test]
+        fn theme_without_palette_is_rejected() -> Result<()> {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                r#"{
+                  themes: {
+                    orphanTheme: {
+                      popupSurface: { fg: "text",     bg: "mantle"   },
+                      keyLabel:     { fg: "peach"                    },
+                      border:       { fg: "surface0"                 },
+                      title:        { fg: "lavender"                 },
+                      header:       { fg: "blue"                     },
+                      selection:    { fg: "base",     bg: "mauve"    },
+                      columnFocus:  { fg: "lavender"                 },
+                      navBar:       { fg: "subtext0", bg: "surface0" },
+                      statusActive: { fg: "text",     bg: "surface0" },
+                      statusEmpty:  { fg: "overlay0", bg: "surface0" },
+                      safe:         { fg: "green"                    },
+                      caution:      { fg: "yellow"                   },
+                      danger:       { fg: "red"                      },
+                      bodyText:     { fg: "text"                     },
+                      hint:         { fg: "subtext0"                 },
+                    }
+                  }
+                }"#,
+            )?;
+
+            assert!(Config::from_dirs(Some(dir.path()), None).is_err());
+
+            Ok(())
+        }
     }
 }
