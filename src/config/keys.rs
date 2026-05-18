@@ -370,7 +370,10 @@ mod tests {
         #[case("a", KeyCode::Char('a'))]
         #[case("enter", KeyCode::Enter)]
         #[case("esc", KeyCode::Esc)]
-        fn simple_chars_and_named_keys(#[case] key: &str, #[case] code: KeyCode) -> Result<(), String> {
+        fn simple_chars_and_named_keys(
+            #[case] key: &str,
+            #[case] code: KeyCode,
+        ) -> Result<(), String> {
             assert_eq!(
                 parse_key_event(key)?,
                 KeyEvent::new(code, KeyModifiers::empty())

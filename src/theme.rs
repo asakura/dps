@@ -244,9 +244,12 @@ impl Theme {
     ///
     /// This is the single construction path for config-driven themes; call sites
     /// live in [`crate::config::theme`]. Hard-coded themes use [`Theme::default`].
-    #[expect(clippy::too_many_arguments, reason = "one argument per semantic colour slot")]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one argument per semantic colour slot"
+    )]
     #[must_use]
-    pub(crate) fn new(
+    pub(crate) const fn new(
         popup_surface_fg: Color,
         popup_surface_bg: Color,
         key_label_fg: Color,

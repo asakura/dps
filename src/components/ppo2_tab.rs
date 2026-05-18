@@ -273,7 +273,11 @@ impl Component for PpO2Tab {
     }
 
     fn render_status(&self, area: Rect, buf: &mut Buffer, theme: &Theme) {
-        PpO2TabStatus { tab: self, theme: *theme }.render(area, buf);
+        PpO2TabStatus {
+            tab: self,
+            theme: *theme,
+        }
+        .render(area, buf);
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
@@ -409,7 +413,13 @@ mod tests {
         #[test]
         fn no_selection_shows_prompt() {
             let tab = PpO2Tab::new();
-            let text = widget_text(PpO2TabStatus { tab: &tab, theme: Theme::default() }, 60);
+            let text = widget_text(
+                PpO2TabStatus {
+                    tab: &tab,
+                    theme: Theme::default(),
+                },
+                60,
+            );
             assert!(text.contains("No depth selected"));
         }
 
@@ -420,7 +430,13 @@ mod tests {
                 tab.handle_action(Action::Move(Movement::Down));
             }
             tab.handle_action(Action::Select);
-            let text = widget_text(PpO2TabStatus { tab: &tab, theme: Theme::default() }, 80);
+            let text = widget_text(
+                PpO2TabStatus {
+                    tab: &tab,
+                    theme: Theme::default(),
+                },
+                80,
+            );
             assert!(text.contains("10.0 m"));
             assert!(text.contains("21")); // Air (EAN21)
         }
