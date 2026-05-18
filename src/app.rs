@@ -90,7 +90,7 @@ impl App {
     /// # Examples
     ///
     /// ```no_run
-    /// # fn main() -> color_eyre::Result<()> {
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use dps::app::App;
     /// let _app = App::new(4.0, 60.0, None, None)?;
     /// # Ok(())
@@ -144,7 +144,7 @@ impl App {
     ///
     /// ```no_run
     /// # #[tokio::main]
-    /// # async fn main() -> color_eyre::Result<()> {
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use dps::app::App;
     /// let mut app = App::new(4.0, 60.0, None, None)?;
     /// app.run().await?;
