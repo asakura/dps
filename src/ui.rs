@@ -196,19 +196,19 @@ mod tests {
 
         #[test]
         fn zero_data_columns_returns_only_fixed() {
-            let c = trailing_constraints(&[Constraint::Length(12)], 0, 9);
+            let c = trailing_constraints([Constraint::Length(12)].as_slice(), 0, 9);
             assert_eq!(c, vec![Constraint::Length(12)]);
         }
 
         #[test]
         fn single_data_column_is_fill() {
-            let c = trailing_constraints(&[], 1, 9);
+            let c = trailing_constraints([].as_slice(), 1, 9);
             assert_eq!(c, vec![Constraint::Fill(1)]);
         }
 
         #[test]
         fn multiple_data_columns_last_is_fill() {
-            let c = trailing_constraints(&[], 3, 9);
+            let c = trailing_constraints([].as_slice(), 3, 9);
             assert_eq!(
                 c,
                 vec![
@@ -221,7 +221,11 @@ mod tests {
 
         #[test]
         fn fixed_columns_prepended() {
-            let c = trailing_constraints(&[Constraint::Length(12), Constraint::Length(6)], 2, 9);
+            let c = trailing_constraints(
+                [Constraint::Length(12), Constraint::Length(6)].as_slice(),
+                2,
+                9,
+            );
             assert_eq!(
                 c,
                 vec![
