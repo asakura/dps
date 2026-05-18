@@ -1,4 +1,13 @@
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        reason = "Tests legitimately combine Result return types with panic-inducing assertions"
+    )
+)]
+
 //! DPS — interactive terminal MOD and ppO₂ tables for nitrox dive planning.
+
 pub mod action;
 pub mod app;
 pub mod cli;
