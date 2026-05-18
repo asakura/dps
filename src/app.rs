@@ -20,7 +20,7 @@ use crate::{
     tui::{Event, Tui},
 };
 
-static GLOBAL_BINDINGS: &[KeyBinding] = &[
+static GLOBAL_BINDINGS: &[KeyBinding] = [
     KeyBinding {
         key: "Tab",
         desc: "next table",
@@ -33,7 +33,8 @@ static GLOBAL_BINDINGS: &[KeyBinding] = &[
         key: "?",
         desc: "toggle bindings",
     },
-];
+]
+.as_slice();
 
 /// Top-level coordinator: owns the tab list, tracks the active tab, and routes
 /// key events and render calls to the appropriate component.
@@ -477,10 +478,9 @@ mod tests {
 
         #[test]
         fn chord_first_key_is_prefix() -> Result<(), String> {
-            let mut app = with_config(config_with_keybindings(&[(
-                "gg",
-                Action::Move(Movement::GotoTop),
-            )])?);
+            let mut app = with_config(config_with_keybindings(
+                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
+            )?);
 
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('g'))),
@@ -493,10 +493,9 @@ mod tests {
         #[test]
         fn chord_completes_on_second_key() -> Result<(), String> {
             // Action is dispatched to the component; caller sees None.
-            let mut app = with_config(config_with_keybindings(&[(
-                "gg",
-                Action::Move(Movement::GotoTop),
-            )])?);
+            let mut app = with_config(config_with_keybindings(
+                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
+            )?);
 
             app.handle_key(press(KeyCode::Char('g')));
 
@@ -512,10 +511,13 @@ mod tests {
         fn chord_broken_key_retried_as_new_binding() -> Result<(), String> {
             // "g" is a prefix of "gg"; when "j" breaks the chord it is retried
             // as a standalone key, matched as Down, dispatched, and None returned.
-            let mut app = with_config(config_with_keybindings(&[
-                ("gg", Action::Move(Movement::GotoTop)),
-                ("j", Action::Move(Movement::Down)),
-            ])?);
+            let mut app = with_config(config_with_keybindings(
+                [
+                    ("gg", Action::Move(Movement::GotoTop)),
+                    ("j", Action::Move(Movement::Down)),
+                ]
+                .as_slice(),
+            )?);
 
             app.handle_key(press(KeyCode::Char('g')));
 
@@ -531,10 +533,9 @@ mod tests {
         fn chord_broken_unbound_key_falls_to_global_fallback() -> Result<(), String> {
             // "g" is a prefix of "gg"; "q" breaks the chord and has no
             // configured binding, so the hardcoded fallback fires: q → Quit.
-            let mut app = with_config(config_with_keybindings(&[(
-                "gg",
-                Action::Move(Movement::GotoTop),
-            )])?);
+            let mut app = with_config(config_with_keybindings(
+                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
+            )?);
 
             app.handle_key(press(KeyCode::Char('g')));
 
@@ -549,10 +550,9 @@ mod tests {
         #[test]
         fn exact_match_clears_buffer_for_next_chord() -> Result<(), String> {
             // After a chord fires the buffer is cleared; the next key starts fresh.
-            let mut app = with_config(config_with_keybindings(&[(
-                "gg",
-                Action::Move(Movement::GotoTop),
-            )])?);
+            let mut app = with_config(config_with_keybindings(
+                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
+            )?);
 
             app.handle_key(press(KeyCode::Char('g')));
             app.handle_key(press(KeyCode::Char('g'))); // exact → GotoTop, buffer cleared
@@ -568,10 +568,9 @@ mod tests {
 
         #[test]
         fn three_key_chord_accumulates_and_fires() -> Result<(), String> {
-            let mut app = with_config(config_with_keybindings(&[(
-                "abc",
-                Action::Move(Movement::GotoTop),
-            )])?);
+            let mut app = with_config(config_with_keybindings(
+                [("abc", Action::Move(Movement::GotoTop))].as_slice(),
+            )?);
 
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('a'))),
@@ -595,10 +594,13 @@ mod tests {
             // "gg" and "jk" are bound. Pressing g (prefix) then j breaks gg;
             // j is retried alone and is a prefix of jk, so None is returned and
             // the buffer still holds j. Pressing k then completes jk.
-            let mut app = with_config(config_with_keybindings(&[
-                ("gg", Action::Move(Movement::GotoTop)),
-                ("jk", Action::Move(Movement::ScrollUp)),
-            ])?);
+            let mut app = with_config(config_with_keybindings(
+                [
+                    ("gg", Action::Move(Movement::GotoTop)),
+                    ("jk", Action::Move(Movement::ScrollUp)),
+                ]
+                .as_slice(),
+            )?);
 
             app.handle_key(press(KeyCode::Char('g'))); // prefix
 
@@ -618,10 +620,9 @@ mod tests {
         fn bound_movement_action_is_dispatched_and_returns_none() -> Result<(), String> {
             // A configured binding resolves to Action::Move(Down); App dispatches it
             // to the component and returns None — the caller never sees the movement.
-            let mut app = with_config(config_with_keybindings(&[(
-                "j",
-                Action::Move(Movement::Down),
-            )])?);
+            let mut app = with_config(config_with_keybindings(
+                [("j", Action::Move(Movement::Down))].as_slice(),
+            )?);
 
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('j'))),
@@ -634,7 +635,7 @@ mod tests {
         #[test]
         fn quit_action_propagates_to_caller() -> Result<(), String> {
             // Quit must still reach the event loop even when routed through dispatch.
-            let mut app = with_config(config_with_keybindings(&[("q", Action::Quit)])?);
+            let mut app = with_config(config_with_keybindings([("q", Action::Quit)].as_slice())?);
 
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('q'))),
@@ -648,14 +649,16 @@ mod tests {
     mod hint_bar {
         use super::*;
 
-        static COMP: &[KeyBinding] = &[KeyBinding {
+        static COMP: &[KeyBinding] = [KeyBinding {
             key: "j/k",
             desc: "move",
-        }];
-        static GLOB: &[KeyBinding] = &[KeyBinding {
+        }]
+        .as_slice();
+        static GLOB: &[KeyBinding] = [KeyBinding {
             key: "q",
             desc: "quit",
-        }];
+        }]
+        .as_slice();
 
         #[test]
         fn renders_component_bindings_first() -> Result<(), Box<dyn std::error::Error>> {
@@ -695,8 +698,8 @@ mod tests {
         fn empty_bindings_renders_without_panic() {
             widget_text(
                 HintBar {
-                    component: &[],
-                    global: &[],
+                    component: [].as_slice(),
+                    global: [].as_slice(),
                     theme: Theme::default(),
                 },
                 40,

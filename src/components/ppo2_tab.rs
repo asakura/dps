@@ -281,7 +281,7 @@ impl Component for PpO2Tab {
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
-        static BINDINGS: &[KeyBinding] = &[
+        static BINDINGS: &[KeyBinding] = [
             KeyBinding {
                 key: "j/k",
                 desc: "navigate depth",
@@ -290,7 +290,8 @@ impl Component for PpO2Tab {
                 key: "h/l",
                 desc: "change mix",
             },
-        ];
+        ]
+        .as_slice();
         BINDINGS
     }
 }

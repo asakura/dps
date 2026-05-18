@@ -282,7 +282,7 @@ impl Component for ModTab {
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
-        static BINDINGS: &[KeyBinding] = &[
+        static BINDINGS: &[KeyBinding] = [
             KeyBinding {
                 key: "j/k",
                 desc: "navigate rows",
@@ -295,7 +295,8 @@ impl Component for ModTab {
                 key: "Enter",
                 desc: "select gas",
             },
-        ];
+        ]
+        .as_slice();
         BINDINGS
     }
 }
