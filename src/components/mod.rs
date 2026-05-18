@@ -28,6 +28,7 @@ pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
     let next = state
         .selected()
         .map_or(0, |i| i.saturating_add_signed(delta).min(max));
+
     state.select(Some(next));
 }
 
@@ -62,7 +63,12 @@ pub mod test_utils {
     pub fn widget_text(widget: impl Widget, width: u16) -> String {
         let area = Rect::new(0, 0, width, 1);
         let mut buf = Buffer::empty(area);
+
         widget.render(area, &mut buf);
-        buf.content.iter().map(|c| c.symbol()).collect()
+
+        buf.content
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect()
     }
 }
