@@ -3,6 +3,7 @@
 use std::{path::PathBuf, sync::OnceLock};
 
 use clap::{CommandFactory, Parser};
+use color_eyre::Result;
 
 use crate::config::{get_config_dir, get_data_dir};
 
@@ -92,61 +93,80 @@ Data directory: {data_dir_path}"
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
     use clap::Parser;
 
     mod cli_args {
         use super::*;
 
         #[test]
-        fn defaults() {
-            let cli = Cli::try_parse_from(["dps"]).unwrap();
-            assert_eq!(cli.tick_rate, 4.0);
-            assert_eq!(cli.frame_rate, 60.0);
+        fn defaults() -> Result<()> {
+            let cli = Cli::try_parse_from(["dps"])?;
+
+            assert_relative_eq!(cli.tick_rate, 4.0);
+            assert_relative_eq!(cli.frame_rate, 60.0);
+
             assert!(cli.data_dir.is_none());
             assert!(cli.config_dir.is_none());
+
+            Ok(())
         }
 
         #[test]
-        fn data_and_config_dir_flags() {
+        fn data_and_config_dir_flags() -> Result<(), Box<dyn std::error::Error>> {
             let cli = Cli::try_parse_from([
                 "dps",
                 "--data-dir",
                 "/tmp/mydata",
                 "--config-dir",
                 "/tmp/myconfig",
-            ])
-            .unwrap();
-            assert_eq!(cli.data_dir.unwrap(), PathBuf::from("/tmp/mydata"));
-            assert_eq!(cli.config_dir.unwrap(), PathBuf::from("/tmp/myconfig"));
+            ])?;
+
+            assert_eq!(cli.data_dir.ok_or("data_dir not set")?, PathBuf::from("/tmp/mydata"));
+            assert_eq!(
+                cli.config_dir.ok_or("config_dir not set")?,
+                PathBuf::from("/tmp/myconfig")
+            );
+
+            Ok(())
         }
 
         #[test]
-        fn long_flags() {
-            let cli = Cli::try_parse_from(["dps", "--tick-rate", "10.0", "--frame-rate", "30.0"])
-                .unwrap();
-            assert_eq!(cli.tick_rate, 10.0);
-            assert_eq!(cli.frame_rate, 30.0);
+        fn long_flags() -> Result<()> {
+            let cli = Cli::try_parse_from(["dps", "--tick-rate", "10.0", "--frame-rate", "30.0"])?;
+
+            assert_relative_eq!(cli.tick_rate, 10.0);
+            assert_relative_eq!(cli.frame_rate, 30.0);
+
+            Ok(())
         }
 
         #[test]
-        fn short_flags() {
-            let cli = Cli::try_parse_from(["dps", "-t", "8.0", "-f", "24.0"]).unwrap();
-            assert_eq!(cli.tick_rate, 8.0);
-            assert_eq!(cli.frame_rate, 24.0);
+        fn short_flags() -> Result<()> {
+            let cli = Cli::try_parse_from(["dps", "-t", "8.0", "-f", "24.0"])?;
+
+            assert_relative_eq!(cli.tick_rate, 8.0);
+            assert_relative_eq!(cli.frame_rate, 24.0);
+
+            Ok(())
         }
 
         #[test]
-        fn frame_rate_below_tick_rate_is_rejected() {
-            let cli =
-                Cli::try_parse_from(["dps", "--tick-rate", "60", "--frame-rate", "4"]).unwrap();
+        fn frame_rate_below_tick_rate_is_rejected() -> Result<()> {
+            let cli = Cli::try_parse_from(["dps", "--tick-rate", "60", "--frame-rate", "4"])?;
+
             assert!(cli.validate().is_err());
+
+            Ok(())
         }
 
         #[test]
-        fn frame_rate_equal_to_tick_rate_is_accepted() {
-            let cli =
-                Cli::try_parse_from(["dps", "--tick-rate", "30", "--frame-rate", "30"]).unwrap();
+        fn frame_rate_equal_to_tick_rate_is_accepted() -> Result<()> {
+            let cli = Cli::try_parse_from(["dps", "--tick-rate", "30", "--frame-rate", "30"])?;
+
             assert!(cli.validate().is_ok());
+
+            Ok(())
         }
 
         #[test]
