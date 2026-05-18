@@ -274,7 +274,11 @@ impl Component for ModTab {
     }
 
     fn render_status(&self, area: Rect, buf: &mut Buffer, theme: &Theme) {
-        ModTabStatus { tab: self, theme: *theme }.render(area, buf);
+        ModTabStatus {
+            tab: self,
+            theme: *theme,
+        }
+        .render(area, buf);
     }
 
     fn key_bindings(&self) -> &'static [KeyBinding] {
@@ -300,15 +304,19 @@ impl Component for ModTab {
 mod tests {
     use super::*;
     use crate::components::test_utils::widget_text;
+    use color_eyre::Result;
 
     mod initial_state {
         use super::*;
 
         #[test]
-        fn selected_row_is_ean32() {
+        fn selected_row_is_ean32() -> Result<(), Box<dyn std::error::Error>> {
             let tab = ModTab::new();
-            let idx = tab.table_state.selected().unwrap();
+            let idx = tab.table_state.selected().ok_or("no row selected")?;
+
             assert_eq!(tab.mixes[idx].o2_percent(), DEFAULT_MIX_O2_PCT);
+
+            Ok(())
         }
 
         #[test]
@@ -328,26 +336,43 @@ mod tests {
         use crate::action::Movement;
 
         #[test]
-        fn stores_current_mix_and_ppo2() {
+        fn stores_current_mix_and_ppo2() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
-            let row = tab.table_state.selected().unwrap();
+            let row = tab.table_state.selected().ok_or("no row selected")?;
             let expected_pct = tab.mixes[row].o2_percent();
             let expected_ppo2 = tab.ppo2().value();
+
             tab.handle_action(Action::Select);
-            let (mix, ppo2) = tab.selection.unwrap();
+
+            let (mix, ppo2) = tab.selection.ok_or("no selection after Select action")?;
+
             assert_eq!(mix.o2_percent(), expected_pct);
             assert!((ppo2.value() - expected_ppo2).abs() < 1e-9);
+
+            Ok(())
         }
 
         #[test]
-        fn selection_updates_after_moving_row() {
+        fn selection_updates_after_moving_row() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Select);
-            let first_pct = tab.selection.unwrap().0.o2_percent();
+
+            let first_pct = tab
+                .selection
+                .ok_or("no selection after first Select")?
+                .0
+                .o2_percent();
             tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
-            let second_pct = tab.selection.unwrap().0.o2_percent();
+
+            let second_pct = tab
+                .selection
+                .ok_or("no selection after second Select")?
+                .0
+                .o2_percent();
             assert_ne!(first_pct, second_pct);
+
+            Ok(())
         }
     }
 
@@ -393,15 +418,31 @@ mod tests {
         #[test]
         fn no_selection_shows_prompt() {
             let tab = ModTab::new();
-            let text = widget_text(ModTabStatus { tab: &tab, theme: Theme::default() }, 60);
+            let text = widget_text(
+                ModTabStatus {
+                    tab: &tab,
+                    theme: Theme::default(),
+                },
+                60,
+            );
+
             assert!(text.contains("No gas"));
         }
 
         #[test]
         fn selection_shows_mix_percent_and_mod() {
             let mut tab = ModTab::new();
+
             tab.handle_action(Action::Select);
-            let text = widget_text(ModTabStatus { tab: &tab, theme: Theme::default() }, 60);
+
+            let text = widget_text(
+                ModTabStatus {
+                    tab: &tab,
+                    theme: Theme::default(),
+                },
+                60,
+            );
+
             assert!(text.contains("32"));
             assert!(text.contains("MOD"));
         }
@@ -413,116 +454,173 @@ mod tests {
         use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[test]
-        fn down_advances_row() {
+        fn down_advances_row() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
-            let start = tab.table_state.selected().unwrap();
+            let start = tab.table_state.selected().ok_or("no row selected")?;
+
             tab.handle_action(Action::Move(Movement::Down));
-            assert_eq!(tab.table_state.selected().unwrap(), start + 1);
+
+            assert_eq!(
+                tab.table_state.selected().ok_or("no row selected")?,
+                start + 1
+            );
+
+            Ok(())
         }
 
         #[test]
-        fn down_clamped_at_last_mix() {
+        fn down_clamped_at_last_mix() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
+
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::Down));
-            assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
+
+            assert_eq!(
+                tab.table_state.selected().ok_or("no row selected")?,
+                tab.mixes.len() - 1
+            );
+
+            Ok(())
         }
 
         #[test]
-        fn up_retreats_row() {
+        fn up_retreats_row() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Move(Movement::Down));
-            let after = tab.table_state.selected().unwrap();
+
+            let after = tab.table_state.selected().ok_or("no row selected")?;
             tab.handle_action(Action::Move(Movement::Up));
-            assert_eq!(tab.table_state.selected().unwrap(), after - 1);
+
+            assert_eq!(
+                tab.table_state.selected().ok_or("no row selected")?,
+                after - 1
+            );
+
+            Ok(())
         }
 
         #[test]
-        fn up_clamped_at_zero() {
+        fn up_clamped_at_zero() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
+
             tab.handle_action(Action::Move(Movement::GotoTop));
             tab.handle_action(Action::Move(Movement::Up));
-            assert_eq!(tab.table_state.selected().unwrap(), 0);
+
+            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 0);
+
+            Ok(())
         }
 
         #[test]
-        fn goto_top_selects_first_row() {
+        fn goto_top_selects_first_row() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
+
             for _ in 0..10 {
                 tab.handle_action(Action::Move(Movement::Down));
             }
+
             tab.handle_action(Action::Move(Movement::GotoTop));
-            assert_eq!(tab.table_state.selected().unwrap(), 0);
+
+            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 0);
+
+            Ok(())
         }
 
         #[test]
-        fn goto_bottom_selects_last_row() {
+        fn goto_bottom_selects_last_row() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
+
             tab.handle_action(Action::Move(Movement::GotoBottom));
-            assert_eq!(tab.table_state.selected().unwrap(), tab.mixes.len() - 1);
+
+            assert_eq!(
+                tab.table_state.selected().ok_or("no row selected")?,
+                tab.mixes.len() - 1
+            );
+
+            Ok(())
         }
 
         #[test]
-        fn scroll_down_moves_by_delta() {
+        fn scroll_down_moves_by_delta() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
+
             tab.handle_action(Action::Move(Movement::ScrollDown));
+
             assert_eq!(
-                tab.table_state.selected().unwrap(),
+                tab.table_state.selected().ok_or("no row selected")?,
                 tab.mixes
                     .iter()
                     .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
-                    .unwrap()
+                    .ok_or("EAN32 not found in mixes")?
                     + SCROLL_DELTA as usize,
             );
+
+            Ok(())
         }
 
         #[test]
-        fn scroll_up_moves_by_delta() {
+        fn scroll_up_moves_by_delta() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
+
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::ScrollUp));
+
             assert_eq!(
-                tab.table_state.selected().unwrap(),
+                tab.table_state.selected().ok_or("no row selected")?,
                 tab.mixes.len() - 1 - SCROLL_DELTA as usize,
             );
+
+            Ok(())
         }
 
         #[test]
-        fn page_down_moves_by_page_delta() {
+        fn page_down_moves_by_page_delta() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
-            let start = tab.table_state.selected().unwrap();
+            let start = tab.table_state.selected().ok_or("no row selected")?;
+
             tab.handle_action(Action::Move(Movement::PageDown));
+
             assert_eq!(
-                tab.table_state.selected().unwrap(),
+                tab.table_state.selected().ok_or("no row selected")?,
                 start + PAGE_DELTA as usize,
             );
+
+            Ok(())
         }
 
         #[test]
-        fn page_up_moves_by_page_delta() {
+        fn page_up_moves_by_page_delta() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
+
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::PageUp));
+
             assert_eq!(
-                tab.table_state.selected().unwrap(),
+                tab.table_state.selected().ok_or("no row selected")?,
                 tab.mixes.len() - 1 - PAGE_DELTA as usize,
             );
+
+            Ok(())
         }
 
         #[test]
         fn right_increments_ppo2() {
             let mut tab = ModTab::new();
             let before = tab.ppo2_idx;
+
             tab.handle_action(Action::Move(Movement::Right));
+
             assert_eq!(tab.ppo2_idx, before + 1);
         }
 
         #[test]
         fn right_clamped_at_max_ppo2() {
             let mut tab = ModTab::new();
+
             for _ in 0..=PPO2_MAX_IDX {
                 tab.handle_action(Action::Move(Movement::Right));
             }
+
             assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
         }
 
@@ -530,34 +628,46 @@ mod tests {
         fn left_decrements_ppo2() {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Move(Movement::Right));
+
             let before = tab.ppo2_idx;
             tab.handle_action(Action::Move(Movement::Left));
+
             assert_eq!(tab.ppo2_idx, before - 1);
         }
 
         #[test]
         fn left_clamped_at_zero_ppo2() {
             let mut tab = ModTab::new();
+
             for _ in 0..=PPO2_DEFAULT_IDX {
                 tab.handle_action(Action::Move(Movement::Left));
             }
+
             assert_eq!(tab.ppo2_idx, 0);
         }
 
         #[test]
-        fn none_is_a_noop() {
+        fn none_is_a_noop() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
-            let before = tab.table_state.selected().unwrap();
+            let before = tab.table_state.selected().ok_or("no row selected")?;
+
             tab.handle_action(Action::None);
-            assert_eq!(tab.table_state.selected().unwrap(), before);
+
+            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
+
+            Ok(())
         }
 
         #[test]
-        fn quit_is_a_noop() {
+        fn quit_is_a_noop() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
-            let before = tab.table_state.selected().unwrap();
+            let before = tab.table_state.selected().ok_or("no row selected")?;
+
             tab.handle_action(Action::Quit);
-            assert_eq!(tab.table_state.selected().unwrap(), before);
+
+            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
+
+            Ok(())
         }
     }
 }
