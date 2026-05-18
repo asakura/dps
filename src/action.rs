@@ -2,6 +2,7 @@
 
 use std::{fmt, str::FromStr};
 
+use color_eyre::Result;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use strum::{Display, EnumString};
 
@@ -101,6 +102,7 @@ mod tests {
 
     mod display {
         use super::*;
+        use rstest::rstest;
 
         #[test]
         fn quit() {
@@ -117,62 +119,58 @@ mod tests {
             assert_eq!(Action::Select.to_string(), "Select");
         }
 
-        #[test]
-        fn move_shows_movement_name_not_variant_name() {
-            assert_eq!(Action::Move(Movement::Down).to_string(), "Down");
-            assert_eq!(Action::Move(Movement::GotoTop).to_string(), "GotoTop");
-            assert_eq!(Action::Move(Movement::ScrollUp).to_string(), "ScrollUp");
+        #[rstest]
+        #[case(Movement::Down, "Down")]
+        #[case(Movement::GotoTop, "GotoTop")]
+        #[case(Movement::ScrollUp, "ScrollUp")]
+        fn move_shows_movement_name_not_variant_name(#[case] mv: Movement, #[case] expected: &str) {
+            assert_eq!(Action::Move(mv).to_string(), expected);
         }
     }
 
     mod serde_roundtrip {
         use super::*;
+        use rstest::rstest;
 
-        fn roundtrip(action: &Action) -> Action {
-            let json = serde_json::to_string(action).unwrap();
-            serde_json::from_str(&json).unwrap()
+        fn roundtrip(action: Action) -> Result<Action> {
+            let json = serde_json::to_string(&action)?;
+            Ok(serde_json::from_str(&json)?)
+        }
+
+        #[rstest]
+        #[case(Action::Quit)]
+        #[case(Action::None)]
+        #[case(Action::Select)]
+        fn non_movement_actions_roundtrip(#[case] action: Action) -> Result<()> {
+            assert_eq!(roundtrip(action)?, action);
+            Ok(())
+        }
+
+        #[rstest]
+        #[case(Movement::Up)]
+        #[case(Movement::Down)]
+        #[case(Movement::Left)]
+        #[case(Movement::Right)]
+        #[case(Movement::ScrollUp)]
+        #[case(Movement::ScrollDown)]
+        #[case(Movement::PageUp)]
+        #[case(Movement::PageDown)]
+        #[case(Movement::GotoTop)]
+        #[case(Movement::GotoBottom)]
+        fn movement_roundtrips(#[case] mv: Movement) -> Result<()> {
+            let action = Action::Move(mv);
+            assert_eq!(roundtrip(action)?, action);
+            Ok(())
         }
 
         #[test]
-        fn quit() {
-            assert_eq!(roundtrip(&Action::Quit), Action::Quit);
-        }
-
-        #[test]
-        fn none() {
-            assert_eq!(roundtrip(&Action::None), Action::None);
-        }
-
-        #[test]
-        fn select() {
-            assert_eq!(roundtrip(&Action::Select), Action::Select);
-        }
-
-        #[test]
-        fn all_movements() {
-            for mv in [
-                Movement::Up,
-                Movement::Down,
-                Movement::Left,
-                Movement::Right,
-                Movement::ScrollUp,
-                Movement::ScrollDown,
-                Movement::PageUp,
-                Movement::PageDown,
-                Movement::GotoTop,
-                Movement::GotoBottom,
-            ] {
-                let action = Action::Move(mv);
-                assert_eq!(roundtrip(&action), action, "round-trip failed for {mv}");
-            }
-        }
-
-        #[test]
-        fn movement_serializes_as_flat_string_not_nested_object() {
+        fn movement_serializes_as_flat_string_not_nested_object() -> Result<()> {
             assert_eq!(
-                serde_json::to_string(&Action::Move(Movement::Down)).unwrap(),
+                serde_json::to_string(&Action::Move(Movement::Down))?,
                 "\"Down\""
             );
+
+            Ok(())
         }
 
         #[test]
