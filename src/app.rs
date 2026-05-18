@@ -644,6 +644,29 @@ mod tests {
 
             Ok(())
         }
+
+        #[test]
+        fn chord_break_retries_against_config_before_fallback() -> Result<(), String> {
+            // "gg" makes 'g' a prefix; "<Tab>" is explicitly bound to None, overriding
+            // the built-in fallback that cycles tabs.
+            // When a chord breaks (g then Tab), Tab must be retried against config bindings
+            // before falling through to the built-in handler — otherwise it bypasses the
+            // explicit binding and cycles the active tab from 0 to 1.
+            let mut app = with_config(config_with_keybindings(
+                [
+                    ("gg", Action::Move(Movement::GotoTop)),
+                    ("<Tab>", Action::None),
+                ]
+                .as_slice(),
+            )?);
+
+            app.handle_key(press(KeyCode::Char('g'))); // prefix
+            app.handle_key(press(KeyCode::Tab)); // breaks chord; retried as "<Tab>" binding
+
+            assert_eq!(app.active, 0);
+
+            Ok(())
+        }
     }
 
     mod hint_bar {

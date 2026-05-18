@@ -323,3 +323,108 @@ impl Default for Theme {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::style::Modifier;
+
+    #[test]
+    fn header_cell_has_bold_modifier() {
+        assert!(Theme::header_cell().add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn header_cell_active_has_bold_and_underlined() {
+        let style = Theme::header_cell_active();
+
+        assert!(style.add_modifier.contains(Modifier::BOLD));
+        assert!(style.add_modifier.contains(Modifier::UNDERLINED));
+    }
+
+    #[test]
+    fn header_cell_active_differs_from_plain_header_cell() {
+        // BOLD | UNDERLINED combined must differ from BOLD alone
+        assert_ne!(
+            Theme::header_cell_active().add_modifier,
+            Theme::header_cell().add_modifier
+        );
+    }
+
+    mod style_accessors {
+        use super::*;
+
+        // Each test asserts the method returns a non-default style, catching
+        // "replace <fn> -> Style with Default::default()" mutations.
+
+        #[test]
+        fn popup_surface_is_non_default() {
+            assert_ne!(Theme::default().popup_surface(), Style::default());
+        }
+
+        #[test]
+        fn border_is_non_default() {
+            assert_ne!(Theme::default().border(), Style::default());
+        }
+
+        #[test]
+        fn title_is_non_default() {
+            assert_ne!(Theme::default().title(), Style::default());
+        }
+
+        #[test]
+        fn header_is_non_default() {
+            assert_ne!(Theme::default().header(), Style::default());
+        }
+
+        #[test]
+        fn selection_is_non_default() {
+            assert_ne!(Theme::default().selection(), Style::default());
+        }
+
+        #[test]
+        fn column_focus_is_non_default() {
+            assert_ne!(Theme::default().column_focus(), Style::default());
+        }
+
+        #[test]
+        fn nav_bar_is_non_default() {
+            assert_ne!(Theme::default().nav_bar(), Style::default());
+        }
+
+        #[test]
+        fn status_active_is_non_default() {
+            assert_ne!(Theme::default().status_active(), Style::default());
+        }
+
+        #[test]
+        fn status_empty_is_non_default() {
+            assert_ne!(Theme::default().status_empty(), Style::default());
+        }
+
+        #[test]
+        fn safe_is_non_default() {
+            assert_ne!(Theme::default().safe(), Style::default());
+        }
+
+        #[test]
+        fn caution_is_non_default() {
+            assert_ne!(Theme::default().caution(), Style::default());
+        }
+
+        #[test]
+        fn danger_is_non_default() {
+            assert_ne!(Theme::default().danger(), Style::default());
+        }
+
+        #[test]
+        fn body_text_is_non_default() {
+            assert_ne!(Theme::default().body_text(), Style::default());
+        }
+
+        #[test]
+        fn hint_is_non_default() {
+            assert_ne!(Theme::default().hint(), Style::default());
+        }
+    }
+}

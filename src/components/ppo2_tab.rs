@@ -320,6 +320,73 @@ mod tests {
     use approx::assert_relative_ne;
     use color_eyre::Result;
 
+    mod constants {
+        use super::*;
+
+        #[test]
+        fn ppo2_table_overhead_w_is_twelve() {
+            // 2 + 2 + 7(COL_DEPTH_W) + 1 = 12
+            assert_eq!(PPO2_TABLE_OVERHEAD_W, 12);
+        }
+    }
+
+    mod visible_cols_fn {
+        use super::*;
+
+        #[test]
+        fn full_window_returns_all_fourteen_mixes() {
+            let tab = PpO2Tab::new();
+            assert_eq!(tab.visible_cols(20).len(), 14);
+        }
+
+        #[test]
+        fn returns_mixes_at_correct_offsets_from_start() {
+            let mut tab = PpO2Tab::new();
+
+            // mix_idx: 5 → 6
+            tab.handle_action(Action::Move(Movement::Right));
+
+            // window_start(6, 14, 3) = 5; percents at indices [5],[6],[7]
+            let cols = tab.visible_cols(3);
+
+            assert_eq!(cols[0].o2_percent(), 21); // [5]
+            assert_eq!(cols[1].o2_percent(), 28); // [6]
+            assert_eq!(cols[2].o2_percent(), 30); // [7]
+        }
+    }
+
+    mod mix_window_col_fn {
+        use super::*;
+
+        #[test]
+        fn at_max_mix_idx_with_small_window() {
+            let mut tab = PpO2Tab::new();
+
+            for _ in 0..PPO2_TABLE_MIX_COUNT {
+                tab.handle_action(Action::Move(Movement::Right));
+            }
+
+            // = 13
+            assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
+            // window_start(13, 14, 3): half=1, max_start=11, (13-1).min(11)=11 → col=13-11=2
+            assert_eq!(tab.mix_window_col(3), 2);
+        }
+    }
+
+    mod component_trait {
+        use super::*;
+
+        #[test]
+        fn title_is_correct() {
+            assert_eq!(PpO2Tab::new().title(), "ppO\u{2082} by Depth");
+        }
+
+        #[test]
+        fn key_bindings_is_non_empty() {
+            assert!(!PpO2Tab::new().key_bindings().is_empty());
+        }
+    }
+
     mod initial_state {
         use super::*;
 
@@ -695,6 +762,20 @@ mod tests {
             assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
 
             Ok(())
+        }
+    }
+
+    mod render {
+        use super::*;
+
+        #[test]
+        fn selected_column_is_mix_window_col_plus_fixed_col_count() {
+            // width 123 fits all 14 mix columns (window_size=14), so col_in_window = PPO2_MIX_DEFAULT_IDX(5).
+            // selected_column = col_in_window(5) + FIXED_COL_COUNT(1) = 6
+            let mut tab = PpO2Tab::new();
+            let area = Rect::new(0, 0, 123, 40);
+            tab.render(area, &mut Buffer::empty(area), &Theme::default());
+            assert_eq!(tab.table_state.selected_column(), Some(6));
         }
     }
 }

@@ -50,6 +50,11 @@ opt-level = 3
 panic = "abort"
 strip = "symbols"
 
+[profile.mutants]
+inherits = "test"
+debug = "none"
+opt-level = 0
+
 [lints.rust]
 # Safety — forbid means even #![allow(...)] can't override
 unsafe_code = "forbid"

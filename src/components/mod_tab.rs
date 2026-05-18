@@ -250,7 +250,7 @@ impl Component for ModTab {
         let cols = self.visible_columns(window_size);
         let title = format!(" DPS — MOD Table   ppO\u{2082} {} ", self.ppo2());
         let constraints = trailing_constraints(
-            &[Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)],
+            [Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)].as_slice(),
             cols.len(),
             COL_MOD_W,
         );
@@ -306,6 +306,78 @@ mod tests {
     use super::*;
     use crate::components::test_utils::widget_text;
     use color_eyre::Result;
+
+    mod constants {
+        use super::*;
+
+        #[test]
+        fn ppo2_count_is_nine() {
+            // PPO2_MAX_IDX is 8; count = 8 + 1
+            assert_eq!(PPO2_COUNT, 9);
+        }
+
+        #[test]
+        fn table_overhead_w_is_twenty_four() {
+            // 2 + 2 + 12(COL_NAME_W) + 1 + 6(COL_O2_W) + 1 = 24
+            assert_eq!(TABLE_OVERHEAD_W, 24);
+        }
+    }
+
+    mod visible_columns_fn {
+        use super::*;
+
+        #[test]
+        fn full_window_returns_all_nine_columns() {
+            let tab = ModTab::new();
+            assert_eq!(tab.visible_columns(20).len(), 9);
+        }
+
+        #[test]
+        fn returns_bars_at_correct_offsets_from_start() {
+            // ppo2_idx = PPO2_DEFAULT_IDX = 6
+            let tab = ModTab::new();
+            // window_start(6, 9, 3) = 5; values: (5+i)*0.1 + 0.8
+            let cols = tab.visible_columns(3);
+
+            assert_eq!(cols.len(), 3);
+
+            assert!((cols[0].value() - 1.3).abs() < 1e-9); // (5+0)*0.1+0.8
+            assert!((cols[1].value() - 1.4).abs() < 1e-9); // (5+1)*0.1+0.8
+            assert!((cols[2].value() - 1.5).abs() < 1e-9); // (5+2)*0.1+0.8
+        }
+    }
+
+    mod ppo2_window_col_fn {
+        use super::*;
+
+        #[test]
+        fn at_max_idx_with_small_window() {
+            let mut tab = ModTab::new();
+
+            for _ in 0..PPO2_MAX_IDX {
+                tab.handle_action(Action::Move(Movement::Right));
+            }
+
+            // = 8
+            assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
+            // window_start(8, 9, 3): half=1, max_start=6, (8-1).min(6)=6 → col=8-6=2
+            assert_eq!(tab.ppo2_window_col(3), 2);
+        }
+    }
+
+    mod component_trait {
+        use super::*;
+
+        #[test]
+        fn title_is_mod_table() {
+            assert_eq!(ModTab::new().title(), "MOD Table");
+        }
+
+        #[test]
+        fn key_bindings_is_non_empty() {
+            assert!(!ModTab::new().key_bindings().is_empty());
+        }
+    }
 
     mod initial_state {
         use super::*;
@@ -669,6 +741,20 @@ mod tests {
             assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
 
             Ok(())
+        }
+    }
+
+    mod render {
+        use super::*;
+
+        #[test]
+        fn selected_column_is_ppo2_window_col_plus_fixed_col_count() {
+            // width 113 fits all 9 ppO₂ columns (window_size=9), so col_in_window = PPO2_DEFAULT_IDX(6).
+            // selected_column = col_in_window(6) + FIXED_COL_COUNT(2) = 8
+            let mut tab = ModTab::new();
+            let area = Rect::new(0, 0, 113, 40);
+            tab.render(area, &mut Buffer::empty(area), &Theme::default());
+            assert_eq!(tab.table_state.selected_column(), Some(8));
         }
     }
 }

@@ -567,4 +567,79 @@ mod tests {
             Ok(())
         }
     }
+
+    mod rare_key_names {
+        use super::*;
+        use crossterm::event::{MediaKeyCode, ModifierKeyCode};
+
+        // Every entry corresponds to a match arm in parse_key_code_with_modifiers.
+        // Arms that accept two spellings (e.g. "bs"/"backspace") list both so that
+        // a deleted arm fails on its own dedicated test case.
+        #[rstest]
+        #[case::bs("bs", KeyCode::Backspace)]
+        #[case::backspace("backspace", KeyCode::Backspace)]
+        #[case::del("del", KeyCode::Delete)]
+        #[case::delete("delete", KeyCode::Delete)]
+        #[case::ins("ins", KeyCode::Insert)]
+        #[case::insert("insert", KeyCode::Insert)]
+        #[case::lt("lt", KeyCode::Char('<'))]
+        #[case::bar("bar", KeyCode::Char('|'))]
+        #[case::nul("nul", KeyCode::Null)]
+        #[case::null("null", KeyCode::Null)]
+        #[case::capslock("capslock", KeyCode::CapsLock)]
+        #[case::scrolllock("scrolllock", KeyCode::ScrollLock)]
+        #[case::numlock("numlock", KeyCode::NumLock)]
+        #[case::printscreen("printscreen", KeyCode::PrintScreen)]
+        #[case::print("print", KeyCode::PrintScreen)]
+        #[case::pause("pause", KeyCode::Pause)]
+        #[case::menu("menu", KeyCode::Menu)]
+        #[case::keypadbegin("keypadbegin", KeyCode::KeypadBegin)]
+        #[case::play("play", KeyCode::Media(MediaKeyCode::Play))]
+        #[case::mediapause("mediapause", KeyCode::Media(MediaKeyCode::Pause))]
+        #[case::playpause("playpause", KeyCode::Media(MediaKeyCode::PlayPause))]
+        #[case::reverse("reverse", KeyCode::Media(MediaKeyCode::Reverse))]
+        #[case::stop("stop", KeyCode::Media(MediaKeyCode::Stop))]
+        #[case::fastforward("fastforward", KeyCode::Media(MediaKeyCode::FastForward))]
+        #[case::rewind("rewind", KeyCode::Media(MediaKeyCode::Rewind))]
+        #[case::tracknext("tracknext", KeyCode::Media(MediaKeyCode::TrackNext))]
+        #[case::trackprev("trackprev", KeyCode::Media(MediaKeyCode::TrackPrevious))]
+        #[case::record("record", KeyCode::Media(MediaKeyCode::Record))]
+        #[case::lowervolume("lowervolume", KeyCode::Media(MediaKeyCode::LowerVolume))]
+        #[case::raisevolume("raisevolume", KeyCode::Media(MediaKeyCode::RaiseVolume))]
+        #[case::mutevolume("mutevolume", KeyCode::Media(MediaKeyCode::MuteVolume))]
+        #[case::leftshift("leftshift", KeyCode::Modifier(ModifierKeyCode::LeftShift))]
+        #[case::rightshift("rightshift", KeyCode::Modifier(ModifierKeyCode::RightShift))]
+        #[case::leftctrl("leftctrl", KeyCode::Modifier(ModifierKeyCode::LeftControl))]
+        #[case::leftcontrol("leftcontrol", KeyCode::Modifier(ModifierKeyCode::LeftControl))]
+        #[case::rightctrl("rightctrl", KeyCode::Modifier(ModifierKeyCode::RightControl))]
+        #[case::rightcontrol("rightcontrol", KeyCode::Modifier(ModifierKeyCode::RightControl))]
+        #[case::leftalt("leftalt", KeyCode::Modifier(ModifierKeyCode::LeftAlt))]
+        #[case::rightalt("rightalt", KeyCode::Modifier(ModifierKeyCode::RightAlt))]
+        #[case::leftsuper("leftsuper", KeyCode::Modifier(ModifierKeyCode::LeftSuper))]
+        #[case::rightsuper("rightsuper", KeyCode::Modifier(ModifierKeyCode::RightSuper))]
+        #[case::lefthyper("lefthyper", KeyCode::Modifier(ModifierKeyCode::LeftHyper))]
+        #[case::righthyper("righthyper", KeyCode::Modifier(ModifierKeyCode::RightHyper))]
+        #[case::leftmeta("leftmeta", KeyCode::Modifier(ModifierKeyCode::LeftMeta))]
+        #[case::rightmeta("rightmeta", KeyCode::Modifier(ModifierKeyCode::RightMeta))]
+        #[case::isolevel3shift(
+            "isolevel3shift",
+            KeyCode::Modifier(ModifierKeyCode::IsoLevel3Shift)
+        )]
+        #[case::isolevel5shift(
+            "isolevel5shift",
+            KeyCode::Modifier(ModifierKeyCode::IsoLevel5Shift)
+        )]
+        fn named_special_key_parses_to_expected_code(
+            #[case] name: &str,
+            #[case] expected_code: KeyCode,
+        ) -> Result<(), String> {
+            let key = format!("<{name}>");
+            let events = parse_key_sequence(&key)?;
+
+            assert_eq!(events.len(), 1);
+            assert_eq!(events[0].code, expected_code);
+
+            Ok(())
+        }
+    }
 }

@@ -79,6 +79,7 @@ pub(crate) fn build_header_row(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use color_eyre::Result;
 
     mod window_start_fn {
         use super::*;
@@ -101,6 +102,60 @@ mod tests {
         #[test]
         fn full_window_always_starts_at_zero() {
             assert_eq!(window_start(5, 10, 10), 0);
+        }
+
+        #[test]
+        fn even_window_uses_integer_half_not_remainder() {
+            // window size 4: half = 4/2 = 2; 5.saturating_sub(2).min(6) = 3
+            assert_eq!(window_start(5, 10, 4), 3);
+        }
+    }
+
+    mod build_header_row_fn {
+        use super::*;
+        use ratatui::{
+            buffer::Buffer,
+            layout::{Position, Rect},
+            style::Modifier,
+            widgets::Widget,
+        };
+
+        #[test]
+        fn highlighted_column_is_underlined_others_are_not()
+        -> Result<(), Box<dyn std::error::Error>> {
+            let header = build_header_row(
+                vec![],
+                ["A".to_string(), "B".to_string()].into_iter(),
+                Some(0),
+                &Theme::default(),
+            );
+
+            let table = Table::new(
+                Vec::<Row<'static>>::new(),
+                [Constraint::Length(3), Constraint::Length(3)],
+            )
+            .header(header);
+
+            let area = Rect::new(0, 0, 6, 2);
+            let mut buf = Buffer::empty(area);
+
+            Widget::render(table, area, &mut buf);
+
+            // Header is row 0; 'A' at x=0, 'B' at x=3.
+            assert!(
+                buf.cell(Position::new(0, 0))
+                    .ok_or("cell out of bounds")?
+                    .modifier
+                    .contains(Modifier::UNDERLINED)
+            );
+            assert!(
+                !buf.cell(Position::new(3, 0))
+                    .ok_or("cell out of bounds")?
+                    .modifier
+                    .contains(Modifier::UNDERLINED)
+            );
+
+            Ok(())
         }
     }
 
@@ -127,6 +182,12 @@ mod tests {
         fn exactly_two_columns_fit() {
             // 1 + (29 - 10 - 9) / (9 + 1) = 1 + 1 = 2
             assert_eq!(col_window_size(29, 10, 9, 20), 2);
+        }
+
+        #[test]
+        fn divides_by_col_w_plus_one_not_col_w() {
+            // 1 + (20 - 2 - 4) / (4 + 1) = 1 + 2 = 3; the +1 accounts for the separator
+            assert_eq!(col_window_size(20, 2, 4, 10), 3);
         }
     }
 

@@ -347,6 +347,32 @@ mod tests {
             .as_slice();
 
             #[test]
+            fn one_column_at_width_43() -> Result<(), Box<dyn std::error::Error>> {
+                // min_col_w = LEAD+KEY_W+ENTRY_GAP+MIN_DESC_W = 20; COL_GAP = 4.
+                // At width 43: cols = (43+4)/(20+4) = 1 → 2 bindings stack into 1 column,
+                // 2-row popup, first key at y=3.
+                let backend = TestBackend::new(43, 5);
+                let mut terminal = Terminal::new(backend)?;
+
+                terminal.draw(|f| {
+                    f.render_widget(
+                        WhichKey::new(PAIR, [].as_slice(), Theme::default()),
+                        f.area(),
+                    );
+                })?;
+
+                let buf = terminal.backend().buffer();
+                assert_eq!(
+                    buf.cell(Position::new(LEAD, 3))
+                        .ok_or("cell out of bounds")?
+                        .symbol(),
+                    "q"
+                );
+
+                Ok(())
+            }
+
+            #[test]
             fn two_bindings_stacked_in_one_column() -> Result<(), Box<dyn std::error::Error>> {
                 // area 30×5: 2 bindings, 1 col, 2 rows → popup at y=3..4.
                 let backend = TestBackend::new(30, 5);
