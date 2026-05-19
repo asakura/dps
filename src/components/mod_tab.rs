@@ -158,7 +158,7 @@ impl ModTab {
         }
     }
 
-    fn build_rows(&self, cols: &[Bar], theme: Theme) -> Vec<Row<'static>> {
+    fn build_rows(&self, cols: &[Bar], theme: &Theme) -> Vec<Row<'static>> {
         self.mixes
             .iter()
             .map(|mix| ModRow { mix, cols, theme }.into())
@@ -169,7 +169,7 @@ impl ModTab {
 struct ModRow<'a> {
     mix: &'a Ean,
     cols: &'a [Bar],
-    theme: Theme,
+    theme: &'a Theme,
 }
 
 impl From<ModRow<'_>> for Row<'static> {
@@ -178,10 +178,12 @@ impl From<ModRow<'_>> for Row<'static> {
             Cell::from(r.mix.label().unwrap_or("")),
             Cell::from(format!("{:>4}%", r.mix.o2_percent())),
         ];
+
         for &col in r.cols {
             let depth = r.mix.mod_at(col);
-            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth.value(), &r.theme)));
+            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth.value(), r.theme)));
         }
+
         Row::new(cells)
     }
 }
@@ -245,31 +247,37 @@ impl Component for ModTab {
     fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &Theme) {
         let window_size = col_window_size(area.width, TABLE_OVERHEAD_W, COL_MOD_W, PPO2_COUNT);
         let col_in_window = self.ppo2_window_col(window_size);
+
         self.table_state
             .select_column(Some(col_in_window + FIXED_COL_COUNT));
+
         let cols = self.visible_columns(window_size);
         let title = format!(" DPS — MOD Table   ppO\u{2082} {} ", self.ppo2());
+
         let constraints = trailing_constraints(
             [Constraint::Length(COL_NAME_W), Constraint::Length(COL_O2_W)].as_slice(),
             cols.len(),
             COL_MOD_W,
         );
+
         let header = build_header_row(
             vec![
-                Cell::from("Name").style(Theme::header_cell()),
-                Cell::from("O\u{2082}%").style(Theme::header_cell()),
+                Cell::from("Name").style(theme.header_cell()),
+                Cell::from("O\u{2082}%").style(theme.header_cell()),
             ],
             cols.iter().map(ToString::to_string),
             Some(col_in_window),
             theme,
         );
+
         let table = styled_table(
-            self.build_rows(&cols, *theme),
+            self.build_rows(&cols, theme),
             constraints,
             header,
             title,
             theme,
         );
+
         StatefulWidget::render(table, area, buf, &mut self.table_state);
     }
 

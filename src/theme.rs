@@ -104,140 +104,142 @@ use ratatui::style::{Color, Modifier, Style};
 #[derive(Debug, Clone, Copy)]
 pub struct Theme {
     // Which-key popup
-    popup_surface_fg: Color,
-    popup_surface_bg: Color,
-    key_label_fg: Color,
+    popup_surface: Style,
+    key_label: Style,
+
     // Table chrome
-    border_fg: Color,
-    title_fg: Color,
-    header_fg: Color,
-    selection_fg: Color,
-    selection_bg: Color,
-    column_focus_fg: Color,
+    border: Style,
+    title: Style,
+    header: Style,
+    header_cell: Style,
+    header_cell_active: Style,
+    selection: Style,
+    column_focus: Style,
+
     // Tab bar
-    nav_bar_fg: Color,
-    nav_bar_bg: Color,
+    nav_bar: Style,
+
     // Status bar
-    status_active_fg: Color,
-    status_active_bg: Color,
-    status_empty_fg: Color,
-    status_empty_bg: Color,
+    status_active: Style,
+    status_empty: Style,
+
     // Safety levels
-    safe_fg: Color,
-    caution_fg: Color,
-    danger_fg: Color,
+    safe: Style,
+    caution: Style,
+    danger: Style,
+
     // Text
-    body_text_fg: Color,
-    hint_fg: Color,
+    body_text: Style,
+    hint: Style,
 }
 
 impl Theme {
     // Which-key popup
     /// Popup surface: text-on-mantle background.
     #[must_use]
-    pub fn popup_surface(&self) -> Style {
-        Style::from((self.popup_surface_fg, self.popup_surface_bg))
+    pub const fn popup_surface(self) -> Style {
+        self.popup_surface
     }
 
     /// Key label: bold peach.
     #[must_use]
-    pub fn key_label(&self) -> Style {
-        Style::from((self.key_label_fg, Modifier::BOLD))
+    pub const fn key_label(self) -> Style {
+        self.key_label
     }
 
     // Table chrome
     /// Table border.
     #[must_use]
-    pub fn border(&self) -> Style {
-        Style::from(self.border_fg)
+    pub const fn border(self) -> Style {
+        self.border
     }
 
     /// Block title above a table.
     #[must_use]
-    pub fn title(&self) -> Style {
-        Style::from(self.title_fg)
+    pub const fn title(self) -> Style {
+        self.title
     }
 
     /// Header row text.
     #[must_use]
-    pub fn header(&self) -> Style {
-        Style::from(self.header_fg)
+    pub const fn header(self) -> Style {
+        self.header
     }
 
     /// Non-highlighted header cell.
     #[must_use]
-    pub fn header_cell() -> Style {
-        Style::from(Modifier::BOLD)
+    pub const fn header_cell(self) -> Style {
+        self.header_cell
     }
 
     /// Highlighted (selected column) header cell.
     #[must_use]
-    pub fn header_cell_active() -> Style {
-        Style::from(Modifier::BOLD | Modifier::UNDERLINED)
+    pub const fn header_cell_active(self) -> Style {
+        self.header_cell_active
     }
 
     /// Selected row / active element (Catppuccin Selection Rule: mauve bg + base fg).
     #[must_use]
-    pub fn selection(&self) -> Style {
-        Style::from((self.selection_fg, self.selection_bg, Modifier::BOLD))
+    pub const fn selection(self) -> Style {
+        self.selection
     }
 
     /// Focused column highlight.
     #[must_use]
-    pub fn column_focus(&self) -> Style {
-        Style::from((self.column_focus_fg, Modifier::BOLD))
+    pub const fn column_focus(self) -> Style {
+        self.column_focus
     }
 
     // Tab bar
     /// Inactive tab bar background.
     #[must_use]
-    pub fn nav_bar(&self) -> Style {
-        Style::from((self.nav_bar_fg, self.nav_bar_bg))
+    pub const fn nav_bar(self) -> Style {
+        self.nav_bar
     }
 
     // Status bar
     /// Status bar with an active selection.
     #[must_use]
-    pub fn status_active(&self) -> Style {
-        Style::from((self.status_active_fg, self.status_active_bg, Modifier::BOLD))
+    pub const fn status_active(self) -> Style {
+        self.status_active
     }
 
     /// Status bar empty / placeholder state.
     #[must_use]
-    pub fn status_empty(&self) -> Style {
-        Style::from((self.status_empty_fg, self.status_empty_bg))
+    pub const fn status_empty(self) -> Style {
+        self.status_empty
     }
 
     // Safety levels
     /// Safe dive condition (green).
     #[must_use]
-    pub fn safe(&self) -> Style {
-        Style::from(self.safe_fg)
+    pub const fn safe(self) -> Style {
+        self.safe
     }
 
     /// Caution dive condition (yellow).
     #[must_use]
-    pub fn caution(&self) -> Style {
-        Style::from(self.caution_fg)
+    pub const fn caution(self) -> Style {
+        self.caution
     }
 
     /// Danger dive condition (red).
     #[must_use]
-    pub fn danger(&self) -> Style {
-        Style::from(self.danger_fg)
+    pub const fn danger(self) -> Style {
+        self.danger
     }
 
     // Text
     /// Body text: plain text fg.
     #[must_use]
-    pub fn body_text(&self) -> Style {
-        Style::from(self.body_text_fg)
+    pub const fn body_text(self) -> Style {
+        self.body_text
     }
 
     /// Hint / help line text.
     #[must_use]
-    pub fn hint(&self) -> Style {
-        Style::from(self.hint_fg)
+    pub const fn hint(self) -> Style {
+        self.hint
     }
 
     /// Constructs a theme from pre-resolved colours.
@@ -250,48 +252,42 @@ impl Theme {
     )]
     #[must_use]
     pub(crate) const fn new(
-        popup_surface_fg: Color,
-        popup_surface_bg: Color,
-        key_label_fg: Color,
-        border_fg: Color,
-        title_fg: Color,
-        header_fg: Color,
-        selection_fg: Color,
-        selection_bg: Color,
-        column_focus_fg: Color,
-        nav_bar_fg: Color,
-        nav_bar_bg: Color,
-        status_active_fg: Color,
-        status_active_bg: Color,
-        status_empty_fg: Color,
-        status_empty_bg: Color,
-        safe_fg: Color,
-        caution_fg: Color,
-        danger_fg: Color,
-        body_text_fg: Color,
-        hint_fg: Color,
+        popup_surface: Style,
+        key_label: Style,
+        border: Style,
+        title: Style,
+        header: Style,
+        header_cell: Style,
+        header_cell_active: Style,
+        selection: Style,
+        column_focus: Style,
+        nav_bar: Style,
+        status_active: Style,
+        status_empty: Style,
+        safe: Style,
+        caution: Style,
+        danger: Style,
+        body_text: Style,
+        hint: Style,
     ) -> Self {
         Self {
-            popup_surface_fg,
-            popup_surface_bg,
-            key_label_fg,
-            border_fg,
-            title_fg,
-            header_fg,
-            selection_fg,
-            selection_bg,
-            column_focus_fg,
-            nav_bar_fg,
-            nav_bar_bg,
-            status_active_fg,
-            status_active_bg,
-            status_empty_fg,
-            status_empty_bg,
-            safe_fg,
-            caution_fg,
-            danger_fg,
-            body_text_fg,
-            hint_fg,
+            popup_surface,
+            key_label,
+            border,
+            title,
+            header,
+            header_cell,
+            header_cell_active,
+            selection,
+            column_focus,
+            nav_bar,
+            status_active,
+            status_empty,
+            safe,
+            caution,
+            danger,
+            body_text,
+            hint,
         }
     }
 }
@@ -299,27 +295,39 @@ impl Theme {
 impl Default for Theme {
     /// Catppuccin Frappé — cool dark flavour.
     fn default() -> Self {
+        // Catppuccin Frappé Palette Colors
+        let text = Color::Rgb(198, 208, 245);
+        let mantle = Color::Rgb(41, 44, 60);
+        let base = Color::Rgb(48, 52, 70);
+        let surface0 = Color::Rgb(65, 69, 89);
+        let overlay0 = Color::Rgb(115, 121, 148);
+        let subtext0 = Color::Rgb(165, 173, 206);
+        let lavender = Color::Rgb(186, 187, 241);
+        let mauve = Color::Rgb(202, 158, 230);
+        let blue = Color::Rgb(140, 170, 238);
+        let peach = Color::Rgb(239, 159, 118);
+        let green = Color::Rgb(166, 209, 137);
+        let yellow = Color::Rgb(229, 200, 144);
+        let red = Color::Rgb(231, 130, 132);
+
         Self {
-            popup_surface_fg: Color::Rgb(198, 208, 245), // text
-            popup_surface_bg: Color::Rgb(41, 44, 60),    // mantle
-            key_label_fg: Color::Rgb(239, 159, 118),     // peach
-            border_fg: Color::Rgb(65, 69, 89),           // surface0
-            title_fg: Color::Rgb(186, 187, 241),         // lavender
-            header_fg: Color::Rgb(140, 170, 238),        // blue
-            selection_fg: Color::Rgb(48, 52, 70),        // base
-            selection_bg: Color::Rgb(202, 158, 230),     // mauve
-            column_focus_fg: Color::Rgb(186, 187, 241),  // lavender
-            nav_bar_fg: Color::Rgb(165, 173, 206),       // subtext0
-            nav_bar_bg: Color::Rgb(65, 69, 89),          // surface0
-            status_active_fg: Color::Rgb(198, 208, 245), // text
-            status_active_bg: Color::Rgb(65, 69, 89),    // surface0
-            status_empty_fg: Color::Rgb(115, 121, 148),  // overlay0
-            status_empty_bg: Color::Rgb(65, 69, 89),     // surface0
-            safe_fg: Color::Rgb(166, 209, 137),          // green
-            caution_fg: Color::Rgb(229, 200, 144),       // yellow
-            danger_fg: Color::Rgb(231, 130, 132),        // red
-            body_text_fg: Color::Rgb(198, 208, 245),     // text
-            hint_fg: Color::Rgb(165, 173, 206),          // subtext0
+            popup_surface: Style::from((text, mantle)),
+            key_label: Style::from((peach, Modifier::BOLD)),
+            border: Style::from(surface0),
+            title: Style::from(lavender),
+            header: Style::from(blue),
+            header_cell: Style::from(Modifier::BOLD),
+            header_cell_active: Style::from(Modifier::BOLD | Modifier::UNDERLINED),
+            selection: Style::from((base, mauve, Modifier::BOLD)),
+            column_focus: Style::from((lavender, Modifier::BOLD)),
+            nav_bar: Style::from((subtext0, surface0)),
+            status_active: Style::from((text, surface0, Modifier::BOLD)),
+            status_empty: Style::from((overlay0, surface0)),
+            safe: Style::from(green),
+            caution: Style::from(yellow),
+            danger: Style::from(red),
+            body_text: Style::from(text),
+            hint: Style::from(subtext0),
         }
     }
 }
@@ -331,12 +339,17 @@ mod tests {
 
     #[test]
     fn header_cell_has_bold_modifier() {
-        assert!(Theme::header_cell().add_modifier.contains(Modifier::BOLD));
+        assert!(
+            Theme::default()
+                .header_cell()
+                .add_modifier
+                .contains(Modifier::BOLD)
+        );
     }
 
     #[test]
     fn header_cell_active_has_bold_and_underlined() {
-        let style = Theme::header_cell_active();
+        let style = Theme::default().header_cell_active();
 
         assert!(style.add_modifier.contains(Modifier::BOLD));
         assert!(style.add_modifier.contains(Modifier::UNDERLINED));
@@ -346,85 +359,119 @@ mod tests {
     fn header_cell_active_differs_from_plain_header_cell() {
         // BOLD | UNDERLINED combined must differ from BOLD alone
         assert_ne!(
-            Theme::header_cell_active().add_modifier,
-            Theme::header_cell().add_modifier
+            Theme::default().header_cell_active().add_modifier,
+            Theme::default().header_cell().add_modifier
         );
     }
 
     mod style_accessors {
         use super::*;
+        use ratatui::style::Color;
 
-        // Each test asserts the method returns a non-default style, catching
-        // "replace <fn> -> Style with Default::default()" mutations.
+        // Frappé palette constants mirrored from Default; keep in sync if colours change.
+        const TEXT: Color = Color::Rgb(198, 208, 245);
+        const MANTLE: Color = Color::Rgb(41, 44, 60);
+        const BASE: Color = Color::Rgb(48, 52, 70);
+        const SURFACE0: Color = Color::Rgb(65, 69, 89);
+        const OVERLAY0: Color = Color::Rgb(115, 121, 148);
+        const SUBTEXT0: Color = Color::Rgb(165, 173, 206);
+        const LAVENDER: Color = Color::Rgb(186, 187, 241);
+        const MAUVE: Color = Color::Rgb(202, 158, 230);
+        const BLUE: Color = Color::Rgb(140, 170, 238);
+        const PEACH: Color = Color::Rgb(239, 159, 118);
+        const GREEN: Color = Color::Rgb(166, 209, 137);
+        const YELLOW: Color = Color::Rgb(229, 200, 144);
+        const RED: Color = Color::Rgb(231, 130, 132);
 
         #[test]
-        fn popup_surface_is_non_default() {
-            assert_ne!(Theme::default().popup_surface(), Style::default());
+        fn popup_surface_fg_is_text_bg_is_mantle() {
+            let s = Theme::default().popup_surface();
+            assert_eq!(s.fg, Some(TEXT));
+            assert_eq!(s.bg, Some(MANTLE));
         }
 
         #[test]
-        fn border_is_non_default() {
-            assert_ne!(Theme::default().border(), Style::default());
+        fn key_label_fg_is_peach_and_bold() {
+            let s = Theme::default().key_label();
+            assert_eq!(s.fg, Some(PEACH));
+            assert!(s.add_modifier.contains(Modifier::BOLD));
         }
 
         #[test]
-        fn title_is_non_default() {
-            assert_ne!(Theme::default().title(), Style::default());
+        fn border_fg_is_surface0() {
+            assert_eq!(Theme::default().border().fg, Some(SURFACE0));
         }
 
         #[test]
-        fn header_is_non_default() {
-            assert_ne!(Theme::default().header(), Style::default());
+        fn title_fg_is_lavender() {
+            assert_eq!(Theme::default().title().fg, Some(LAVENDER));
         }
 
         #[test]
-        fn selection_is_non_default() {
-            assert_ne!(Theme::default().selection(), Style::default());
+        fn header_fg_is_blue() {
+            assert_eq!(Theme::default().header().fg, Some(BLUE));
         }
 
         #[test]
-        fn column_focus_is_non_default() {
-            assert_ne!(Theme::default().column_focus(), Style::default());
+        fn selection_fg_is_base_bg_is_mauve_and_bold() {
+            let s = Theme::default().selection();
+            assert_eq!(s.fg, Some(BASE));
+            assert_eq!(s.bg, Some(MAUVE));
+            assert!(s.add_modifier.contains(Modifier::BOLD));
         }
 
         #[test]
-        fn nav_bar_is_non_default() {
-            assert_ne!(Theme::default().nav_bar(), Style::default());
+        fn column_focus_fg_is_lavender_and_bold() {
+            let s = Theme::default().column_focus();
+            assert_eq!(s.fg, Some(LAVENDER));
+            assert!(s.add_modifier.contains(Modifier::BOLD));
         }
 
         #[test]
-        fn status_active_is_non_default() {
-            assert_ne!(Theme::default().status_active(), Style::default());
+        fn nav_bar_fg_is_subtext0_bg_is_surface0() {
+            let s = Theme::default().nav_bar();
+            assert_eq!(s.fg, Some(SUBTEXT0));
+            assert_eq!(s.bg, Some(SURFACE0));
         }
 
         #[test]
-        fn status_empty_is_non_default() {
-            assert_ne!(Theme::default().status_empty(), Style::default());
+        fn status_active_fg_is_text_bg_is_surface0_and_bold() {
+            let s = Theme::default().status_active();
+            assert_eq!(s.fg, Some(TEXT));
+            assert_eq!(s.bg, Some(SURFACE0));
+            assert!(s.add_modifier.contains(Modifier::BOLD));
         }
 
         #[test]
-        fn safe_is_non_default() {
-            assert_ne!(Theme::default().safe(), Style::default());
+        fn status_empty_fg_is_overlay0_bg_is_surface0() {
+            let s = Theme::default().status_empty();
+            assert_eq!(s.fg, Some(OVERLAY0));
+            assert_eq!(s.bg, Some(SURFACE0));
         }
 
         #[test]
-        fn caution_is_non_default() {
-            assert_ne!(Theme::default().caution(), Style::default());
+        fn safe_fg_is_green() {
+            assert_eq!(Theme::default().safe().fg, Some(GREEN));
         }
 
         #[test]
-        fn danger_is_non_default() {
-            assert_ne!(Theme::default().danger(), Style::default());
+        fn caution_fg_is_yellow() {
+            assert_eq!(Theme::default().caution().fg, Some(YELLOW));
         }
 
         #[test]
-        fn body_text_is_non_default() {
-            assert_ne!(Theme::default().body_text(), Style::default());
+        fn danger_fg_is_red() {
+            assert_eq!(Theme::default().danger().fg, Some(RED));
         }
 
         #[test]
-        fn hint_is_non_default() {
-            assert_ne!(Theme::default().hint(), Style::default());
+        fn body_text_fg_is_text() {
+            assert_eq!(Theme::default().body_text().fg, Some(TEXT));
+        }
+
+        #[test]
+        fn hint_fg_is_subtext0() {
+            assert_eq!(Theme::default().hint().fg, Some(SUBTEXT0));
         }
     }
 }

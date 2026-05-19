@@ -143,7 +143,7 @@ impl PpO2Tab {
         }
     }
 
-    fn build_rows(mixes: &[Ean], theme: Theme) -> Vec<Row<'static>> {
+    fn build_rows(mixes: &[Ean], theme: &Theme) -> Vec<Row<'static>> {
         (0..=PPO2_TABLE_DEPTH_MAX)
             .map(|d| {
                 PpO2Row {
@@ -160,7 +160,7 @@ impl PpO2Tab {
 struct PpO2Row<'a> {
     depth: usize,
     mixes: &'a [Ean],
-    theme: Theme,
+    theme: &'a Theme,
 }
 
 impl From<PpO2Row<'_>> for Row<'static> {
@@ -177,7 +177,7 @@ impl From<PpO2Row<'_>> for Row<'static> {
 
             cells.push(
                 Cell::from(format!("{:.2}", ppo2.value()))
-                    .style(ppo2_cell_color(ppo2.value(), &r.theme)),
+                    .style(ppo2_cell_color(ppo2.value(), r.theme)),
             );
         }
 
@@ -270,14 +270,14 @@ impl Component for PpO2Tab {
         );
 
         let header = build_header_row(
-            vec![Cell::from("Depth").style(Theme::header_cell())],
+            vec![Cell::from("Depth").style(theme.header_cell())],
             mixes.iter().map(|m| format!("{:>3}%", m.o2_percent())),
             Some(col_in_window),
             theme,
         );
 
         let table = styled_table(
-            Self::build_rows(&mixes, *theme),
+            Self::build_rows(&mixes, theme),
             constraints,
             header,
             title,

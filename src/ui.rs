@@ -65,14 +65,17 @@ pub(crate) fn build_header_row(
     theme: &Theme,
 ) -> Row<'static> {
     let mut cells = fixed;
+
     for (i, label) in labels.enumerate() {
         let style = if highlighted == Some(i) {
-            Theme::header_cell_active()
+            theme.header_cell_active()
         } else {
-            Theme::header_cell()
+            theme.header_cell()
         };
+
         cells.push(Cell::from(label).style(style));
     }
+
     Row::new(cells).style(theme.header())
 }
 
