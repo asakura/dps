@@ -43,17 +43,24 @@ rstest = "0.26"
 temp-env = "0.3"
 tempfile = "3.27"
 
+[profile.dev]
+debug = 1
+
+[profile.test]
+debug = 1
+split-debuginfo = "unpacked"
+
+[profile.mutants]
+inherits = "test"
+debug = "none"
+opt-level = 0
+
 [profile.release]
 codegen-units = 1
 lto = true
 opt-level = 3
 panic = "abort"
 strip = "symbols"
-
-[profile.mutants]
-inherits = "test"
-debug = "none"
-opt-level = 0
 
 [lints.rust]
 # Safety — forbid means even #![allow(...)] can't override
