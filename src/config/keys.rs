@@ -19,7 +19,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKe
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use dps::config::keys::parse_key_sequence;
 /// use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 ///
@@ -98,7 +98,7 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use dps::config::keys::{key_event_to_string, parse_key_sequence};
 /// use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 ///

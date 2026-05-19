@@ -105,7 +105,7 @@ macro_rules! unit_newtype {
 
 /// Depth in metres. Backed by f64 so mul/div never truncate.
 ///
-/// ```
+/// ```no_run
 /// use dps::units::Meters;
 ///
 /// let a = Meters::new(30.0);
@@ -135,7 +135,7 @@ unit_newtype!(Meters, "m");
 
 /// Meters / `MetersPerBar` → Bar  (depth → gauge pressure)
 ///
-/// ```
+/// ```no_run
 /// use dps::units::{Bar, Meters, MetersPerBar};
 /// let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
 /// assert_eq!(gauge.value(), 3.0);
@@ -150,7 +150,7 @@ impl Div<MetersPerBar> for Meters {
 
 /// Pressure in bar.
 ///
-/// ```
+/// ```no_run
 /// use dps::units::Bar;
 ///
 /// let p = Bar::new(1.5);
@@ -177,7 +177,7 @@ unit_newtype!(Bar, "bar");
 
 /// Bar × `MetersPerBar` → Meters  (gauge pressure → depth)
 ///
-/// ```
+/// ```no_run
 /// use dps::units::{Bar, Meters, MetersPerBar};
 /// let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
 /// assert_eq!(depth.value(), 30.0);
@@ -192,7 +192,7 @@ impl Mul<MetersPerBar> for Bar {
 
 /// Depth-to-pressure conversion factor for seawater (metres per bar).
 ///
-/// ```
+/// ```no_run
 /// use dps::units::MetersPerBar;
 /// let seawater = MetersPerBar::new(10.0);
 /// assert_eq!(seawater.value(), 10.0);

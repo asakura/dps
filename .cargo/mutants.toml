@@ -1,2 +1,3 @@
 profile = "mutants"
 cap_lints = true
+additional_cargo_test_args = ["--lib", "--tests"]

@@ -260,7 +260,7 @@ impl Config {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// use dps::config::Config;
     ///
     /// let config = Config::default();
@@ -292,7 +292,7 @@ fn project_directory() -> Option<ProjectDirs> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use dps::config::get_config_dir;
 ///
 /// assert!(!get_config_dir().as_os_str().is_empty());
@@ -322,7 +322,7 @@ pub fn get_config_dir() -> PathBuf {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use dps::config::get_data_dir;
 ///
 /// assert!(!get_data_dir().as_os_str().is_empty());

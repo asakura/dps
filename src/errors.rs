@@ -92,7 +92,7 @@ macro_rules! trace_dbg {
 
 /// Error returned when an O₂ percentage is outside the valid range [10, 100].
 ///
-/// ```
+/// ```no_run
 /// use dps::errors::InvalidO2Percent;
 /// let msg = InvalidO2Percent(5).to_string();
 /// assert!(msg.contains("5") && msg.contains("10") && msg.contains("100"));

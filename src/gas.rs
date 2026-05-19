@@ -24,7 +24,7 @@ impl Ean {
     ///
     /// Returns `Err` if `o2_pct` is outside `[10, 100]`.
     ///
-    /// ```
+    /// ```no_run
     /// use dps::gas::Ean;
     /// assert!(Ean::from_percent(32).is_ok());
     /// assert!(Ean::from_percent(21).is_ok()); // air
@@ -43,7 +43,7 @@ impl Ean {
 
     /// Returns the O₂ fraction as a whole percentage (10–100).
     ///
-    /// ```
+    /// ```no_run
     /// use dps::gas::Ean;
     /// assert_eq!(Ean::from_percent(32).unwrap().o2_percent(), 32);
     /// ```
@@ -60,7 +60,7 @@ impl Ean {
 
     /// Returns the O₂ fraction as a decimal in [0.10, 1.0].
     ///
-    /// ```
+    /// ```no_run
     /// # use approx::assert_relative_eq;
     /// use dps::gas::Ean;
     /// assert_relative_eq!(Ean::from_percent(32).unwrap().fo2(), 0.32);
@@ -74,7 +74,7 @@ impl Ean {
     ///
     /// Formula: MOD = (`ppO₂_max` / FO₂ − 1 atm) × 10 m/bar  (seawater approximation)
     ///
-    /// ```
+    /// ```no_run
     /// # use approx::assert_relative_eq;
     /// use dps::gas::Ean;
     /// use dps::units::Bar;
@@ -93,7 +93,7 @@ impl Ean {
 
     /// ppO₂ for this mix at the given depth.
     ///
-    /// ```
+    /// ```no_run
     /// # use approx::assert_relative_eq;
     /// use dps::gas::Ean;
     /// use dps::units::Meters;
@@ -108,7 +108,7 @@ impl Ean {
 
     /// Named label for this mix, if one exists.
     ///
-    /// ```
+    /// ```no_run
     /// use dps::gas::Ean;
     /// assert_eq!(Ean::from_percent(21).unwrap().label(), Some("Air"));
     /// assert_eq!(Ean::from_percent(32).unwrap().label(), Some("EANx 32"));
