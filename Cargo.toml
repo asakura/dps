@@ -10,6 +10,9 @@ readme = "README.md"
 keywords = ["diving", "dive-planning", "scuba", "tui"]
 categories = ["command-line-utilities"]
 
+[lib]
+doctest = false
+
 [build-dependencies]
 anyhow = "1.0"
 vergen = { version = "9.1", features = ["build"] }
