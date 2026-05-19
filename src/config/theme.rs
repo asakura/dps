@@ -102,48 +102,44 @@ pub(super) fn resolve_theme(
 
 fn resolve_single(tc: &ThemeConfig, pc: &PaletteConfig) -> Result<Theme> {
     let pal = parse_palette(pc)?;
-    let s = |slot: &ThemeSlotConfig| slot_to_style(slot, &pal);
+    let resolve = |slot: &ThemeSlotConfig| slot_to_style(slot, &pal);
 
     Ok(Theme::new(
-        s(&tc.popup_surface)?,
-        s(&tc.key_label)?,
-        s(&tc.border)?,
-        s(&tc.title)?,
-        s(&tc.header)?,
-        s(&tc.header_cell)?,
-        s(&tc.header_cell_active)?,
-        s(&tc.selection)?,
-        s(&tc.column_focus)?,
-        s(&tc.nav_bar)?,
-        s(&tc.status_active)?,
-        s(&tc.status_empty)?,
-        s(&tc.safe)?,
-        s(&tc.caution)?,
-        s(&tc.danger)?,
-        s(&tc.body_text)?,
-        s(&tc.hint)?,
+        resolve(&tc.popup_surface)?,
+        resolve(&tc.key_label)?,
+        resolve(&tc.border)?,
+        resolve(&tc.title)?,
+        resolve(&tc.header)?,
+        resolve(&tc.header_cell)?,
+        resolve(&tc.header_cell_active)?,
+        resolve(&tc.selection)?,
+        resolve(&tc.column_focus)?,
+        resolve(&tc.nav_bar)?,
+        resolve(&tc.status_active)?,
+        resolve(&tc.status_empty)?,
+        resolve(&tc.safe)?,
+        resolve(&tc.caution)?,
+        resolve(&tc.danger)?,
+        resolve(&tc.body_text)?,
+        resolve(&tc.hint)?,
     ))
 }
 
 fn slot_to_style(slot: &ThemeSlotConfig, pal: &HashMap<String, Color>) -> Result<Style> {
+    let lookup = |name: &str| {
+        pal.get(name)
+            .copied()
+            .ok_or_else(|| eyre!("unknown palette colour '{name}'"))
+    };
+
     let mut style = Style::default();
 
     if let Some(name) = &slot.fg {
-        let color = pal
-            .get(name.as_str())
-            .copied()
-            .ok_or_else(|| eyre!("unknown palette colour '{name}'"))?;
-        style = style.fg(color);
+        style = style.fg(lookup(name)?);
     }
-
     if let Some(name) = &slot.bg {
-        let color = pal
-            .get(name.as_str())
-            .copied()
-            .ok_or_else(|| eyre!("unknown palette colour '{name}'"))?;
-        style = style.bg(color);
+        style = style.bg(lookup(name)?);
     }
-
     if let Some(mods) = &slot.modifiers {
         for m in mods {
             style = style.add_modifier(Modifier::from(*m));
@@ -168,17 +164,19 @@ fn parse_hex(s: &str) -> Result<Color> {
         return Err(eyre!("expected 6 hex digits in '{s}', got {}", hex.len()));
     }
 
-    let r = u8::from_str_radix(&hex[0..2], 16).map_err(|e| eyre!("bad hex in '{s}': {e}"))?;
-    let g = u8::from_str_radix(&hex[2..4], 16).map_err(|e| eyre!("bad hex in '{s}': {e}"))?;
-    let b = u8::from_str_radix(&hex[4..6], 16).map_err(|e| eyre!("bad hex in '{s}': {e}"))?;
+    let byte =
+        |i| u8::from_str_radix(&hex[i..i + 2], 16).map_err(|e| eyre!("bad hex in '{s}': {e}"));
 
-    Ok(Color::Rgb(r, g, b))
+    Ok(Color::Rgb(byte(0)?, byte(2)?, byte(4)?))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Config;
+    use ratatui::style::{Color, Modifier, Style};
     use rstest::fixture;
+    use rstest::rstest;
 
     #[fixture]
     fn frappe_palette() -> HashMap<String, Color> {
@@ -235,7 +233,6 @@ mod tests {
 
     mod parse_hex {
         use super::*;
-        use rstest::rstest;
 
         #[test]
         fn valid_rgb() -> Result<()> {
@@ -252,7 +249,6 @@ mod tests {
 
     mod slot_to_style {
         use super::*;
-        use rstest::rstest;
 
         #[rstest]
         fn fg_only_sets_fg(frappe_palette: HashMap<String, Color>) -> Result<()> {
@@ -317,9 +313,9 @@ mod tests {
             Ok(())
         }
 
-        #[rstest]
-        fn empty_slot_produces_default_style(frappe_palette: HashMap<String, Color>) -> Result<()> {
-            let style = slot_to_style(&deserialize_slot("{}")?, &frappe_palette)?;
+        #[test]
+        fn empty_slot_produces_default_style() -> Result<()> {
+            let style = slot_to_style(&deserialize_slot("{}")?, &HashMap::new())?;
             assert_eq!(style, Style::default());
 
             Ok(())
@@ -335,6 +331,7 @@ mod tests {
             Ok(())
         }
 
+        // The colour names in #[values] must match the keys in the `frappe_palette` fixture.
         #[rstest]
         fn all_palette_colours_resolve(
             frappe_palette: HashMap<String, Color>,
@@ -421,6 +418,78 @@ mod tests {
         #[test]
         fn theme_config_all_slots_uniform_fg() -> Result<()> {
             value_roundtrip::<ThemeConfig>(&full_theme_json("text")?)
+        }
+    }
+
+    mod config_integration {
+        use super::*;
+
+        #[fixture]
+        fn config_defaults() -> color_eyre::Result<Config> {
+            let dir = tempfile::tempdir()?;
+
+            Ok(Config::from_dirs(Some(dir.path()), None)?)
+        }
+
+        #[rstest]
+        fn theme_resolved_from_embedded_config(config_defaults: Result<Config>) -> Result<()> {
+            assert_eq!(
+                config_defaults?.active_theme().key_label(),
+                // Default is catpuccineFrappe; peach = #ef9f76 = Rgb(239, 159, 118).
+                Style::from((Color::Rgb(239, 159, 118), Modifier::BOLD)),
+            );
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case("catpuccineLatte")]
+        #[case("catpuccineFrappe")]
+        #[case("catpuccineMacchiato")]
+        #[case("catpuccineMocha")]
+        fn all_four_catppuccin_themes_resolved(
+            config_defaults: Result<Config>,
+            #[case] name: &str,
+        ) -> Result<()> {
+            assert!(
+                config_defaults?.themes.contains_key(name),
+                "missing theme '{name}'"
+            );
+            Ok(())
+        }
+
+        #[test]
+        fn unknown_default_theme_is_rejected() -> color_eyre::Result<()> {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                r#"{ defaultTheme: "doesNotExist" }"#,
+            )?;
+
+            let result = Config::from_dirs(Some(dir.path()), None);
+
+            assert!(matches!(
+                result,
+                Err(config::ConfigError::Message(ref s)) if s.contains("doesNotExist")
+            ));
+
+            Ok(())
+        }
+
+        #[test]
+        fn theme_without_palette_is_rejected() -> color_eyre::Result<()> {
+            let dir = tempfile::tempdir()?;
+
+            let content = format!(
+                r#"{{ "themes": {{ "orphanTheme": {} }} }}"#,
+                full_theme_json("text")?
+            );
+            std::fs::write(dir.path().join("config.json5"), content)?;
+
+            assert!(Config::from_dirs(Some(dir.path()), None).is_err());
+
+            Ok(())
         }
     }
 
