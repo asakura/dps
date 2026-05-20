@@ -11,11 +11,163 @@ const SURFACE_PRESSURE: Bar = Bar::new(1.0);
 const SEAWATER: MetersPerBar = MetersPerBar::new(10.0);
 const EAN_MIN_O2: f64 = 0.10;
 
+/// Maximum Operating Depth for a gas mix at a ppO₂ limit.
+///
+/// Produced exclusively by [`Ean::mod_at`].
+///
+/// ```no_run
+/// use dps::gas::Ean;
+/// use dps::units::{Bar, Percent};
+/// let ean32 = Ean::try_from(Percent::new(0.32).unwrap()).unwrap();
+/// let m = ean32.mod_at(Bar::new(1.4));
+/// assert_eq!(m.to_string(), "33.8 m");
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Mod {
+    depth: Meters,
+    gas: Ean,
+    ppo2_max: Bar,
+}
+
+impl Mod {
+    /// The computed depth.
+    ///
+    /// ```no_run
+    /// # use approx::assert_relative_eq;
+    /// use dps::gas::Ean;
+    /// use dps::units::{Bar, Meters, Percent};
+    /// let ean32 = Ean::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.75), epsilon = 1e-6);
+    /// ```
+    #[must_use]
+    pub const fn depth(self) -> Meters {
+        self.depth
+    }
+
+    /// The gas mix that produced this MOD.
+    ///
+    /// ```no_run
+    /// use dps::gas::Ean;
+    /// use dps::units::{Bar, Percent};
+    /// let ean32 = Ean::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// assert_eq!(ean32.mod_at(Bar::new(1.4)).gas(), ean32);
+    /// ```
+    #[must_use]
+    pub const fn gas(self) -> Ean {
+        self.gas
+    }
+
+    /// The ppO₂ limit used to compute this MOD.
+    ///
+    /// ```no_run
+    /// use dps::gas::Ean;
+    /// use dps::units::{Bar, Percent};
+    /// let ean32 = Ean::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// assert_eq!(ean32.mod_at(Bar::new(1.4)).ppo2_max(), Bar::new(1.4));
+    /// ```
+    #[must_use]
+    pub const fn ppo2_max(self) -> Bar {
+        self.ppo2_max
+    }
+
+    /// Full-detail formatter: `{gas}  MOD {depth}  @ ppO₂ {ppo2_max}`.
+    ///
+    /// ```no_run
+    /// use dps::gas::Ean;
+    /// use dps::units::{Bar, Percent};
+    /// let ean32 = Ean::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// assert_eq!(
+    ///     ean32.mod_at(Bar::new(1.4)).summary().to_string(),
+    ///     "EANx 32  MOD 33.8 m  @ ppO₂ 1.4 bar",
+    /// );
+    /// ```
+    #[must_use]
+    pub const fn summary(self) -> ModSummary {
+        ModSummary(self)
+    }
+
+    /// Constructs a [`Mod`] for testing without going through [`Ean::mod_at`].
+    #[cfg(test)]
+    #[must_use]
+    pub fn new(gas: Ean, ppo2_max: Bar) -> Self {
+        Self::from((gas, ppo2_max))
+    }
+}
+
+impl From<(Ean, Bar)> for Mod {
+    fn from((gas, ppo2_max): (Ean, Bar)) -> Self {
+        let gauge = ppo2_max / gas.fraction - SURFACE_PRESSURE;
+        let depth = (gauge * SEAWATER).max(Meters::new(0.0));
+        Self {
+            depth,
+            gas,
+            ppo2_max,
+        }
+    }
+}
+
+impl fmt::Display for Mod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.depth.fmt(f)
+    }
+}
+
+impl From<Mod> for Meters {
+    /// ```no_run
+    /// use dps::gas::Ean;
+    /// use dps::units::{Bar, Meters, Percent};
+    /// let ean32 = Ean::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// let m = ean32.mod_at(Bar::new(1.4));
+    /// assert_eq!(Meters::from(m), m.depth());
+    /// ```
+    fn from(m: Mod) -> Self {
+        m.depth
+    }
+}
+
+/// Full-detail display: `{gas}  MOD {depth}  @ ppO₂ {ppo2_max}`.
+#[derive(Debug, Clone, Copy)]
+pub struct ModSummary(Mod);
+
+impl fmt::Display for ModSummary {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}  MOD {}  @ ppO\u{2082} {}",
+            self.0.gas, self.0, self.0.ppo2_max
+        )
+    }
+}
+
+#[cfg(test)]
+impl approx::AbsDiffEq for Mod {
+    type Epsilon = f64;
+
+    fn default_epsilon() -> f64 {
+        f64::default_epsilon()
+    }
+
+    fn abs_diff_eq(&self, other: &Self, epsilon: f64) -> bool {
+        self.depth.abs_diff_eq(&other.depth, epsilon)
+    }
+}
+
+#[cfg(test)]
+impl approx::RelativeEq for Mod {
+    fn default_max_relative() -> f64 {
+        f64::default_max_relative()
+    }
+
+    fn relative_eq(&self, other: &Self, epsilon: f64, max_relative: f64) -> bool {
+        self.depth.relative_eq(&other.depth, epsilon, max_relative)
+    }
+}
+
 /// Enriched Air Nitrox: modelled by oxygen fraction in [0.10, 1.0].
 ///
 /// The remainder (1 − FO₂) is treated as inert diluent. In practice this is
 /// mostly N₂ with ~1 % Ar and trace CO₂, none of which affect MOD calculations.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ean {
     fraction: Percent,
 }
@@ -42,18 +194,17 @@ impl Ean {
     /// ```no_run
     /// # use approx::assert_relative_eq;
     /// use dps::gas::Ean;
-    /// use dps::units::{Bar, Percent};
+    /// use dps::units::{Bar, Meters, Percent};
     /// let ean32 = Ean::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).value(), 33.75, epsilon = 1e-6);
+    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.75), epsilon = 1e-6);
     ///
     /// // Clamps to 0.0 when the ppO₂ limit is below the surface partial pressure.
     /// let o2 = Ean::try_from(Percent::new(1.0).unwrap()).unwrap();
-    /// assert_relative_eq!(o2.mod_at(Bar::new(0.5)).value(), 0.0, epsilon = 1e-9);
+    /// assert_relative_eq!(o2.mod_at(Bar::new(0.5)).depth(), Meters::new(0.0), epsilon = 1e-9);
     /// ```
     #[must_use]
-    pub fn mod_at(self, ppo2_max: Bar) -> Meters {
-        let gauge = ppo2_max / self.fraction - SURFACE_PRESSURE;
-        (gauge * SEAWATER).max(Meters::new(0.0))
+    pub fn mod_at(self, ppo2_max: Bar) -> Mod {
+        Mod::from((self, ppo2_max))
     }
 
     /// ppO₂ for this mix at the given depth.
@@ -179,7 +330,7 @@ mod tests {
         fn mod_at_eanx32_1_4_bar() -> Result<()> {
             let expected = Meters::new((1.4_f64 / 0.32 - 1.0) * 10.0); // ≈ 33.75 m
 
-            assert_relative_eq!(ean(0.32)?.mod_at(Bar::new(1.4)), expected);
+            assert_relative_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).depth(), expected);
 
             Ok(())
         }
@@ -188,7 +339,7 @@ mod tests {
         fn mod_at_eanx40_1_4_bar() -> Result<()> {
             let expected = Meters::new((1.4_f64 / 0.40 - 1.0) * 10.0); // 25.0 m
 
-            assert_relative_eq!(ean(0.40)?.mod_at(Bar::new(1.4)), expected);
+            assert_relative_eq!(ean(0.40)?.mod_at(Bar::new(1.4)).depth(), expected);
 
             Ok(())
         }
@@ -197,7 +348,7 @@ mod tests {
         fn mod_at_pure_o2_1_6_bar() -> Result<()> {
             let expected = Meters::new((1.6_f64 / 1.0 - 1.0) * 10.0); // 6.0 m
 
-            assert_relative_eq!(ean(1.0)?.mod_at(Bar::new(1.6)), expected);
+            assert_relative_eq!(ean(1.0)?.mod_at(Bar::new(1.6)).depth(), expected);
 
             Ok(())
         }
@@ -206,10 +357,26 @@ mod tests {
         fn mod_at_clamps_to_zero_when_negative() -> Result<()> {
             // Pure O2 at 0.5 bar ppO2 limit: (0.5/1.0 - 1) * 10 = -5.0 m → 0.0
             assert_relative_eq!(
-                ean(1.0)?.mod_at(Bar::new(0.5)),
+                ean(1.0)?.mod_at(Bar::new(0.5)).depth(),
                 Meters::new(0.0),
                 epsilon = 1e-9
             );
+
+            Ok(())
+        }
+
+        #[test]
+        fn gas_is_preserved() -> Result<()> {
+            let gas = ean(0.32)?;
+            assert_eq!(gas.mod_at(Bar::new(1.4)).gas(), gas);
+
+            Ok(())
+        }
+
+        #[test]
+        fn ppo2_max_is_preserved() -> Result<()> {
+            let ppo2 = Bar::new(1.6);
+            assert_eq!(ean(0.32)?.mod_at(ppo2).ppo2_max(), ppo2);
 
             Ok(())
         }
@@ -301,6 +468,40 @@ mod tests {
         fn display_unnamed_mix_shows_fraction() -> Result<()> {
             assert_eq!(ean(0.25)?.to_string(), "25 %");
             assert_eq!(ean(0.33)?.to_string(), "33 %");
+
+            Ok(())
+        }
+    }
+
+    mod r#mod {
+        use super::*;
+
+        #[test]
+        fn display_shows_depth() -> Result<()> {
+            assert_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).to_string(), "33.8 m");
+
+            Ok(())
+        }
+
+        #[test]
+        fn into_meters_gives_depth() -> Result<()> {
+            let m = ean(0.32)?.mod_at(Bar::new(1.4));
+            assert_eq!(Meters::from(m), m.depth());
+
+            Ok(())
+        }
+    }
+
+    mod mod_summary {
+        use super::*;
+
+        #[test]
+        fn summary_formats_full_detail() -> Result<()> {
+            let m = ean(0.32)?.mod_at(Bar::new(1.4));
+            assert_eq!(
+                m.summary().to_string(),
+                "EANx 32  MOD 33.8 m  @ ppO₂ 1.4 bar"
+            );
 
             Ok(())
         }

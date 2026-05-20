@@ -339,6 +339,7 @@ impl approx::RelativeEq for Percent {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;

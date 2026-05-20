@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     action::{Action, Movement},
-    gas::Ean,
+    gas::{Ean, Mod},
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::{Bar, Meters, Percent},
@@ -42,7 +42,7 @@ pub struct ModTab {
     mixes: Vec<Ean>,
     table_state: TableState,
     ppo2_idx: usize,
-    selection: Option<(Ean, Bar)>,
+    selection: Option<Mod>,
 }
 
 impl Default for ModTab {
@@ -181,8 +181,8 @@ impl From<ModRow<'_>> for Row<'static> {
         ];
 
         for &col in r.cols {
-            let depth = r.mix.mod_at(col);
-            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth, r.theme)));
+            let m = r.mix.mod_at(col);
+            cells.push(Cell::from(format!("{m}")).style(mod_color(m.into(), r.theme)));
         }
 
         Row::new(cells)
@@ -207,9 +207,8 @@ struct ModTabStatus<'a> {
 impl Widget for ModTabStatus<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         match self.tab.selection {
-            Some((mix, ppo2)) => {
-                let depth = mix.mod_at(ppo2);
-                let text = format!(" \u{25c6} {mix}  MOD {depth}  @ ppO\u{2082} {ppo2}");
+            Some(m) => {
+                let text = format!(" \u{25c6} {}", m.summary());
                 Paragraph::new(text)
                     .style(self.theme.status_active())
                     .render(area, buf);
@@ -231,7 +230,7 @@ impl Component for ModTab {
             Action::Move(mv) => self.handle_movement(mv),
             Action::Select => {
                 if let Some(row) = self.table_state.selected() {
-                    self.selection = Some((self.mixes[row], self.ppo2()));
+                    self.selection = Some(self.mixes[row].mod_at(self.ppo2()));
                 }
             }
             Action::Quit | Action::None => {}
@@ -420,10 +419,10 @@ mod tests {
 
             tab.handle_action(Action::Select);
 
-            let (mix, ppo2) = tab.selection.ok_or("no selection after Select action")?;
+            let m = tab.selection.ok_or("no selection after Select action")?;
 
-            assert_eq!(mix.fo2(), expected_fo2);
-            assert_eq!(ppo2, expected_ppo2);
+            assert_eq!(m.gas().fo2(), expected_fo2);
+            assert_eq!(m.ppo2_max(), expected_ppo2);
 
             Ok(())
         }
@@ -436,7 +435,7 @@ mod tests {
             let first_fo2 = tab
                 .selection
                 .ok_or("no selection after first Select")?
-                .0
+                .gas()
                 .fo2();
             tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
@@ -444,7 +443,7 @@ mod tests {
             let second_fo2 = tab
                 .selection
                 .ok_or("no selection after second Select")?
-                .0
+                .gas()
                 .fo2();
             assert_ne!(first_fo2, second_fo2);
 
