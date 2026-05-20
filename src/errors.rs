@@ -3,14 +3,17 @@
 use std::env;
 use std::fmt;
 
+use color_eyre::Result;
 use tracing::error;
+
+use crate::units::Percent;
 
 /// Installs the `color_eyre` panic and error hooks.
 ///
 /// # Errors
 ///
 /// Returns `Err` if the `color_eyre` hook is already installed.
-pub fn init() -> color_eyre::Result<()> {
+pub fn init() -> Result<()> {
     let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
         .panic_section(format!(
             "This is a bug. Consider reporting it at {}",
@@ -94,11 +97,12 @@ macro_rules! trace_dbg {
 ///
 /// ```no_run
 /// use dps::errors::InvalidO2Percent;
-/// let msg = InvalidO2Percent(5).to_string();
-/// assert!(msg.contains("5") && msg.contains("10") && msg.contains("100"));
+/// use dps::units::Percent;
+/// let msg = InvalidO2Percent(Percent::new(0.05).unwrap()).to_string();
+/// assert!(msg.contains('5') && msg.contains("10") && msg.contains("100"));
 /// ```
 #[derive(Debug, Clone, Copy)]
-pub struct InvalidO2Percent(pub u8);
+pub struct InvalidO2Percent(pub Percent);
 
 impl fmt::Display for InvalidO2Percent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -12,20 +12,20 @@ use crate::{
     gas::Ean,
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
-    units::Bar,
+    units::{Bar, Meters, Percent},
 };
 
 use super::{Component, KeyBinding};
 
-const PPO2_MIN: f64 = 0.8;
-const PPO2_STEP: f64 = 0.1;
+const PPO2_MIN: Bar = Bar::new(0.8);
+const PPO2_STEP: Bar = Bar::new(0.1);
 const PPO2_MAX_IDX: usize = 8;
 const PPO2_DEFAULT_IDX: usize = 6;
 const PPO2_COUNT: usize = PPO2_MAX_IDX + 1;
 
 const O2_PCT_MIN: u8 = 10;
 const O2_PCT_MAX: u8 = 100;
-const DEFAULT_MIX_O2_PCT: u8 = 32;
+const DEFAULT_MIX: Percent = Percent::new(0.32).expect("valid fraction literal");
 
 const COL_NAME_W: u16 = 12;
 const COL_O2_W: u16 = 6;
@@ -33,8 +33,8 @@ const COL_MOD_W: u16 = 9;
 const FIXED_COL_COUNT: usize = 2;
 const TABLE_OVERHEAD_W: u16 = 2 + 2 + COL_NAME_W + 1 + COL_O2_W + 1;
 
-const MOD_RED_BELOW_M: f64 = 10.0;
-const MOD_YELLOW_BELOW_M: f64 = 20.0;
+const MOD_RED_BELOW: Meters = Meters::new(10.0);
+const MOD_YELLOW_BELOW: Meters = Meters::new(20.0);
 
 /// MOD-by-ppO₂ table: maximum operating depth for each nitrox mix at the selected ppO₂ limit.
 #[derive(Debug)]
@@ -56,11 +56,12 @@ impl ModTab {
     #[must_use]
     pub fn new() -> Self {
         let mixes: Vec<Ean> = (O2_PCT_MIN..=O2_PCT_MAX)
-            .filter_map(|p| Ean::from_percent(p).ok())
+            .filter_map(|p| Percent::new(f64::from(p) / 100.0))
+            .filter_map(|pct| Ean::try_from(pct).ok())
             .collect();
         let start_idx = mixes
             .iter()
-            .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
+            .position(|m| m.fo2() == DEFAULT_MIX)
             .unwrap_or(0);
         let mut table_state = TableState::default();
         table_state.select(Some(start_idx));
@@ -77,7 +78,7 @@ impl ModTab {
         reason = "ppo2_idx is bounded by PPO2_MAX_IDX = 8"
     )]
     const fn ppo2(&self) -> Bar {
-        Bar::new((self.ppo2_idx as f64).mul_add(PPO2_STEP, PPO2_MIN))
+        PPO2_STEP.mul_add(self.ppo2_idx as f64, PPO2_MIN)
     }
 
     /// ppO₂ column values for a sliding window of `window_size` columns centred on the selected index.
@@ -89,7 +90,7 @@ impl ModTab {
         let start = window_start(self.ppo2_idx, PPO2_COUNT, window_size);
         let count = window_size.min(PPO2_COUNT);
         (0..count)
-            .map(|i| Bar::new(((start + i) as f64).mul_add(PPO2_STEP, PPO2_MIN)))
+            .map(|i| PPO2_STEP.mul_add((start + i) as f64, PPO2_MIN))
             .collect()
     }
 
@@ -175,23 +176,23 @@ struct ModRow<'a> {
 impl From<ModRow<'_>> for Row<'static> {
     fn from(r: ModRow<'_>) -> Self {
         let mut cells = vec![
-            Cell::from(r.mix.label().unwrap_or("")),
-            Cell::from(format!("{:>4}%", r.mix.o2_percent())),
+            Cell::from(r.mix.to_string()),
+            Cell::from(r.mix.fo2().to_string()),
         ];
 
         for &col in r.cols {
             let depth = r.mix.mod_at(col);
-            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth.value(), r.theme)));
+            cells.push(Cell::from(format!("{depth}")).style(mod_color(depth, r.theme)));
         }
 
         Row::new(cells)
     }
 }
 
-fn mod_color(depth_m: f64, theme: &Theme) -> Style {
-    if depth_m < MOD_RED_BELOW_M {
+fn mod_color(depth: Meters, theme: &Theme) -> Style {
+    if depth < MOD_RED_BELOW {
         theme.danger()
-    } else if depth_m < MOD_YELLOW_BELOW_M {
+    } else if depth < MOD_YELLOW_BELOW {
         theme.caution()
     } else {
         theme.safe()
@@ -208,14 +209,7 @@ impl Widget for ModTabStatus<'_> {
         match self.tab.selection {
             Some((mix, ppo2)) => {
                 let depth = mix.mod_at(ppo2);
-                let name = mix.label().map(|s| format!("{s} ")).unwrap_or_default();
-                let text = format!(
-                    " \u{25c6} {}({}%)  MOD {}  @ ppO\u{2082} {}",
-                    name,
-                    mix.o2_percent(),
-                    depth,
-                    ppo2,
-                );
+                let text = format!(" \u{25c6} {mix}  MOD {depth}  @ ppO\u{2082} {ppo2}");
                 Paragraph::new(text)
                     .style(self.theme.status_active())
                     .render(area, buf);
@@ -395,15 +389,16 @@ mod tests {
             let tab = ModTab::new();
             let idx = tab.table_state.selected().ok_or("no row selected")?;
 
-            assert_eq!(tab.mixes[idx].o2_percent(), DEFAULT_MIX_O2_PCT);
+            assert_eq!(tab.mixes[idx].fo2(), DEFAULT_MIX);
 
             Ok(())
         }
 
         #[test]
         fn ppo2_is_1_4_bar() {
+            use approx::assert_relative_eq;
             let tab = ModTab::new();
-            assert!((tab.ppo2().value() - 1.4).abs() < 1e-9);
+            assert_relative_eq!(tab.ppo2(), Bar::new(1.4));
         }
 
         #[test]
@@ -420,15 +415,15 @@ mod tests {
         fn stores_current_mix_and_ppo2() -> Result<(), Box<dyn std::error::Error>> {
             let mut tab = ModTab::new();
             let row = tab.table_state.selected().ok_or("no row selected")?;
-            let expected_pct = tab.mixes[row].o2_percent();
-            let expected_ppo2 = tab.ppo2().value();
+            let expected_fo2 = tab.mixes[row].fo2();
+            let expected_ppo2 = tab.ppo2();
 
             tab.handle_action(Action::Select);
 
             let (mix, ppo2) = tab.selection.ok_or("no selection after Select action")?;
 
-            assert_eq!(mix.o2_percent(), expected_pct);
-            assert!((ppo2.value() - expected_ppo2).abs() < 1e-9);
+            assert_eq!(mix.fo2(), expected_fo2);
+            assert_eq!(ppo2, expected_ppo2);
 
             Ok(())
         }
@@ -438,20 +433,20 @@ mod tests {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Select);
 
-            let first_pct = tab
+            let first_fo2 = tab
                 .selection
                 .ok_or("no selection after first Select")?
                 .0
-                .o2_percent();
+                .fo2();
             tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
 
-            let second_pct = tab
+            let second_fo2 = tab
                 .selection
                 .ok_or("no selection after second Select")?
                 .0
-                .o2_percent();
-            assert_ne!(first_pct, second_pct);
+                .fo2();
+            assert_ne!(first_fo2, second_fo2);
 
             Ok(())
         }
@@ -462,14 +457,20 @@ mod tests {
 
         #[test]
         fn below_10m_is_red() {
-            assert_eq!(mod_color(9.9, &Theme::default()), Theme::default().danger());
-            assert_eq!(mod_color(0.0, &Theme::default()), Theme::default().danger());
+            assert_eq!(
+                mod_color(Meters::new(9.9), &Theme::default()),
+                Theme::default().danger()
+            );
+            assert_eq!(
+                mod_color(Meters::new(0.0), &Theme::default()),
+                Theme::default().danger()
+            );
         }
 
         #[test]
         fn exactly_10m_is_yellow() {
             assert_eq!(
-                mod_color(10.0, &Theme::default()),
+                mod_color(Meters::new(10.0), &Theme::default()),
                 Theme::default().caution()
             );
         }
@@ -477,19 +478,25 @@ mod tests {
         #[test]
         fn between_thresholds_is_yellow() {
             assert_eq!(
-                mod_color(15.0, &Theme::default()),
+                mod_color(Meters::new(15.0), &Theme::default()),
                 Theme::default().caution()
             );
         }
 
         #[test]
         fn exactly_20m_is_green() {
-            assert_eq!(mod_color(20.0, &Theme::default()), Theme::default().safe());
+            assert_eq!(
+                mod_color(Meters::new(20.0), &Theme::default()),
+                Theme::default().safe()
+            );
         }
 
         #[test]
         fn above_20m_is_green() {
-            assert_eq!(mod_color(33.75, &Theme::default()), Theme::default().safe());
+            assert_eq!(
+                mod_color(Meters::new(33.75), &Theme::default()),
+                Theme::default().safe()
+            );
         }
     }
 
@@ -631,7 +638,7 @@ mod tests {
                 tab.table_state.selected().ok_or("no row selected")?,
                 tab.mixes
                     .iter()
-                    .position(|m| m.o2_percent() == DEFAULT_MIX_O2_PCT)
+                    .position(|m| m.fo2() == DEFAULT_MIX)
                     .ok_or("EAN32 not found in mixes")?
                     + SCROLL_DELTA as usize,
             );

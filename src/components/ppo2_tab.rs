@@ -12,25 +12,41 @@ use crate::{
     gas::Ean,
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
-    units::Meters,
+    units::{Bar, Meters, Percent},
 };
 
 use super::{Component, KeyBinding};
 
-const PPO2_TABLE_MIX_PERCENTS: &[u8] =
-    [10, 12, 14, 16, 18, 21, 28, 30, 32, 36, 40, 50, 80, 100].as_slice();
-const PPO2_TABLE_MIX_COUNT: usize = PPO2_TABLE_MIX_PERCENTS.len();
-const PPO2_TABLE_DEPTH_MAX: usize = 80;
-const PPO2_MIX_DEFAULT_IDX: usize = 5; // EAN21 (Air)
+const PPO2_TABLE_MIX_PERCENTS: &[Percent] = [
+    Percent::new(0.10).expect("valid fraction literal"),
+    Percent::new(0.12).expect("valid fraction literal"),
+    Percent::new(0.14).expect("valid fraction literal"),
+    Percent::new(0.16).expect("valid fraction literal"),
+    Percent::new(0.18).expect("valid fraction literal"),
+    Percent::new(0.21).expect("valid fraction literal"),
+    Percent::new(0.28).expect("valid fraction literal"),
+    Percent::new(0.30).expect("valid fraction literal"),
+    Percent::new(0.32).expect("valid fraction literal"),
+    Percent::new(0.36).expect("valid fraction literal"),
+    Percent::new(0.40).expect("valid fraction literal"),
+    Percent::new(0.50).expect("valid fraction literal"),
+    Percent::new(0.80).expect("valid fraction literal"),
+    Percent::new(1.00).expect("valid fraction literal"),
+]
+.as_slice();
 
-const FIXED_COL_COUNT: usize = 1;
-const COL_DEPTH_W: u16 = 7;
-const COL_PPO2_MIX_W: u16 = 7;
+const PPO2_MIX_DEFAULT_IDX: usize = 5; // EAN21 (Air)
+const PPO2_TABLE_DEPTH_MAX: usize = 80;
+const PPO2_TABLE_MIX_COUNT: usize = PPO2_TABLE_MIX_PERCENTS.len();
 const PPO2_TABLE_OVERHEAD_W: u16 = 2 + 2 + COL_DEPTH_W + 1;
 
-const PPO2_HYPOXIC_BELOW: f64 = 0.18;
-const PPO2_CAUTION_FROM: f64 = 1.4;
-const PPO2_DANGER_FROM: f64 = 1.6;
+const PPO2_CAUTION_FROM: Bar = Bar::new(1.4);
+const PPO2_DANGER_FROM: Bar = Bar::new(1.6);
+const PPO2_HYPOXIC_BELOW: Bar = Bar::new(0.18);
+
+const COL_DEPTH_W: u16 = 7;
+const COL_PPO2_MIX_W: u16 = 7;
+const FIXED_COL_COUNT: usize = 1;
 
 /// ppO₂-by-depth table: partial pressure of oxygen for each mix at each depth.
 #[derive(Debug, Clone, Copy)]
@@ -62,7 +78,7 @@ impl PpO2Tab {
     }
 
     fn selected_mix(&self) -> Ean {
-        Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[self.mix_idx])
+        Ean::try_from(PPO2_TABLE_MIX_PERCENTS[self.mix_idx])
             .unwrap_or_else(|_| unreachable!("PPO2_TABLE_MIX_PERCENTS values are valid"))
     }
 
@@ -73,7 +89,7 @@ impl PpO2Tab {
 
         (0..count)
             .map(|i| {
-                Ean::from_percent(PPO2_TABLE_MIX_PERCENTS[start + i])
+                Ean::try_from(PPO2_TABLE_MIX_PERCENTS[start + i])
                     .unwrap_or_else(|_| unreachable!("PPO2_TABLE_MIX_PERCENTS values are valid"))
             })
             .collect()
@@ -176,8 +192,7 @@ impl From<PpO2Row<'_>> for Row<'static> {
             let ppo2 = mix.ppo2_at(depth);
 
             cells.push(
-                Cell::from(format!("{:.2}", ppo2.value()))
-                    .style(ppo2_cell_color(ppo2.value(), r.theme)),
+                Cell::from(format!("{:.2}", ppo2.value())).style(ppo2_cell_color(ppo2, r.theme)),
             );
         }
 
@@ -185,7 +200,7 @@ impl From<PpO2Row<'_>> for Row<'static> {
     }
 }
 
-fn ppo2_cell_color(ppo2: f64, theme: &Theme) -> Style {
+fn ppo2_cell_color(ppo2: Bar, theme: &Theme) -> Style {
     if !(PPO2_HYPOXIC_BELOW..PPO2_DANGER_FROM).contains(&ppo2) {
         theme.danger()
     } else if ppo2 >= PPO2_CAUTION_FROM {
@@ -205,12 +220,9 @@ impl Widget for PpO2TabStatus<'_> {
         match self.tab.selection {
             Some((depth, mix)) => {
                 let ppo2 = mix.ppo2_at(depth);
-                let name = mix.label().map(|s| format!("{s} ")).unwrap_or_default();
-
                 let text = format!(
-                    " \u{25c6} {}({}%)  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
-                    name,
-                    mix.o2_percent(),
+                    " \u{25c6} {}  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
+                    mix,
                     depth,
                     ppo2.value(),
                 );
@@ -261,7 +273,7 @@ impl Component for PpO2Tab {
 
         let mixes = self.visible_cols(window_size);
         let mix = self.selected_mix();
-        let title = format!(" DPS — ppO\u{2082} by Depth   {}% ", mix.o2_percent());
+        let title = format!(" DPS — ppO\u{2082} by Depth   {} ", mix.fo2());
 
         let constraints = trailing_constraints(
             [Constraint::Length(COL_DEPTH_W)].as_slice(),
@@ -271,7 +283,7 @@ impl Component for PpO2Tab {
 
         let header = build_header_row(
             vec![Cell::from("Depth").style(theme.header_cell())],
-            mixes.iter().map(|m| format!("{:>3}%", m.o2_percent())),
+            mixes.iter().map(|m| m.fo2().to_string()),
             Some(col_in_window),
             theme,
         );
@@ -317,7 +329,6 @@ mod tests {
     use super::*;
     use crate::action::Movement;
     use crate::components::test_utils::widget_text;
-    use approx::assert_relative_ne;
     use color_eyre::Result;
 
     mod constants {
@@ -340,7 +351,8 @@ mod tests {
         }
 
         #[test]
-        fn returns_mixes_at_correct_offsets_from_start() {
+        fn returns_mixes_at_correct_offsets_from_start() -> Result<()> {
+            use color_eyre::eyre::eyre;
             let mut tab = PpO2Tab::new();
 
             // mix_idx: 5 → 6
@@ -349,9 +361,20 @@ mod tests {
             // window_start(6, 14, 3) = 5; percents at indices [5],[6],[7]
             let cols = tab.visible_cols(3);
 
-            assert_eq!(cols[0].o2_percent(), 21); // [5]
-            assert_eq!(cols[1].o2_percent(), 28); // [6]
-            assert_eq!(cols[2].o2_percent(), 30); // [7]
+            assert_eq!(
+                cols[0].fo2(),
+                Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
+            ); // [5]
+            assert_eq!(
+                cols[1].fo2(),
+                Percent::new(0.28).ok_or_else(|| eyre!("invalid"))?
+            ); // [6]
+            assert_eq!(
+                cols[2].fo2(),
+                Percent::new(0.30).ok_or_else(|| eyre!("invalid"))?
+            ); // [7]
+
+            Ok(())
         }
     }
 
@@ -400,9 +423,14 @@ mod tests {
         }
 
         #[test]
-        fn selected_mix_is_air() {
+        fn selected_mix_is_air() -> Result<()> {
+            use color_eyre::eyre::eyre;
             let tab = PpO2Tab::new();
-            assert_eq!(tab.selected_mix().o2_percent(), 21);
+            assert_eq!(
+                tab.selected_mix().fo2(),
+                Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
+            );
+            Ok(())
         }
 
         #[test]
@@ -415,15 +443,19 @@ mod tests {
         use super::*;
 
         #[test]
-        fn stores_current_depth_and_mix() -> Result<(), Box<dyn std::error::Error>> {
+        fn stores_current_depth_and_mix() -> Result<()> {
+            use color_eyre::eyre::eyre;
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Select);
 
-            let (depth, mix) = tab.selection.ok_or("no selection")?;
+            let (depth, mix) = tab.selection.ok_or_else(|| eyre!("no selection"))?;
 
-            assert!((depth.value() - 0.0).abs() < 1e-9);
-            assert_eq!(mix.o2_percent(), 21);
+            assert_eq!(depth, Meters::new(0.0));
+            assert_eq!(
+                mix.fo2(),
+                Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
+            );
 
             Ok(())
         }
@@ -434,13 +466,13 @@ mod tests {
 
             tab.handle_action(Action::Select);
 
-            let first_depth = tab.selection.ok_or("no selection")?.0.value();
+            let first_depth = tab.selection.ok_or("no selection")?.0;
 
             tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
 
-            let second_depth = tab.selection.ok_or("no selection")?.0.value();
-            assert_relative_ne!(first_depth, second_depth);
+            let second_depth = tab.selection.ok_or("no selection")?.0;
+            assert_ne!(first_depth, second_depth);
 
             Ok(())
         }
@@ -452,7 +484,7 @@ mod tests {
         #[test]
         fn hypoxic_below_threshold_is_red() {
             assert_eq!(
-                ppo2_cell_color(0.10, &Theme::default()),
+                ppo2_cell_color(Bar::new(0.10), &Theme::default()),
                 Theme::default().danger()
             );
         }
@@ -460,7 +492,7 @@ mod tests {
         #[test]
         fn at_hypoxic_threshold_is_green() {
             assert_eq!(
-                ppo2_cell_color(0.18, &Theme::default()),
+                ppo2_cell_color(Bar::new(0.18), &Theme::default()),
                 Theme::default().safe()
             );
         }
@@ -468,7 +500,7 @@ mod tests {
         #[test]
         fn normal_range_is_green() {
             assert_eq!(
-                ppo2_cell_color(1.0, &Theme::default()),
+                ppo2_cell_color(Bar::new(1.0), &Theme::default()),
                 Theme::default().safe()
             );
         }
@@ -476,7 +508,7 @@ mod tests {
         #[test]
         fn at_caution_threshold_is_yellow() {
             assert_eq!(
-                ppo2_cell_color(1.4, &Theme::default()),
+                ppo2_cell_color(Bar::new(1.4), &Theme::default()),
                 Theme::default().caution()
             );
         }
@@ -484,7 +516,7 @@ mod tests {
         #[test]
         fn caution_range_is_yellow() {
             assert_eq!(
-                ppo2_cell_color(1.5, &Theme::default()),
+                ppo2_cell_color(Bar::new(1.5), &Theme::default()),
                 Theme::default().caution()
             );
         }
@@ -492,7 +524,7 @@ mod tests {
         #[test]
         fn at_danger_threshold_is_red() {
             assert_eq!(
-                ppo2_cell_color(1.6, &Theme::default()),
+                ppo2_cell_color(Bar::new(1.6), &Theme::default()),
                 Theme::default().danger()
             );
         }
@@ -500,7 +532,7 @@ mod tests {
         #[test]
         fn above_danger_is_red() {
             assert_eq!(
-                ppo2_cell_color(2.0, &Theme::default()),
+                ppo2_cell_color(Bar::new(2.0), &Theme::default()),
                 Theme::default().danger()
             );
         }
@@ -544,7 +576,7 @@ mod tests {
             );
 
             assert!(text.contains("10.0 m"));
-            assert!(text.contains("21")); // Air (EAN21)
+            assert!(text.contains("Air"));
         }
     }
 
