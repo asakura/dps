@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     action::{Action, Movement},
-    gas::Ean,
+    gas::EANx,
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::{Bar, Meters, Percent},
@@ -53,7 +53,7 @@ const FIXED_COL_COUNT: usize = 1;
 pub struct PpO2Tab {
     table_state: TableState,
     mix_idx: usize,
-    selection: Option<(Meters, Ean)>,
+    selection: Option<(Meters, EANx)>,
 }
 
 impl Default for PpO2Tab {
@@ -77,19 +77,19 @@ impl PpO2Tab {
         }
     }
 
-    fn selected_mix(&self) -> Ean {
-        Ean::try_from(PPO2_TABLE_MIX_PERCENTS[self.mix_idx])
+    fn selected_mix(&self) -> EANx {
+        EANx::try_from(PPO2_TABLE_MIX_PERCENTS[self.mix_idx])
             .unwrap_or_else(|_| unreachable!("PPO2_TABLE_MIX_PERCENTS values are valid"))
     }
 
     /// Mix columns for a sliding window of `window_size` columns centred on the selected index.
-    fn visible_cols(&self, window_size: usize) -> Vec<Ean> {
+    fn visible_cols(&self, window_size: usize) -> Vec<EANx> {
         let start = window_start(self.mix_idx, PPO2_TABLE_MIX_COUNT, window_size);
         let count = window_size.min(PPO2_TABLE_MIX_COUNT);
 
         (0..count)
             .map(|i| {
-                Ean::try_from(PPO2_TABLE_MIX_PERCENTS[start + i])
+                EANx::try_from(PPO2_TABLE_MIX_PERCENTS[start + i])
                     .unwrap_or_else(|_| unreachable!("PPO2_TABLE_MIX_PERCENTS values are valid"))
             })
             .collect()
@@ -159,7 +159,7 @@ impl PpO2Tab {
         }
     }
 
-    fn build_rows(mixes: &[Ean], theme: &Theme) -> Vec<Row<'static>> {
+    fn build_rows(mixes: &[EANx], theme: &Theme) -> Vec<Row<'static>> {
         (0..=PPO2_TABLE_DEPTH_MAX)
             .map(|d| {
                 PpO2Row {
@@ -175,7 +175,7 @@ impl PpO2Tab {
 
 struct PpO2Row<'a> {
     depth: usize,
-    mixes: &'a [Ean],
+    mixes: &'a [EANx],
     theme: &'a Theme,
 }
 
