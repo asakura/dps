@@ -1,12 +1,9 @@
 //! Error handling, panic hook setup, and debug utilities for DPS.
 
 use std::env;
-use std::fmt;
 
 use color_eyre::Result;
 use tracing::error;
-
-use crate::units::Percent;
 
 /// Installs the `color_eyre` panic and error hooks.
 ///
@@ -92,22 +89,3 @@ macro_rules! trace_dbg {
         trace_dbg!(level: tracing::Level::DEBUG, $ex)
     };
 }
-
-/// Error returned when an O₂ percentage is outside the valid range [10, 100].
-///
-/// ```no_run
-/// use dps::errors::InvalidO2Percent;
-/// use dps::units::Percent;
-/// let msg = InvalidO2Percent(Percent::new(0.05).unwrap()).to_string();
-/// assert!(msg.contains('5') && msg.contains("10") && msg.contains("100"));
-/// ```
-#[derive(Debug, Clone, Copy)]
-pub struct InvalidO2Percent(pub Percent);
-
-impl fmt::Display for InvalidO2Percent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "O₂ percentage {} is outside valid range 10-100%", self.0)
-    }
-}
-
-impl std::error::Error for InvalidO2Percent {}
