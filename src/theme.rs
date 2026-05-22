@@ -1,7 +1,5 @@
 //! Application colour theme. Assumes 24-bit ("true colour") terminal support.
 //!
-//! TODO: update this documentation
-//!
 //! Colour values sourced from <https://github.com/catppuccin/palette> (palette.json v1.8.0).
 //!
 //! # Styling guide
