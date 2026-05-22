@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::{
     action::{Action, Movement},
-    gas::{Ean, Mod},
+    gas::{EANx, MOD},
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::{Bar, Meters, Percent},
@@ -39,10 +39,10 @@ const MOD_YELLOW_BELOW: Meters = Meters::new(20.0);
 /// MOD-by-ppO₂ table: maximum operating depth for each nitrox mix at the selected ppO₂ limit.
 #[derive(Debug)]
 pub struct ModTab {
-    mixes: Vec<Ean>,
+    mixes: Vec<EANx>,
     table_state: TableState,
     ppo2_idx: usize,
-    selection: Option<Mod>,
+    selection: Option<MOD>,
 }
 
 impl Default for ModTab {
@@ -55,9 +55,9 @@ impl ModTab {
     /// Creates a `ModTab` pre-selected on EAN32 at 1.4 bar ppO₂.
     #[must_use]
     pub fn new() -> Self {
-        let mixes: Vec<Ean> = (O2_PCT_MIN..=O2_PCT_MAX)
+        let mixes: Vec<EANx> = (O2_PCT_MIN..=O2_PCT_MAX)
             .filter_map(|p| Percent::new(f64::from(p) / 100.0))
-            .filter_map(|pct| Ean::try_from(pct).ok())
+            .filter_map(|pct| EANx::try_from(pct).ok())
             .collect();
         let start_idx = mixes
             .iter()
@@ -168,7 +168,7 @@ impl ModTab {
 }
 
 struct ModRow<'a> {
-    mix: &'a Ean,
+    mix: &'a EANx,
     cols: &'a [Bar],
     theme: &'a Theme,
 }
@@ -421,7 +421,7 @@ mod tests {
 
             let m = tab.selection.ok_or("no selection after Select action")?;
 
-            assert_eq!(m.gas().fo2(), expected_fo2);
+            assert_eq!(m.fo2(), expected_fo2);
             assert_eq!(m.ppo2_max(), expected_ppo2);
 
             Ok(())
@@ -435,7 +435,6 @@ mod tests {
             let first_fo2 = tab
                 .selection
                 .ok_or("no selection after first Select")?
-                .gas()
                 .fo2();
             tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
@@ -443,7 +442,6 @@ mod tests {
             let second_fo2 = tab
                 .selection
                 .ok_or("no selection after second Select")?
-                .gas()
                 .fo2();
             assert_ne!(first_fo2, second_fo2);
 
