@@ -1,0 +1,74 @@
+use std::fmt;
+
+use crate::units::Percent;
+
+/// Error returned when an [`EANxBlend`] cannot be constructed.
+///
+/// ```no_run
+/// use dps::gas::{EANxBlend, InvalidEANx, PartialPressure, Psa};
+/// use dps::units::Percent;
+///
+/// // FO₂ below 10 % minimum
+/// let too_low = Percent::new(0.09).unwrap();
+/// assert!(matches!(
+///     EANxBlend::new(too_low, PartialPressure),
+///     Err(InvalidEANx::O2TooLow(_))
+/// ));
+///
+/// // PSA ceiling exceeded (fo2 ≈ 95.7 % max)
+/// let too_high = Percent::new(0.99).unwrap();
+/// assert!(matches!(
+///     EANxBlend::new(too_high, Psa),
+///     Err(InvalidEANx::BlendCeilingExceeded(_))
+/// ));
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub enum InvalidEANx {
+    /// FO₂ is below the 10 % minimum for a breathable EAN mix.
+    O2TooLow(Percent),
+    /// FO₂ exceeds the physical ceiling for this blend method.
+    ///
+    /// For [`Psa`] the ceiling is ≈ 95.7 %: the point at which all N₂
+    /// would be depleted and the output is pure O₂ + Ar.
+    BlendCeilingExceeded(Percent),
+}
+
+impl fmt::Display for InvalidEANx {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::O2TooLow(p) => write!(f, "O₂ fraction {p} is below the 10 % minimum"),
+            Self::BlendCeilingExceeded(p) => {
+                write!(f, "O₂ fraction {p} exceeds the blend method ceiling")
+            }
+        }
+    }
+}
+
+impl std::error::Error for InvalidEANx {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::units::Percent;
+    use color_eyre::Result;
+
+    #[test]
+    fn o2_too_low_display_contains_fraction() -> Result<(), Box<dyn std::error::Error>> {
+        let p = Percent::new(0.05).ok_or("invalid")?;
+        let msg = InvalidEANx::O2TooLow(p).to_string();
+
+        assert!(msg.contains('5') || msg.contains("0.05"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn blend_ceiling_exceeded_display() -> Result<(), Box<dyn std::error::Error>> {
+        let p = Percent::new(0.99).ok_or("invalid")?;
+        let msg = InvalidEANx::BlendCeilingExceeded(p).to_string();
+
+        assert!(msg.contains("ceiling"));
+
+        Ok(())
+    }
+}
