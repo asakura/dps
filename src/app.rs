@@ -406,7 +406,9 @@ mod tests {
             App::from_config(4.0, 60.0, config)
         }
 
-        fn config_with_keybindings(bindings: &[(&str, Action)]) -> Result<Config, String> {
+        fn config_with_keybindings(
+            bindings: &[(&str, Action)],
+        ) -> Result<Config, Box<dyn std::error::Error>> {
             let mut home_map = HashMap::new();
 
             for (seq_str, action) in bindings {
@@ -477,7 +479,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_first_key_is_prefix() -> Result<(), String> {
+        fn chord_first_key_is_prefix() -> Result<(), Box<dyn std::error::Error>> {
             let mut app = with_config(config_with_keybindings(
                 [("gg", Action::Move(Movement::GotoTop))].as_slice(),
             )?);
@@ -491,7 +493,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_completes_on_second_key() -> Result<(), String> {
+        fn chord_completes_on_second_key() -> Result<(), Box<dyn std::error::Error>> {
             // Action is dispatched to the component; caller sees None.
             let mut app = with_config(config_with_keybindings(
                 [("gg", Action::Move(Movement::GotoTop))].as_slice(),
@@ -508,7 +510,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_broken_key_retried_as_new_binding() -> Result<(), String> {
+        fn chord_broken_key_retried_as_new_binding() -> Result<(), Box<dyn std::error::Error>> {
             // "g" is a prefix of "gg"; when "j" breaks the chord it is retried
             // as a standalone key, matched as Down, dispatched, and None returned.
             let mut app = with_config(config_with_keybindings(
@@ -530,7 +532,8 @@ mod tests {
         }
 
         #[test]
-        fn chord_broken_unbound_key_falls_to_global_fallback() -> Result<(), String> {
+        fn chord_broken_unbound_key_falls_to_global_fallback()
+        -> Result<(), Box<dyn std::error::Error>> {
             // "g" is a prefix of "gg"; "q" breaks the chord and has no
             // configured binding, so the hardcoded fallback fires: q → Quit.
             let mut app = with_config(config_with_keybindings(
@@ -548,7 +551,7 @@ mod tests {
         }
 
         #[test]
-        fn exact_match_clears_buffer_for_next_chord() -> Result<(), String> {
+        fn exact_match_clears_buffer_for_next_chord() -> Result<(), Box<dyn std::error::Error>> {
             // After a chord fires the buffer is cleared; the next key starts fresh.
             let mut app = with_config(config_with_keybindings(
                 [("gg", Action::Move(Movement::GotoTop))].as_slice(),
@@ -567,7 +570,7 @@ mod tests {
         }
 
         #[test]
-        fn three_key_chord_accumulates_and_fires() -> Result<(), String> {
+        fn three_key_chord_accumulates_and_fires() -> Result<(), Box<dyn std::error::Error>> {
             let mut app = with_config(config_with_keybindings(
                 [("abc", Action::Move(Movement::GotoTop))].as_slice(),
             )?);
@@ -590,7 +593,7 @@ mod tests {
         }
 
         #[test]
-        fn broken_chord_retry_starts_new_prefix() -> Result<(), String> {
+        fn broken_chord_retry_starts_new_prefix() -> Result<(), Box<dyn std::error::Error>> {
             // "gg" and "jk" are bound. Pressing g (prefix) then j breaks gg;
             // j is retried alone and is a prefix of jk, so None is returned and
             // the buffer still holds j. Pressing k then completes jk.
@@ -617,7 +620,8 @@ mod tests {
         }
 
         #[test]
-        fn bound_movement_action_is_dispatched_and_returns_none() -> Result<(), String> {
+        fn bound_movement_action_is_dispatched_and_returns_none()
+        -> Result<(), Box<dyn std::error::Error>> {
             // A configured binding resolves to Action::Move(Down); App dispatches it
             // to the component and returns None — the caller never sees the movement.
             let mut app = with_config(config_with_keybindings(
@@ -633,7 +637,7 @@ mod tests {
         }
 
         #[test]
-        fn quit_action_propagates_to_caller() -> Result<(), String> {
+        fn quit_action_propagates_to_caller() -> Result<(), Box<dyn std::error::Error>> {
             // Quit must still reach the event loop even when routed through dispatch.
             let mut app = with_config(config_with_keybindings([("q", Action::Quit)].as_slice())?);
 
@@ -646,7 +650,8 @@ mod tests {
         }
 
         #[test]
-        fn chord_break_retries_against_config_before_fallback() -> Result<(), String> {
+        fn chord_break_retries_against_config_before_fallback()
+        -> Result<(), Box<dyn std::error::Error>> {
             // "gg" makes 'g' a prefix; "<Tab>" is explicitly bound to None, overriding
             // the built-in fallback that cycles tabs.
             // When a chord breaks (g then Tab), Tab must be retried against config bindings
