@@ -124,7 +124,6 @@ macro_rules! unit_newtype {
             }
         }
 
-        #[cfg(test)]
         impl approx::AbsDiffEq for $ty {
             type Epsilon = f64;
 
@@ -137,7 +136,6 @@ macro_rules! unit_newtype {
             }
         }
 
-        #[cfg(test)]
         impl approx::RelativeEq for $ty {
             fn default_max_relative() -> f64 {
                 f64::default_max_relative()
@@ -288,6 +286,13 @@ impl Percent {
     }
 
     /// Returns the underlying fraction in [0.0, 1.0].
+    ///
+    /// ```no_run
+    /// use dps::units::Percent;
+    /// # use approx::assert_relative_eq;
+    /// let p = Percent::new(0.32).unwrap();
+    /// assert_relative_eq!(p.value(), 0.32);
+    /// ```
     #[must_use]
     pub const fn value(self) -> f64 {
         self.0
@@ -315,7 +320,6 @@ impl fmt::Display for Percent {
     }
 }
 
-#[cfg(test)]
 impl approx::AbsDiffEq for Percent {
     type Epsilon = f64;
 
@@ -328,7 +332,6 @@ impl approx::AbsDiffEq for Percent {
     }
 }
 
-#[cfg(test)]
 impl approx::RelativeEq for Percent {
     fn default_max_relative() -> f64 {
         f64::default_max_relative()
@@ -338,7 +341,6 @@ impl approx::RelativeEq for Percent {
         self.0.relative_eq(&other.0, epsilon, max_relative)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
