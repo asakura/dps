@@ -143,8 +143,22 @@ impl From<MiniMOD> for Meters {
 }
 
 /// Full-detail display: `{gas name}  MiniMOD {depth}  @ ppO₂ {ppo2_min}`.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MiniMODSummary(MiniMOD);
+
+impl MiniMODSummary {
+    /// Unwraps the inner [`MiniMOD`].
+    #[must_use]
+    pub const fn into_inner(self) -> MiniMOD {
+        self.0
+    }
+}
+
+impl From<MiniMOD> for MiniMODSummary {
+    fn from(m: MiniMOD) -> Self {
+        Self(m)
+    }
+}
 
 impl fmt::Display for MiniMODSummary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -249,6 +263,30 @@ mod tests {
                 m.summary().to_string(),
                 "EANx 32  MiniMOD 33.8 m  @ ppO₂ 1.4 bar"
             );
+
+            Ok(())
+        }
+
+        #[test]
+        fn into_inner_recovers_original_minimod() -> Result<()> {
+            let m = MiniMOD::try_from((
+                Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?,
+                Bar::new(0.16),
+            ))?;
+
+            assert_eq!(m.summary().into_inner(), m);
+
+            Ok(())
+        }
+
+        #[test]
+        fn from_impl_matches_summary_method() -> Result<()> {
+            let m = MiniMOD::try_from((
+                Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?,
+                Bar::new(0.16),
+            ))?;
+
+            assert_eq!(MiniMODSummary::from(m).to_string(), m.summary().to_string());
 
             Ok(())
         }

@@ -167,8 +167,22 @@ impl approx::RelativeEq for MOD {
 }
 
 /// Full-detail display: `{gas name}  MOD {depth}  @ ppO₂ {ppo2_max}`.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MODSummary(MOD);
+
+impl MODSummary {
+    /// Unwraps the inner [`MOD`].
+    #[must_use]
+    pub const fn into_inner(self) -> MOD {
+        self.0
+    }
+}
+
+impl From<MOD> for MODSummary {
+    fn from(m: MOD) -> Self {
+        Self(m)
+    }
+}
 
 impl fmt::Display for MODSummary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -242,6 +256,30 @@ mod tests {
                 m.summary().to_string(),
                 "EANx 32  MOD 33.8 m  @ ppO₂ 1.4 bar"
             );
+
+            Ok(())
+        }
+
+        #[test]
+        fn into_inner_recovers_original_mod() -> Result<()> {
+            let m = MOD::try_from((
+                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Bar::new(1.4),
+            ))?;
+
+            assert_eq!(m.summary().into_inner(), m);
+
+            Ok(())
+        }
+
+        #[test]
+        fn from_impl_matches_summary_method() -> Result<()> {
+            let m = MOD::try_from((
+                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Bar::new(1.4),
+            ))?;
+
+            assert_eq!(MODSummary::from(m).to_string(), m.summary().to_string());
 
             Ok(())
         }
