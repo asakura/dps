@@ -23,6 +23,10 @@ pub struct PartialPressure;
 impl sealed::Sealed for PartialPressure {}
 
 impl BlendMethod for PartialPressure {
+    fn blend_name(&self) -> &'static str {
+        "partial pressure"
+    }
+
     fn components(&self, fo2: f64) -> GasComponents {
         let d = 1.0 - fo2;
 
@@ -81,5 +85,10 @@ mod tests {
         assert_relative_eq!(c.ar(), 0.0, epsilon = 1e-12);
         assert_relative_eq!(c.co2(), 0.0, epsilon = 1e-12);
         assert_relative_eq!(c.other(), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn blend_name_is_partial_pressure() {
+        assert_eq!(PartialPressure.blend_name(), "partial pressure");
     }
 }

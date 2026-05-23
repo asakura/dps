@@ -8,6 +8,9 @@ use super::constants::{
     AIR_N2, AIR_NARCOTIC, EAN_MIN_O2, GAS_CONSTANT, SEAWATER, STANDARD_TEMP_K, SURFACE_PRESSURE,
 };
 
+mod detail;
+pub use detail::EANxDetail;
+
 mod error;
 pub use error::InvalidEANx;
 
@@ -407,6 +410,40 @@ impl<M: BlendMethod> EANxBlend<M> {
         } else {
             (ppo2 - 0.5_f64).powf(0.83)
         }
+    }
+
+    /// Short human-readable name for the blend method used to produce this mix.
+    ///
+    /// ```no_run
+    /// use dps::gas::{EANx, EANxBlend, Psa};
+    /// use dps::units::Percent;
+    ///
+    /// let pp = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// assert_eq!(pp.blend_name(), "partial pressure");
+    ///
+    /// let psa = EANxBlend::new(Percent::new(0.32).unwrap(), Psa).unwrap();
+    /// assert_eq!(psa.blend_name(), "PSA");
+    /// ```
+    #[must_use]
+    pub fn blend_name(self) -> &'static str {
+        self.method.blend_name()
+    }
+
+    /// Returns a display wrapper that prints extended gas information.
+    ///
+    /// The wrapper's [`Display`](std::fmt::Display) shows the gas name, blend
+    /// method, and the full component breakdown (O₂, N₂, Ar, CO₂, other).
+    ///
+    /// ```no_run
+    /// use dps::gas::EANx;
+    /// use dps::units::Percent;
+    ///
+    /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// println!("{}", ean32.detail());
+    /// ```
+    #[must_use]
+    pub fn detail(self) -> EANxDetail<M> {
+        EANxDetail::from(self)
     }
 }
 

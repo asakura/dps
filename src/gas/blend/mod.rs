@@ -30,6 +30,15 @@ pub trait BlendMethod: sealed::Sealed + Copy + fmt::Debug {
     /// ```
     fn components(&self, fo2: f64) -> GasComponents;
 
+    /// Short human-readable name for this blend method.
+    ///
+    /// ```no_run
+    /// use dps::gas::{BlendMethod, PartialPressure, Psa};
+    /// assert_eq!(PartialPressure.blend_name(), "partial pressure");
+    /// assert_eq!(Psa.blend_name(), "PSA");
+    /// ```
+    fn blend_name(&self) -> &'static str;
+
     /// Returns `true` if `fo2` is physically achievable with this blend method.
     ///
     /// Defaults to `true`; overridden by [`Psa`] to enforce the ~95.7 % ceiling.

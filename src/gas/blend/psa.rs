@@ -31,6 +31,10 @@ pub struct Psa;
 impl sealed::Sealed for Psa {}
 
 impl BlendMethod for Psa {
+    fn blend_name(&self) -> &'static str {
+        "PSA"
+    }
+
     fn components(&self, fo2: f64) -> GasComponents {
         let ar = fo2 * PSA_AR_PER_O2;
         let other = fo2 * PSA_OTHER_PER_O2;
@@ -98,5 +102,10 @@ mod tests {
         );
 
         assert_relative_eq!(c.sum(), 1.0, epsilon = 1e-9);
+    }
+
+    #[test]
+    fn blend_name_is_psa() {
+        assert_eq!(Psa.blend_name(), "PSA");
     }
 }

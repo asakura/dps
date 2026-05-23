@@ -132,6 +132,10 @@ impl Membrane {
 impl sealed::Sealed for Membrane {}
 
 impl BlendMethod for Membrane {
+    fn blend_name(&self) -> &'static str {
+        "membrane"
+    }
+
     fn components(&self, fo2: f64) -> GasComponents {
         let d = 1.0 - fo2;
 
@@ -235,5 +239,10 @@ mod tests {
             msg.contains("fn2") || msg.contains("far") || msg.contains("fco2"),
             "expected fraction names in message, got: {msg}"
         );
+    }
+
+    #[test]
+    fn blend_name_is_membrane() {
+        assert_eq!(Membrane::typical().blend_name(), "membrane");
     }
 }
