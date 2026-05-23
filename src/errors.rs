@@ -1,9 +1,24 @@
-//! Error handling, panic hook setup, and debug utilities for DPS.
+//! Error types, panic hook setup, and debug utilities for DPS.
 
 use std::env;
 
 use color_eyre::Result;
 use tracing::error;
+
+/// Application-level error, wrapping all domain and configuration errors.
+///
+/// Implements [`std::error::Error`] via `thiserror`, so any variant converts
+/// to [`color_eyre::Report`] through `?` in functions that return
+/// [`color_eyre::Result`].
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    /// Gas domain error (blend validation, membrane fractions, …).
+    #[error(transparent)]
+    Gas(#[from] crate::gas::GasError),
+    /// Configuration error (key parsing, file loading, …).
+    #[error(transparent)]
+    Config(#[from] crate::config::ConfigError),
+}
 
 /// Installs the `color_eyre` panic and error hooks.
 ///

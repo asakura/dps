@@ -76,8 +76,7 @@ impl Default for App {
 }
 
 impl App {
-    /// Creates an `App`, loading configuration from disk (falls back to
-    /// defaults on any error).
+    /// Creates an `App`, loading configuration from disk.
     ///
     /// `tick_rate` controls how often the internal timer fires (Hz);
     /// `frame_rate` caps the render rate (Hz).  `config_dir` and `data_dir`
@@ -85,8 +84,9 @@ impl App {
     ///
     /// # Errors
     ///
-    /// Currently infallible; the `Result` return type is kept for forward
-    /// compatibility.
+    /// Returns [`crate::Error::Config`] if a config file is present but cannot
+    /// be parsed, if theme resolution fails, or if `defaultTheme` does not
+    /// match any resolved theme.
     ///
     /// # Examples
     ///
@@ -102,11 +102,8 @@ impl App {
         frame_rate: f64,
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
-    ) -> Result<Self> {
-        let config = Config::from_dirs(config_dir, data_dir).unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "config load failed, using defaults");
-            Config::default()
-        });
+    ) -> Result<Self, crate::Error> {
+        let config = Config::from_dirs(config_dir, data_dir)?;
         tracing::debug!(
             data_dir = %config.config.data_dir.display(),
             config_dir = %config.config.config_dir.display(),
@@ -406,9 +403,7 @@ mod tests {
             App::from_config(4.0, 60.0, config)
         }
 
-        fn config_with_keybindings(
-            bindings: &[(&str, Action)],
-        ) -> Result<Config, Box<dyn std::error::Error>> {
+        fn config_with_keybindings(bindings: &[(&str, Action)]) -> Result<Config> {
             let mut home_map = HashMap::new();
 
             for (seq_str, action) in bindings {
@@ -479,7 +474,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_first_key_is_prefix() -> Result<(), Box<dyn std::error::Error>> {
+        fn chord_first_key_is_prefix() -> Result<()> {
             let mut app = with_config(config_with_keybindings(
                 [("gg", Action::Move(Movement::GotoTop))].as_slice(),
             )?);
@@ -493,7 +488,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_completes_on_second_key() -> Result<(), Box<dyn std::error::Error>> {
+        fn chord_completes_on_second_key() -> Result<()> {
             // Action is dispatched to the component; caller sees None.
             let mut app = with_config(config_with_keybindings(
                 [("gg", Action::Move(Movement::GotoTop))].as_slice(),
@@ -510,7 +505,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_broken_key_retried_as_new_binding() -> Result<(), Box<dyn std::error::Error>> {
+        fn chord_broken_key_retried_as_new_binding() -> Result<()> {
             // "g" is a prefix of "gg"; when "j" breaks the chord it is retried
             // as a standalone key, matched as Down, dispatched, and None returned.
             let mut app = with_config(config_with_keybindings(
@@ -532,8 +527,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_broken_unbound_key_falls_to_global_fallback()
-        -> Result<(), Box<dyn std::error::Error>> {
+        fn chord_broken_unbound_key_falls_to_global_fallback() -> Result<()> {
             // "g" is a prefix of "gg"; "q" breaks the chord and has no
             // configured binding, so the hardcoded fallback fires: q → Quit.
             let mut app = with_config(config_with_keybindings(
@@ -551,7 +545,7 @@ mod tests {
         }
 
         #[test]
-        fn exact_match_clears_buffer_for_next_chord() -> Result<(), Box<dyn std::error::Error>> {
+        fn exact_match_clears_buffer_for_next_chord() -> Result<()> {
             // After a chord fires the buffer is cleared; the next key starts fresh.
             let mut app = with_config(config_with_keybindings(
                 [("gg", Action::Move(Movement::GotoTop))].as_slice(),
@@ -570,7 +564,7 @@ mod tests {
         }
 
         #[test]
-        fn three_key_chord_accumulates_and_fires() -> Result<(), Box<dyn std::error::Error>> {
+        fn three_key_chord_accumulates_and_fires() -> Result<()> {
             let mut app = with_config(config_with_keybindings(
                 [("abc", Action::Move(Movement::GotoTop))].as_slice(),
             )?);
@@ -593,7 +587,7 @@ mod tests {
         }
 
         #[test]
-        fn broken_chord_retry_starts_new_prefix() -> Result<(), Box<dyn std::error::Error>> {
+        fn broken_chord_retry_starts_new_prefix() -> Result<()> {
             // "gg" and "jk" are bound. Pressing g (prefix) then j breaks gg;
             // j is retried alone and is a prefix of jk, so None is returned and
             // the buffer still holds j. Pressing k then completes jk.
@@ -620,8 +614,7 @@ mod tests {
         }
 
         #[test]
-        fn bound_movement_action_is_dispatched_and_returns_none()
-        -> Result<(), Box<dyn std::error::Error>> {
+        fn bound_movement_action_is_dispatched_and_returns_none() -> Result<()> {
             // A configured binding resolves to Action::Move(Down); App dispatches it
             // to the component and returns None — the caller never sees the movement.
             let mut app = with_config(config_with_keybindings(
@@ -637,7 +630,7 @@ mod tests {
         }
 
         #[test]
-        fn quit_action_propagates_to_caller() -> Result<(), Box<dyn std::error::Error>> {
+        fn quit_action_propagates_to_caller() -> Result<()> {
             // Quit must still reach the event loop even when routed through dispatch.
             let mut app = with_config(config_with_keybindings([("q", Action::Quit)].as_slice())?);
 
@@ -650,8 +643,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_break_retries_against_config_before_fallback()
-        -> Result<(), Box<dyn std::error::Error>> {
+        fn chord_break_retries_against_config_before_fallback() -> Result<()> {
             // "gg" makes 'g' a prefix; "<Tab>" is explicitly bound to None, overriding
             // the built-in fallback that cycles tabs.
             // When a chord breaks (g then Tab), Tab must be retried against config bindings
@@ -676,6 +668,7 @@ mod tests {
 
     mod hint_bar {
         use super::*;
+        use color_eyre::eyre::eyre;
 
         static COMP: &[KeyBinding] = [KeyBinding {
             key: "j/k",
@@ -689,7 +682,7 @@ mod tests {
         .as_slice();
 
         #[test]
-        fn renders_component_bindings_first() -> Result<(), Box<dyn std::error::Error>> {
+        fn renders_component_bindings_first() -> Result<()> {
             let text = widget_text(
                 HintBar {
                     component: COMP,
@@ -698,10 +691,12 @@ mod tests {
                 },
                 60,
             );
-            let j_pos = text.find("j/k").ok_or("'j/k' not found in hint bar text")?;
+            let j_pos = text
+                .find("j/k")
+                .ok_or_else(|| eyre!("'j/k' not found in hint bar text"))?;
             let q_pos = text
                 .find("q quit")
-                .ok_or("'q quit' not found in hint bar text")?;
+                .ok_or_else(|| eyre!("'q quit' not found in hint bar text"))?;
 
             assert!(j_pos < q_pos);
 

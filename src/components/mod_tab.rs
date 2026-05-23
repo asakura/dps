@@ -306,7 +306,7 @@ impl Component for ModTab {
 mod tests {
     use super::*;
     use crate::components::test_utils::widget_text;
-    use color_eyre::Result;
+    use color_eyre::{Result, eyre::eyre};
 
     mod constants {
         use super::*;
@@ -384,9 +384,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn selected_row_is_ean32() -> Result<(), Box<dyn std::error::Error>> {
+        fn selected_row_is_ean32() -> Result<()> {
             let tab = ModTab::new();
-            let idx = tab.table_state.selected().ok_or("no row selected")?;
+            let idx = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             assert_eq!(tab.mixes[idx].fo2(), DEFAULT_MIX);
 
@@ -411,15 +414,20 @@ mod tests {
         use crate::action::Movement;
 
         #[test]
-        fn stores_current_mix_and_ppo2() -> Result<(), Box<dyn std::error::Error>> {
+        fn stores_current_mix_and_ppo2() -> Result<()> {
             let mut tab = ModTab::new();
-            let row = tab.table_state.selected().ok_or("no row selected")?;
+            let row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
             let expected_fo2 = tab.mixes[row].fo2();
             let expected_ppo2 = tab.ppo2();
 
             tab.handle_action(Action::Select);
 
-            let m = tab.selection.ok_or("no selection after Select action")?;
+            let m = tab
+                .selection
+                .ok_or_else(|| eyre!("no selection after Select action"))?;
 
             assert_eq!(m.fo2(), expected_fo2);
             assert_eq!(m.ppo2_max(), expected_ppo2);
@@ -428,21 +436,23 @@ mod tests {
         }
 
         #[test]
-        fn selection_updates_after_moving_row() -> Result<(), Box<dyn std::error::Error>> {
+        fn selection_updates_after_moving_row() -> Result<()> {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Select);
 
             let first_fo2 = tab
                 .selection
-                .ok_or("no selection after first Select")?
+                .ok_or_else(|| eyre!("no selection after first Select"))?
                 .fo2();
+
             tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
 
             let second_fo2 = tab
                 .selection
-                .ok_or("no selection after second Select")?
+                .ok_or_else(|| eyre!("no selection after second Select"))?
                 .fo2();
+
             assert_ne!(first_fo2, second_fo2);
 
             Ok(())
@@ -539,14 +549,19 @@ mod tests {
         use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[test]
-        fn down_advances_row() -> Result<(), Box<dyn std::error::Error>> {
+        fn down_advances_row() -> Result<()> {
             let mut tab = ModTab::new();
-            let start = tab.table_state.selected().ok_or("no row selected")?;
+            let start = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::Move(Movement::Down));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 start + 1
             );
 
@@ -554,14 +569,16 @@ mod tests {
         }
 
         #[test]
-        fn down_clamped_at_last_mix() -> Result<(), Box<dyn std::error::Error>> {
+        fn down_clamped_at_last_mix() -> Result<()> {
             let mut tab = ModTab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::Down));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 tab.mixes.len() - 1
             );
 
@@ -569,15 +586,20 @@ mod tests {
         }
 
         #[test]
-        fn up_retreats_row() -> Result<(), Box<dyn std::error::Error>> {
+        fn up_retreats_row() -> Result<()> {
             let mut tab = ModTab::new();
             tab.handle_action(Action::Move(Movement::Down));
 
-            let after = tab.table_state.selected().ok_or("no row selected")?;
+            let after = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
             tab.handle_action(Action::Move(Movement::Up));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 after - 1
             );
 
@@ -585,19 +607,24 @@ mod tests {
         }
 
         #[test]
-        fn up_clamped_at_zero() -> Result<(), Box<dyn std::error::Error>> {
+        fn up_clamped_at_zero() -> Result<()> {
             let mut tab = ModTab::new();
 
             tab.handle_action(Action::Move(Movement::GotoTop));
             tab.handle_action(Action::Move(Movement::Up));
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 0);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                0
+            );
 
             Ok(())
         }
 
         #[test]
-        fn goto_top_selects_first_row() -> Result<(), Box<dyn std::error::Error>> {
+        fn goto_top_selects_first_row() -> Result<()> {
             let mut tab = ModTab::new();
 
             for _ in 0..10 {
@@ -606,19 +633,26 @@ mod tests {
 
             tab.handle_action(Action::Move(Movement::GotoTop));
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 0);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                0
+            );
 
             Ok(())
         }
 
         #[test]
-        fn goto_bottom_selects_last_row() -> Result<(), Box<dyn std::error::Error>> {
+        fn goto_bottom_selects_last_row() -> Result<()> {
             let mut tab = ModTab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 tab.mixes.len() - 1
             );
 
@@ -626,17 +660,19 @@ mod tests {
         }
 
         #[test]
-        fn scroll_down_moves_by_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn scroll_down_moves_by_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
             tab.handle_action(Action::Move(Movement::ScrollDown));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 tab.mixes
                     .iter()
                     .position(|m| m.fo2() == DEFAULT_MIX)
-                    .ok_or("EAN32 not found in mixes")?
+                    .ok_or_else(|| eyre!("EAN32 not found in mixes"))?
                     + SCROLL_DELTA as usize,
             );
 
@@ -644,14 +680,16 @@ mod tests {
         }
 
         #[test]
-        fn scroll_up_moves_by_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn scroll_up_moves_by_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::ScrollUp));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 tab.mixes.len() - 1 - SCROLL_DELTA as usize,
             );
 
@@ -659,14 +697,19 @@ mod tests {
         }
 
         #[test]
-        fn page_down_moves_by_page_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn page_down_moves_by_page_delta() -> Result<()> {
             let mut tab = ModTab::new();
-            let start = tab.table_state.selected().ok_or("no row selected")?;
+            let start = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::Move(Movement::PageDown));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 start + PAGE_DELTA as usize,
             );
 
@@ -674,14 +717,16 @@ mod tests {
         }
 
         #[test]
-        fn page_up_moves_by_page_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn page_up_moves_by_page_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::PageUp));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 tab.mixes.len() - 1 - PAGE_DELTA as usize,
             );
 
@@ -732,25 +777,41 @@ mod tests {
         }
 
         #[test]
-        fn none_is_a_noop() -> Result<(), Box<dyn std::error::Error>> {
+        fn none_is_a_noop() -> Result<()> {
             let mut tab = ModTab::new();
-            let before = tab.table_state.selected().ok_or("no row selected")?;
+            let before = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::None);
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                before
+            );
 
             Ok(())
         }
 
         #[test]
-        fn quit_is_a_noop() -> Result<(), Box<dyn std::error::Error>> {
+        fn quit_is_a_noop() -> Result<()> {
             let mut tab = ModTab::new();
-            let before = tab.table_state.selected().ok_or("no row selected")?;
+            let before = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::Quit);
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                before
+            );
 
             Ok(())
         }
@@ -765,7 +826,9 @@ mod tests {
             // selected_column = col_in_window(6) + FIXED_COL_COUNT(2) = 8
             let mut tab = ModTab::new();
             let area = Rect::new(0, 0, 113, 40);
+
             tab.render(area, &mut Buffer::empty(area), &Theme::default());
+
             assert_eq!(tab.table_state.selected_column(), Some(8));
         }
     }

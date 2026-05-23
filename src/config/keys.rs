@@ -1,32 +1,8 @@
 //! Vim-style key sequence parsing and serialization.
 
-use std::fmt;
-
-use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKeyCode};
 
-/// Error returned by [`parse_key_sequence`] and related functions.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParseKeyError {
-    /// The input key sequence was empty.
-    EmptySequence,
-    /// An opening `<` has no matching `>`.
-    UnclosedAngleBracket(String),
-    /// A `<…>` spec contained an unrecognised key name.
-    UnknownKey(String),
-}
-
-impl fmt::Display for ParseKeyError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::EmptySequence => write!(f, "empty key sequence"),
-            Self::UnclosedAngleBracket(raw) => write!(f, "unclosed `<` in `{raw}`"),
-            Self::UnknownKey(key) => write!(f, "unable to parse `{key}`"),
-        }
-    }
-}
-
-impl std::error::Error for ParseKeyError {}
+use super::error::KeyResolutionError;
 
 /// Parses a Vim-style key sequence into a [`Vec<KeyEvent>`].
 ///
@@ -37,9 +13,9 @@ impl std::error::Error for ParseKeyError {}
 ///
 /// # Errors
 ///
-/// - [`ParseKeyError::EmptySequence`] if `raw` is empty.
-/// - [`ParseKeyError::UnclosedAngleBracket`] if a `<` has no matching `>`.
-/// - [`ParseKeyError::UnknownKey`] if a `<…>` spec names an unrecognised key.
+/// - [`KeyResolutionError::EmptySequence`] if `raw` is empty.
+/// - [`KeyResolutionError::UnclosedAngleBracket`] if a `<` has no matching `>`.
+/// - [`KeyResolutionError::UnknownKey`] if a `<…>` spec names an unrecognised key.
 ///
 /// # Examples
 ///
@@ -78,9 +54,9 @@ impl std::error::Error for ParseKeyError {}
 /// assert!(parse_key_sequence("<C-d").is_err());
 /// assert!(parse_key_sequence("<nope>").is_err());
 /// ```
-pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, ParseKeyError> {
+pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, KeyResolutionError> {
     if raw.is_empty() {
-        return Err(ParseKeyError::EmptySequence);
+        return Err(KeyResolutionError::EmptySequence);
     }
 
     let mut keys = Vec::new();
@@ -100,7 +76,7 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, ParseKeyError> {
             }
 
             if !closed {
-                return Err(ParseKeyError::UnclosedAngleBracket(raw.to_owned()));
+                return Err(KeyResolutionError::UnclosedAngleBracket(raw.to_owned()));
             }
 
             keys.push(parse_key_event(&spec)?);
@@ -262,7 +238,7 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
 /// Parses the content of a `<…>` spec (without the angle brackets) into a
 /// [`KeyEvent`]. The input is lowercased before modifier extraction so that
 /// `<C-A>` and `<c-a>` are equivalent.
-fn parse_key_event(raw: &str) -> Result<KeyEvent, ParseKeyError> {
+fn parse_key_event(raw: &str) -> Result<KeyEvent, KeyResolutionError> {
     let raw_lower = raw.to_ascii_lowercase();
     let (remaining, modifiers) = extract_modifiers(&raw_lower);
 
@@ -303,7 +279,7 @@ fn extract_modifiers(raw: &str) -> (&str, KeyModifiers) {
 fn parse_key_code_with_modifiers(
     raw: &str,
     mut modifiers: KeyModifiers,
-) -> Result<KeyEvent, ParseKeyError> {
+) -> Result<KeyEvent, KeyResolutionError> {
     let c = match raw {
         "esc" | "escape" => KeyCode::Esc,
         "cr" | "enter" | "return" => KeyCode::Enter,
@@ -371,19 +347,23 @@ fn parse_key_code_with_modifiers(
                 .chars()
                 .next()
                 .unwrap_or_else(|| unreachable!("guard ensures exactly one char"));
+
             if modifiers.contains(KeyModifiers::SHIFT) {
                 c = c.to_ascii_uppercase();
             }
+
             KeyCode::Char(c)
         }
-        _ => return Err(ParseKeyError::UnknownKey(raw.to_owned())),
+        _ => return Err(KeyResolutionError::UnknownKey(raw.to_owned())),
     };
+
     Ok(KeyEvent::new(c, modifiers))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use color_eyre::Result;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use rstest::rstest;
 
@@ -394,10 +374,7 @@ mod tests {
         #[case("a", KeyCode::Char('a'))]
         #[case("enter", KeyCode::Enter)]
         #[case("esc", KeyCode::Esc)]
-        fn simple_chars_and_named_keys(
-            #[case] key: &str,
-            #[case] code: KeyCode,
-        ) -> Result<(), Box<dyn std::error::Error>> {
+        fn simple_chars_and_named_keys(#[case] key: &str, #[case] code: KeyCode) -> Result<()> {
             assert_eq!(
                 parse_key_event(key)?,
                 KeyEvent::new(code, KeyModifiers::empty())
@@ -415,7 +392,7 @@ mod tests {
             #[case] key: &str,
             #[case] code: KeyCode,
             #[case] modifier: KeyModifiers,
-        ) -> Result<(), Box<dyn std::error::Error>> {
+        ) -> Result<()> {
             assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifier));
 
             Ok(())
@@ -428,7 +405,7 @@ mod tests {
             #[case] key: &str,
             #[case] code: KeyCode,
             #[case] modifier: KeyModifiers,
-        ) -> Result<(), Box<dyn std::error::Error>> {
+        ) -> Result<()> {
             assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifier));
 
             Ok(())
@@ -437,7 +414,7 @@ mod tests {
         #[rstest]
         #[case("f1", 1u8)]
         #[case("f12", 12u8)]
-        fn f_keys(#[case] key: &str, #[case] n: u8) -> Result<(), Box<dyn std::error::Error>> {
+        fn f_keys(#[case] key: &str, #[case] n: u8) -> Result<()> {
             assert_eq!(
                 parse_key_event(key)?,
                 KeyEvent::new(KeyCode::F(n), KeyModifiers::NONE)
@@ -460,14 +437,14 @@ mod tests {
             #[case] key: &str,
             #[case] code: KeyCode,
             #[case] modifiers: KeyModifiers,
-        ) -> Result<(), Box<dyn std::error::Error>> {
+        ) -> Result<()> {
             assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifiers));
 
             Ok(())
         }
 
         #[test]
-        fn backtab_inserts_shift() -> Result<(), Box<dyn std::error::Error>> {
+        fn backtab_inserts_shift() -> Result<()> {
             assert_eq!(
                 parse_key_event("backtab")?,
                 KeyEvent::new(KeyCode::BackTab, KeyModifiers::SHIFT)
@@ -477,7 +454,7 @@ mod tests {
         }
 
         #[test]
-        fn shift_prefix_uppercases_char() -> Result<(), Box<dyn std::error::Error>> {
+        fn shift_prefix_uppercases_char() -> Result<()> {
             assert_eq!(
                 parse_key_event("s-g")?,
                 KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT)
@@ -523,14 +500,15 @@ mod tests {
         #[test]
         fn empty_sequence_display() {
             assert_eq!(
-                ParseKeyError::EmptySequence.to_string(),
+                KeyResolutionError::EmptySequence.to_string(),
                 "empty key sequence"
             );
         }
 
         #[test]
         fn unclosed_angle_bracket_display_contains_input() {
-            let msg = ParseKeyError::UnclosedAngleBracket("<C-d".to_owned()).to_string();
+            let msg = KeyResolutionError::UnclosedAngleBracket("<C-d".to_owned()).to_string();
+
             assert!(
                 msg.contains("<C-d"),
                 "expected input in message, got: {msg}"
@@ -539,7 +517,8 @@ mod tests {
 
         #[test]
         fn unknown_key_display_contains_key_name() {
-            let msg = ParseKeyError::UnknownKey("nope".to_owned()).to_string();
+            let msg = KeyResolutionError::UnknownKey("nope".to_owned()).to_string();
+
             assert!(
                 msg.contains("nope"),
                 "expected key name in message, got: {msg}"
@@ -548,14 +527,17 @@ mod tests {
 
         #[test]
         fn empty_input_returns_empty_sequence_variant() {
-            assert_eq!(parse_key_sequence(""), Err(ParseKeyError::EmptySequence));
+            assert_eq!(
+                parse_key_sequence(""),
+                Err(KeyResolutionError::EmptySequence)
+            );
         }
 
         #[test]
         fn unclosed_bracket_returns_correct_variant() {
             assert!(matches!(
                 parse_key_sequence("<C-d"),
-                Err(ParseKeyError::UnclosedAngleBracket(_))
+                Err(KeyResolutionError::UnclosedAngleBracket(_))
             ));
         }
 
@@ -563,7 +545,7 @@ mod tests {
         fn unknown_key_returns_correct_variant() {
             assert!(matches!(
                 parse_key_sequence("<nope>"),
-                Err(ParseKeyError::UnknownKey(_))
+                Err(KeyResolutionError::UnknownKey(_))
             ));
         }
     }
@@ -580,7 +562,7 @@ mod tests {
         }
 
         #[test]
-        fn round_trip() -> Result<(), Box<dyn std::error::Error>> {
+        fn round_trip() -> Result<()> {
             let seq = parse_key_sequence("<C-w>j")?;
 
             assert_eq!(seq.len(), 2);
@@ -591,7 +573,7 @@ mod tests {
         }
 
         #[test]
-        fn two_consecutive_angle_bracket_specs() -> Result<(), Box<dyn std::error::Error>> {
+        fn two_consecutive_angle_bracket_specs() -> Result<()> {
             let seq = parse_key_sequence("<C-w><C-j>")?;
 
             assert_eq!(seq.len(), 2);
@@ -608,7 +590,7 @@ mod tests {
         }
 
         #[test]
-        fn space_key_parses_and_round_trips() -> Result<(), Box<dyn std::error::Error>> {
+        fn space_key_parses_and_round_trips() -> Result<()> {
             let seq = parse_key_sequence("<Space>")?;
 
             assert_eq!(seq, [KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)]);
@@ -618,7 +600,7 @@ mod tests {
         }
 
         #[test]
-        fn bare_and_bracketed_mixed_sequence() -> Result<(), Box<dyn std::error::Error>> {
+        fn bare_and_bracketed_mixed_sequence() -> Result<()> {
             let seq = parse_key_sequence("j<Down>")?;
 
             assert_eq!(seq.len(), 2);
@@ -632,7 +614,7 @@ mod tests {
         }
 
         #[test]
-        fn shift_char_round_trips() -> Result<(), Box<dyn std::error::Error>> {
+        fn shift_char_round_trips() -> Result<()> {
             let upper = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT);
             let s = key_event_to_string(&upper);
 
@@ -707,7 +689,7 @@ mod tests {
         fn named_special_key_parses_to_expected_code(
             #[case] name: &str,
             #[case] expected_code: KeyCode,
-        ) -> Result<(), Box<dyn std::error::Error>> {
+        ) -> Result<()> {
             let key = format!("<{name}>");
             let events = parse_key_sequence(&key)?;
 

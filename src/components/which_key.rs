@@ -157,7 +157,7 @@ fn bottom_rect(height: u16, area: Rect) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use color_eyre::Result;
+    use color_eyre::{Result, eyre::eyre};
     use ratatui::{Terminal, backend::TestBackend, layout::Position};
 
     mod bottom_rect {
@@ -211,11 +211,11 @@ mod tests {
         }
 
         #[test]
-        fn key_placed_after_lead() -> Result<(), Box<dyn std::error::Error>> {
+        fn key_placed_after_lead() -> Result<()> {
             let buf = render_entry(&BINDING, 30)?;
             assert_eq!(
                 buf.cell(Position::new(LEAD, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or_else(|| eyre!("cell out of bounds"))?
                     .symbol(),
                 "?"
             );
@@ -224,25 +224,25 @@ mod tests {
         }
 
         #[test]
-        fn desc_placed_after_lead_key_gap() -> Result<(), Box<dyn std::error::Error>> {
+        fn desc_placed_after_lead_key_gap() -> Result<()> {
             let buf = render_entry(&BINDING, 30)?;
             let x = LEAD + KEY_W + ENTRY_GAP;
 
             assert_eq!(
                 buf.cell(Position::new(x, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or_else(|| eyre!("cell out of bounds"))?
                     .symbol(),
                 "z"
             );
             assert_eq!(
                 buf.cell(Position::new(x + 1, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or_else(|| eyre!("cell out of bounds"))?
                     .symbol(),
                 "i"
             );
             assert_eq!(
                 buf.cell(Position::new(x + 2, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or_else(|| eyre!("cell out of bounds"))?
                     .symbol(),
                 "g"
             );
@@ -251,19 +251,19 @@ mod tests {
         }
 
         #[test]
-        fn long_key_clipped_to_key_width() -> Result<(), Box<dyn std::error::Error>> {
+        fn long_key_clipped_to_key_width() -> Result<()> {
             // Key longer than KEY_W is clipped by the layout rect; desc starts at the correct offset.
             let buf = render_entry(&LONG_KEY, 30)?;
 
             assert_eq!(
                 buf.cell(Position::new(LEAD, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or_else(|| eyre!("cell out of bounds"))?
                     .symbol(),
                 "t"
             );
             assert_eq!(
                 buf.cell(Position::new(LEAD + KEY_W + ENTRY_GAP, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or_else(|| eyre!("cell out of bounds"))?
                     .symbol(),
                 "d"
             );
@@ -279,7 +279,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn bindings_is_noop() -> Result<(), Box<dyn std::error::Error>> {
+            fn bindings_is_noop() -> Result<()> {
                 let backend = TestBackend::new(40, 5);
                 let mut terminal = Terminal::new(backend)?;
 
@@ -347,7 +347,7 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn one_column_at_width_43() -> Result<(), Box<dyn std::error::Error>> {
+            fn one_column_at_width_43() -> Result<()> {
                 // min_col_w = LEAD+KEY_W+ENTRY_GAP+MIN_DESC_W = 20; COL_GAP = 4.
                 // At width 43: cols = (43+4)/(20+4) = 1 → 2 bindings stack into 1 column,
                 // 2-row popup, first key at y=3.
@@ -364,7 +364,7 @@ mod tests {
                 let buf = terminal.backend().buffer();
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 3))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "q"
                 );
@@ -373,7 +373,7 @@ mod tests {
             }
 
             #[test]
-            fn two_bindings_stacked_in_one_column() -> Result<(), Box<dyn std::error::Error>> {
+            fn two_bindings_stacked_in_one_column() -> Result<()> {
                 // area 30×5: 2 bindings, 1 col, 2 rows → popup at y=3..4.
                 let backend = TestBackend::new(30, 5);
                 let mut terminal = Terminal::new(backend)?;
@@ -389,13 +389,13 @@ mod tests {
 
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 3))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "q"
                 );
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 4))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "j"
                 );
@@ -404,7 +404,7 @@ mod tests {
             }
 
             #[test]
-            fn across_two_columns() -> Result<(), Box<dyn std::error::Error>> {
+            fn across_two_columns() -> Result<()> {
                 // area 44×3: cols = ((44+4)/(min_col_w+4)).max(1) = 2, rows = 4/2 = 2.
                 // Each Fill(1) column = (44 - COL_GAP) / 2 = min_col_w; col 1 starts at min_col_w + COL_GAP.
                 let backend = TestBackend::new(44, 3);
@@ -423,25 +423,25 @@ mod tests {
 
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 1))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "a"
                 );
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 2))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "b"
                 );
                 assert_eq!(
                     buf.cell(Position::new(col1_key_x, 1))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "c"
                 );
                 assert_eq!(
                     buf.cell(Position::new(col1_key_x, 2))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "d"
                 );
@@ -450,7 +450,7 @@ mod tests {
             }
 
             #[test]
-            fn partial_last_column_leaves_row_empty() -> Result<(), Box<dyn std::error::Error>> {
+            fn partial_last_column_leaves_row_empty() -> Result<()> {
                 // area 44×3: cols=2, rows=ceil(3/2)=2. col 1 has only 1 entry; its second row is empty.
                 let backend = TestBackend::new(44, 3);
                 let mut terminal = Terminal::new(backend)?;
@@ -468,13 +468,13 @@ mod tests {
 
                 assert_eq!(
                     buf.cell(Position::new(col1_key_x, 1))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "c"
                 );
                 assert_eq!(
                     buf.cell(Position::new(col1_key_x, 2))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     " "
                 );
@@ -498,7 +498,7 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn global_and_component_bindings() -> Result<(), Box<dyn std::error::Error>> {
+            fn global_and_component_bindings() -> Result<()> {
                 // area 30×5: 2 total bindings, 1 col, 2 rows → popup at y=3..4.
                 let backend = TestBackend::new(30, 5);
                 let mut terminal = Terminal::new(backend)?;
@@ -511,13 +511,13 @@ mod tests {
 
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 3))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "g"
                 );
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 4))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "c"
                 );
@@ -554,7 +554,7 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn bounded_by_area() -> Result<(), Box<dyn std::error::Error>> {
+            fn bounded_by_area() -> Result<()> {
                 // 5 bindings in a 30×3 area: rows=5 would exceed area height=3,
                 // so popup_h is clamped to 3 and fills the whole terminal.
                 let backend = TestBackend::new(30, 3);
@@ -570,7 +570,7 @@ mod tests {
                 let buf = terminal.backend().buffer();
                 assert_eq!(
                     buf.cell(Position::new(LEAD, 0))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "a"
                 );
@@ -589,7 +589,7 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn long_desc_clipped_to_column_width() -> Result<(), Box<dyn std::error::Error>> {
+            fn long_desc_clipped_to_column_width() -> Result<()> {
                 // Desc longer than the available Fill(1) width is clipped; nothing bleeds past the column.
                 let backend = TestBackend::new(30, 3);
                 let mut terminal = Terminal::new(backend)?;
@@ -606,7 +606,7 @@ mod tests {
 
                 assert_eq!(
                     buf.cell(Position::new(desc_x, 2))
-                        .ok_or("cell out of bounds")?
+                        .ok_or_else(|| eyre!("cell out of bounds"))?
                         .symbol(),
                     "a"
                 );

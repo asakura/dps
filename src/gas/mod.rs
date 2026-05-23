@@ -39,11 +39,13 @@ mod blend;
 mod components;
 mod constants;
 mod eanx;
+pub mod error;
 
 pub use blend::{BlendMethod, InvalidMembraneFractions, Membrane, PartialPressure, Psa};
 pub use components::GasComponents;
 pub use eanx::InvalidEANx;
 pub use eanx::{EANx, EANxBlend, MOD, MODSummary, MiniMOD, MiniMODSummary};
+pub use error::Error as GasError;
 
 #[cfg(test)]
 mod tests {
@@ -76,8 +78,8 @@ mod tests {
     }
 
     #[test]
-    fn membrane_typical_has_higher_ar_than_pp() -> Result<(), Box<dyn std::error::Error>> {
-        let fo2 = Percent::new(0.32).ok_or("0.32 is in [0.0, 1.0]")?;
+    fn membrane_typical_has_higher_ar_than_pp() -> Result<()> {
+        let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is in [0.0, 1.0]"))?;
         let mem_mix = EANxBlend::new(fo2, Membrane::typical())?;
 
         assert!(

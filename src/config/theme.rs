@@ -2,11 +2,10 @@
 
 use std::collections::HashMap;
 
-use color_eyre::Result;
-use color_eyre::eyre::eyre;
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, Serialize};
 
+use super::error::{Error, ThemeResolutionError};
 use crate::theme::Theme;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -88,19 +87,19 @@ pub(super) type PaletteConfig = HashMap<String, String>;
 pub(super) fn resolve_theme(
     themes: &HashMap<String, ThemeConfig>,
     palettes: &HashMap<String, PaletteConfig>,
-) -> Result<HashMap<String, Theme>> {
+) -> Result<HashMap<String, Theme>, Error> {
     themes
         .iter()
         .map(|(name, tc)| {
             let pc = palettes
                 .get(name)
-                .ok_or_else(|| eyre!("theme '{name}' has no matching palette"))?;
+                .ok_or_else(|| ThemeResolutionError::MissingPalette(name.clone()))?;
             Ok((name.clone(), resolve_single(tc, pc)?))
         })
         .collect()
 }
 
-fn resolve_single(tc: &ThemeConfig, pc: &PaletteConfig) -> Result<Theme> {
+fn resolve_single(tc: &ThemeConfig, pc: &PaletteConfig) -> Result<Theme, Error> {
     let pal = parse_palette(pc)?;
     let resolve = |slot: &ThemeSlotConfig| slot_to_style(slot, &pal);
 
@@ -125,11 +124,11 @@ fn resolve_single(tc: &ThemeConfig, pc: &PaletteConfig) -> Result<Theme> {
     ))
 }
 
-fn slot_to_style(slot: &ThemeSlotConfig, pal: &HashMap<String, Color>) -> Result<Style> {
+fn slot_to_style(slot: &ThemeSlotConfig, pal: &HashMap<String, Color>) -> Result<Style, Error> {
     let lookup = |name: &str| {
         pal.get(name)
             .copied()
-            .ok_or_else(|| eyre!("unknown palette colour '{name}'"))
+            .ok_or_else(|| ThemeResolutionError::UnknownColour(name.to_string()))
     };
 
     let mut style = Style::default();
@@ -149,23 +148,31 @@ fn slot_to_style(slot: &ThemeSlotConfig, pal: &HashMap<String, Color>) -> Result
     Ok(style)
 }
 
-fn parse_palette(cfg: &HashMap<String, String>) -> Result<HashMap<String, Color>> {
+fn parse_palette(cfg: &HashMap<String, String>) -> Result<HashMap<String, Color>, Error> {
     cfg.iter()
         .map(|(name, hex)| Ok((name.clone(), parse_hex(hex)?)))
         .collect()
 }
 
-fn parse_hex(s: &str) -> Result<Color> {
+fn parse_hex(s: &str) -> Result<Color, Error> {
     let hex = s
         .strip_prefix('#')
-        .ok_or_else(|| eyre!("expected '#' prefix in colour '{s}'"))?;
+        .ok_or_else(|| ThemeResolutionError::MissingHexPrefix(s.to_string()))?;
 
     if hex.len() != 6 {
-        return Err(eyre!("expected 6 hex digits in '{s}', got {}", hex.len()));
+        return Err(ThemeResolutionError::InvalidHexLength {
+            value: s.to_string(),
+            len: hex.len(),
+        }
+        .into());
     }
 
-    let byte =
-        |i| u8::from_str_radix(&hex[i..i + 2], 16).map_err(|e| eyre!("bad hex in '{s}': {e}"));
+    let byte = |i| {
+        u8::from_str_radix(&hex[i..i + 2], 16).map_err(|e| ThemeResolutionError::InvalidHexDigit {
+            value: s.to_string(),
+            source: e,
+        })
+    };
 
     Ok(Color::Rgb(byte(0)?, byte(2)?, byte(4)?))
 }
@@ -174,6 +181,7 @@ fn parse_hex(s: &str) -> Result<Color> {
 mod tests {
     use super::*;
     use crate::config::Config;
+    use color_eyre::Result;
     use ratatui::style::{Color, Modifier, Style};
     use rstest::fixture;
     use rstest::rstest;
@@ -425,7 +433,7 @@ mod tests {
         use super::*;
 
         #[fixture]
-        fn config_defaults() -> color_eyre::Result<Config> {
+        fn config_defaults() -> Result<Config> {
             let dir = tempfile::tempdir()?;
 
             Ok(Config::from_dirs(Some(dir.path()), None)?)
@@ -455,11 +463,12 @@ mod tests {
                 config_defaults?.themes.contains_key(name),
                 "missing theme '{name}'"
             );
+
             Ok(())
         }
 
         #[test]
-        fn unknown_default_theme_is_rejected() -> color_eyre::Result<()> {
+        fn unknown_default_theme_is_rejected() -> Result<()> {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -471,14 +480,14 @@ mod tests {
 
             assert!(matches!(
                 result,
-                Err(config::ConfigError::Message(ref s)) if s.contains("doesNotExist")
+                Err(crate::config::ConfigError::UnknownTheme(ref s)) if s.contains("doesNotExist")
             ));
 
             Ok(())
         }
 
         #[test]
-        fn theme_without_palette_is_rejected() -> color_eyre::Result<()> {
+        fn theme_without_palette_is_rejected() -> Result<()> {
             let dir = tempfile::tempdir()?;
 
             let content = format!(

@@ -169,25 +169,33 @@ mod tests {
     use crate::gas::EANx;
     use crate::units::Percent;
     use approx::assert_relative_eq;
-    use color_eyre::Result;
+    use color_eyre::{Result, eyre::eyre};
 
-    fn air() -> Result<GasComponents, Box<dyn std::error::Error>> {
-        Ok(EANx::try_from(Percent::new(0.20946).ok_or("0.20946 is in [0.0, 1.0]")?)?.components())
+    fn air() -> Result<GasComponents> {
+        Ok(
+            EANx::try_from(
+                Percent::new(0.20946).ok_or_else(|| eyre!("0.20946 is in [0.0, 1.0]"))?,
+            )?
+            .components(),
+        )
     }
 
-    fn ean32() -> Result<GasComponents, Box<dyn std::error::Error>> {
-        Ok(EANx::try_from(Percent::new(0.32).ok_or("0.32 is in [0.0, 1.0]")?)?.components())
+    fn ean32() -> Result<GasComponents> {
+        Ok(
+            EANx::try_from(Percent::new(0.32).ok_or_else(|| eyre!("0.32 is in [0.0, 1.0]"))?)?
+                .components(),
+        )
     }
 
     #[test]
-    fn molar_mass_of_air_is_approximately_28_97() -> Result<(), Box<dyn std::error::Error>> {
+    fn molar_mass_of_air_is_approximately_28_97() -> Result<()> {
         assert_relative_eq!(air()?.molar_mass(), 28.97, epsilon = 0.01);
 
         Ok(())
     }
 
     #[test]
-    fn molar_mass_increases_with_fo2() -> Result<(), Box<dyn std::error::Error>> {
+    fn molar_mass_increases_with_fo2() -> Result<()> {
         // Pure O₂ (MW 32) raises the mean molar mass above air (MW ≈ 28.97)
         assert!(ean32()?.molar_mass() > air()?.molar_mass());
 
@@ -195,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn narcotic_fraction_equals_n2_plus_1_5_ar() -> Result<(), Box<dyn std::error::Error>> {
+    fn narcotic_fraction_equals_n2_plus_1_5_ar() -> Result<()> {
         let air = air()?;
         assert_relative_eq!(
             air.narcotic(),
@@ -207,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn narcotic_fraction_of_ean32_is_less_than_air() -> Result<(), Box<dyn std::error::Error>> {
+    fn narcotic_fraction_of_ean32_is_less_than_air() -> Result<()> {
         // Higher FO₂ → less N₂/Ar → lower narcotic load
         assert!(ean32()?.narcotic() < air()?.narcotic());
 

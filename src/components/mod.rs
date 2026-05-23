@@ -50,7 +50,7 @@ pub trait Component {
 
     /// Structured key bindings for the which-key popup and hint line.
     fn key_bindings(&self) -> &'static [KeyBinding] {
-        &[]
+        [].as_slice()
     }
 }
 

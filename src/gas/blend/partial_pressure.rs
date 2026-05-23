@@ -1,6 +1,6 @@
+use super::{BlendMethod, sealed};
 use crate::gas::components::GasComponents;
 use crate::gas::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
-use super::{BlendMethod, sealed};
 
 /// Partial-pressure blending: pure O₂ added to air.
 ///
@@ -38,8 +38,8 @@ impl BlendMethod for PartialPressure {
 
 #[cfg(test)]
 mod tests {
-    use crate::gas::constants::{AIR_AR, AIR_CO2, AIR_N2, AIR_O2};
     use super::*;
+    use crate::gas::constants::{AIR_AR, AIR_CO2, AIR_N2, AIR_O2};
     use approx::assert_relative_eq;
 
     #[test]

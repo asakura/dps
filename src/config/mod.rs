@@ -1,7 +1,10 @@
 //! Platform-aware configuration and data directory resolution.
 
+pub mod error;
 pub mod keys;
 mod theme;
+
+pub use error::Error as ConfigError;
 
 use std::{
     collections::HashMap,
@@ -133,7 +136,7 @@ impl Config {
     ///
     /// Returns `Err` if the config source cannot be read or parsed; see
     /// [`Config::from_dirs`].
-    pub fn new() -> Result<Self, config::ConfigError> {
+    pub fn new() -> Result<Self, error::Error> {
         Self::from_dirs(None, None)
     }
 
@@ -156,16 +159,15 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// Returns a [`config::ConfigError`] if a config file is present but
+    /// Returns [`error::Error::Load`] if a config file is present but
     /// cannot be parsed or deserialised, if theme resolution fails (unknown
     /// palette colour or missing palette), or if `defaultTheme` does not
     /// match any resolved theme.
     pub fn from_dirs(
         config_dir: Option<&Path>,
         data_dir: Option<&Path>,
-    ) -> Result<Self, config::ConfigError> {
-        let default_raw: RawConfig =
-            json5::from_str(CONFIG).map_err(|e| config::ConfigError::Message(e.to_string()))?;
+    ) -> Result<Self, error::Error> {
+        let default_raw: RawConfig = json5::from_str(CONFIG)?;
 
         let effective_data_dir = data_dir.map_or_else(get_data_dir, Path::to_path_buf);
         let effective_config_dir = config_dir.map_or_else(get_config_dir, Path::to_path_buf);
@@ -187,16 +189,21 @@ impl Config {
             ("config.toml", config::FileFormat::Toml),
             ("config.ini", config::FileFormat::Ini),
         ];
+
         let mut found_config = false;
+
         for (file, format) in &config_files {
             let source = config::File::from(effective_config_dir.join(file))
                 .format(*format)
                 .required(false);
+
             builder = builder.add_source(source);
+
             if effective_config_dir.join(file).exists() {
                 found_config = true;
             }
         }
+
         if !found_config {
             error!("No configuration file found. Application may not behave as expected");
         }
@@ -205,6 +212,7 @@ impl Config {
         if let Some(p) = data_dir {
             builder = builder.set_override("data_dir", p.to_string_lossy().into_owned())?;
         }
+
         if let Some(p) = config_dir {
             builder = builder.set_override("config_dir", p.to_string_lossy().into_owned())?;
         }
@@ -221,23 +229,21 @@ impl Config {
         if raw.default_theme.is_empty() {
             raw.default_theme.clone_from(&default_raw.default_theme);
         }
+
         for (name, t) in &default_raw.themes {
             raw.themes.entry(name.clone()).or_insert_with(|| t.clone());
         }
+
         for (name, p) in &default_raw.palettes {
             raw.palettes
                 .entry(name.clone())
                 .or_insert_with(|| p.clone());
         }
 
-        let themes = theme::resolve_theme(&raw.themes, &raw.palettes)
-            .map_err(|e| config::ConfigError::Message(e.to_string()))?;
+        let themes = theme::resolve_theme(&raw.themes, &raw.palettes)?;
 
         if !themes.contains_key(&raw.default_theme) {
-            return Err(config::ConfigError::Message(format!(
-                "defaultTheme '{}' does not match any resolved theme",
-                raw.default_theme,
-            )));
+            return Err(error::Error::UnknownTheme(raw.default_theme));
         }
 
         Ok(Self {
@@ -418,26 +424,26 @@ mod tests {
     mod keybindings {
         use super::*;
         use crate::action::Movement;
+        use color_eyre::eyre::eyre;
 
         #[test]
-        fn default_keybindings_loaded_from_embedded_config()
-        -> Result<(), Box<dyn std::error::Error>> {
+        fn default_keybindings_loaded_from_embedded_config() -> Result<()> {
             temp_env::with_var_unset("DPS_CONFIG", || {
                 let c = Config::new()?;
                 let home = c
                     .keybindings
                     .0
                     .get(&Mode::Home)
-                    .ok_or("no Home bindings in config")?;
+                    .ok_or_else(|| eyre!("no Home bindings in config"))?;
 
                 assert_eq!(
                     home.get(&parse_key_sequence("j")?)
-                        .ok_or("no binding for 'j'")?,
+                        .ok_or_else(|| eyre!("no binding for 'j'"))?,
                     &Action::Move(Movement::Down)
                 );
                 assert_eq!(
                     home.get(&parse_key_sequence("gg")?)
-                        .ok_or("no binding for 'gg'")?,
+                        .ok_or_else(|| eyre!("no binding for 'gg'"))?,
                     &Action::Move(Movement::GotoTop)
                 );
 
@@ -446,8 +452,7 @@ mod tests {
         }
 
         #[test]
-        fn user_config_adds_binding_and_defaults_merge_in() -> Result<(), Box<dyn std::error::Error>>
-        {
+        fn user_config_adds_binding_and_defaults_merge_in() -> Result<()> {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -461,17 +466,17 @@ mod tests {
                     .keybindings
                     .0
                     .get(&Mode::Home)
-                    .ok_or("no Home bindings in config")?;
+                    .ok_or_else(|| eyre!("no Home bindings in config"))?;
 
                 assert_eq!(
                     home.get(&parse_key_sequence("x")?)
-                        .ok_or("no binding for 'x'")?,
+                        .ok_or_else(|| eyre!("no binding for 'x'"))?,
                     &Action::Move(Movement::ScrollUp),
                 );
 
                 assert_eq!(
                     home.get(&parse_key_sequence("j")?)
-                        .ok_or("no binding for 'j'")?,
+                        .ok_or_else(|| eyre!("no binding for 'j'"))?,
                     &Action::Move(Movement::Down),
                 );
 
@@ -480,7 +485,7 @@ mod tests {
         }
 
         #[test]
-        fn user_config_override_wins_over_default() -> Result<(), Box<dyn std::error::Error>> {
+        fn user_config_override_wins_over_default() -> Result<()> {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -494,11 +499,11 @@ mod tests {
                     .keybindings
                     .0
                     .get(&Mode::Home)
-                    .ok_or("no Home bindings in config")?;
+                    .ok_or_else(|| eyre!("no Home bindings in config"))?;
 
                 assert_eq!(
                     home.get(&parse_key_sequence("j")?)
-                        .ok_or("no binding for 'j'")?,
+                        .ok_or_else(|| eyre!("no binding for 'j'"))?,
                     &Action::Move(Movement::Up),
                 );
 
@@ -507,7 +512,7 @@ mod tests {
         }
 
         #[test]
-        fn from_dirs_loads_file_from_given_directory() -> Result<(), Box<dyn std::error::Error>> {
+        fn from_dirs_loads_file_from_given_directory() -> Result<()> {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -520,17 +525,17 @@ mod tests {
                 .keybindings
                 .0
                 .get(&Mode::Home)
-                .ok_or("no Home bindings in config")?;
+                .ok_or_else(|| eyre!("no Home bindings in config"))?;
 
             assert_eq!(
                 home.get(&parse_key_sequence("x")?)
-                    .ok_or("no binding for 'x'")?,
+                    .ok_or_else(|| eyre!("no binding for 'x'"))?,
                 &Action::Move(Movement::ScrollUp),
             );
 
             assert_eq!(
                 home.get(&parse_key_sequence("j")?)
-                    .ok_or("no binding for 'j'")?,
+                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
                 &Action::Move(Movement::Down),
             );
 

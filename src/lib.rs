@@ -14,6 +14,7 @@ pub mod cli;
 pub mod components;
 pub mod config;
 pub mod errors;
+pub use errors::Error;
 pub mod gas;
 pub mod logging;
 /// Application interaction modes.

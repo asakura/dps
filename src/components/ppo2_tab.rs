@@ -327,9 +327,10 @@ impl Component for PpO2Tab {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::action::Movement;
+    use crate::action::{Action, Movement};
     use crate::components::test_utils::widget_text;
-    use color_eyre::Result;
+    use crate::components::{PAGE_DELTA, SCROLL_DELTA};
+    use color_eyre::{Result, eyre::eyre};
 
     mod constants {
         use super::*;
@@ -352,7 +353,6 @@ mod tests {
 
         #[test]
         fn returns_mixes_at_correct_offsets_from_start() -> Result<()> {
-            use color_eyre::eyre::eyre;
             let mut tab = PpO2Tab::new();
 
             // mix_idx: 5 → 6
@@ -414,22 +414,28 @@ mod tests {
         use super::*;
 
         #[test]
-        fn selected_depth_is_zero() -> Result<(), Box<dyn std::error::Error>> {
+        fn selected_depth_is_zero() -> Result<()> {
             let tab = PpO2Tab::new();
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 0);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                0
+            );
 
             Ok(())
         }
 
         #[test]
         fn selected_mix_is_air() -> Result<()> {
-            use color_eyre::eyre::eyre;
             let tab = PpO2Tab::new();
+
             assert_eq!(
                 tab.selected_mix().fo2(),
                 Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
             );
+
             Ok(())
         }
 
@@ -444,7 +450,6 @@ mod tests {
 
         #[test]
         fn stores_current_depth_and_mix() -> Result<()> {
-            use color_eyre::eyre::eyre;
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Select);
@@ -461,17 +466,17 @@ mod tests {
         }
 
         #[test]
-        fn selection_updates_after_moving_row() -> Result<(), Box<dyn std::error::Error>> {
+        fn selection_updates_after_moving_row() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Select);
 
-            let first_depth = tab.selection.ok_or("no selection")?.0;
+            let first_depth = tab.selection.ok_or_else(|| eyre!("no selection"))?.0;
 
             tab.handle_action(Action::Move(Movement::Down));
             tab.handle_action(Action::Select);
 
-            let second_depth = tab.selection.ok_or("no selection")?.0;
+            let second_depth = tab.selection.ok_or_else(|| eyre!("no selection"))?.0;
             assert_ne!(first_depth, second_depth);
 
             Ok(())
@@ -540,7 +545,6 @@ mod tests {
 
     mod status_bar {
         use super::*;
-        use crate::action::Movement;
 
         #[test]
         fn no_selection_shows_prompt() {
@@ -582,29 +586,34 @@ mod tests {
 
     mod action_dispatch {
         use super::*;
-        use crate::action::{Action, Movement};
-        use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[test]
-        fn down_advances_depth() -> Result<(), Box<dyn std::error::Error>> {
+        fn down_advances_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::Down));
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 1);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                1
+            );
 
             Ok(())
         }
 
         #[test]
-        fn down_clamped_at_max_depth() -> Result<(), Box<dyn std::error::Error>> {
+        fn down_clamped_at_max_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::Down));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 PPO2_TABLE_DEPTH_MAX
             );
 
@@ -612,17 +621,22 @@ mod tests {
         }
 
         #[test]
-        fn up_retreats_depth() -> Result<(), Box<dyn std::error::Error>> {
+        fn up_retreats_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::Down));
 
-            let after = tab.table_state.selected().ok_or("no row selected")?;
+            let after = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::Move(Movement::Up));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 after - 1
             );
 
@@ -630,18 +644,23 @@ mod tests {
         }
 
         #[test]
-        fn up_at_zero_stays_at_zero() -> Result<(), Box<dyn std::error::Error>> {
+        fn up_at_zero_stays_at_zero() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::Up));
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 0);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                0
+            );
 
             Ok(())
         }
 
         #[test]
-        fn goto_top_selects_depth_zero() -> Result<(), Box<dyn std::error::Error>> {
+        fn goto_top_selects_depth_zero() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..10 {
@@ -650,19 +669,26 @@ mod tests {
 
             tab.handle_action(Action::Move(Movement::GotoTop));
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, 0);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                0
+            );
 
             Ok(())
         }
 
         #[test]
-        fn goto_bottom_selects_max_depth() -> Result<(), Box<dyn std::error::Error>> {
+        fn goto_bottom_selects_max_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 PPO2_TABLE_DEPTH_MAX
             );
 
@@ -670,13 +696,15 @@ mod tests {
         }
 
         #[test]
-        fn scroll_down_moves_by_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn scroll_down_moves_by_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::ScrollDown));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 SCROLL_DELTA as usize,
             );
 
@@ -684,14 +712,16 @@ mod tests {
         }
 
         #[test]
-        fn scroll_up_moves_by_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn scroll_up_moves_by_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::ScrollUp));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 PPO2_TABLE_DEPTH_MAX - SCROLL_DELTA as usize,
             );
 
@@ -699,13 +729,15 @@ mod tests {
         }
 
         #[test]
-        fn page_down_moves_by_page_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn page_down_moves_by_page_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::PageDown));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 PAGE_DELTA as usize,
             );
 
@@ -713,14 +745,16 @@ mod tests {
         }
 
         #[test]
-        fn page_up_moves_by_page_delta() -> Result<(), Box<dyn std::error::Error>> {
+        fn page_up_moves_by_page_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::GotoBottom));
             tab.handle_action(Action::Move(Movement::PageUp));
 
             assert_eq!(
-                tab.table_state.selected().ok_or("no row selected")?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 PPO2_TABLE_DEPTH_MAX - PAGE_DELTA as usize,
             );
 
@@ -773,25 +807,41 @@ mod tests {
         }
 
         #[test]
-        fn none_is_a_noop() -> Result<(), Box<dyn std::error::Error>> {
+        fn none_is_a_noop() -> Result<()> {
             let mut tab = PpO2Tab::new();
-            let before = tab.table_state.selected().ok_or("no row selected")?;
+            let before = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::None);
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                before
+            );
 
             Ok(())
         }
 
         #[test]
-        fn quit_is_a_noop() -> Result<(), Box<dyn std::error::Error>> {
+        fn quit_is_a_noop() -> Result<()> {
             let mut tab = PpO2Tab::new();
-            let before = tab.table_state.selected().ok_or("no row selected")?;
+            let before = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::Quit);
 
-            assert_eq!(tab.table_state.selected().ok_or("no row selected")?, before);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                before
+            );
 
             Ok(())
         }
@@ -806,7 +856,9 @@ mod tests {
             // selected_column = col_in_window(5) + FIXED_COL_COUNT(1) = 6
             let mut tab = PpO2Tab::new();
             let area = Rect::new(0, 0, 123, 40);
+
             tab.render(area, &mut Buffer::empty(area), &Theme::default());
+
             assert_eq!(tab.table_state.selected_column(), Some(6));
         }
     }

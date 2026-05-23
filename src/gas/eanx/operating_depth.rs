@@ -2,9 +2,9 @@ use std::fmt;
 
 use crate::units::{Bar, Meters, Percent};
 
-use crate::gas::constants::{EAN_MIN_O2, SEAWATER, SURFACE_PRESSURE};
-use super::errors::InvalidEANx;
+use super::error::InvalidEANx;
 use super::fmt_gas_name;
+use crate::gas::constants::{EAN_MIN_O2, SEAWATER, SURFACE_PRESSURE};
 
 /// Maximum Operating Depth for a gas mix at a ppO₂ limit.
 ///
@@ -195,29 +195,37 @@ mod tests {
     use super::*;
     use crate::gas::InvalidEANx;
     use crate::units::{Bar, Meters, Percent};
+    use color_eyre::{Result, eyre::eyre};
 
     mod operating_depth {
         use super::*;
 
         #[test]
-        fn display_shows_depth() -> Result<(), Box<dyn std::error::Error>> {
-            let m = MOD::try_from((Percent::new(0.32).ok_or("invalid")?, Bar::new(1.4)))?;
+        fn display_shows_depth() -> Result<()> {
+            let m = MOD::try_from((
+                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Bar::new(1.4),
+            ))?;
+
             assert_eq!(m.to_string(), "33.8 m");
 
             Ok(())
         }
 
         #[test]
-        fn into_meters_gives_depth() -> Result<(), Box<dyn std::error::Error>> {
-            let m = MOD::try_from((Percent::new(0.32).ok_or("invalid")?, Bar::new(1.4)))?;
+        fn into_meters_gives_depth() -> Result<()> {
+            let m = MOD::try_from((
+                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Bar::new(1.4),
+            ))?;
             assert_eq!(Meters::from(m), m.depth());
 
             Ok(())
         }
 
         #[test]
-        fn try_from_rejects_fo2_below_minimum() -> Result<(), Box<dyn std::error::Error>> {
-            let fo2 = Percent::new(0.09).ok_or("0.09 is in [0.0, 1.0]")?;
+        fn try_from_rejects_fo2_below_minimum() -> Result<()> {
+            let fo2 = Percent::new(0.09).ok_or_else(|| eyre!("0.09 is in [0.0, 1.0]"))?;
 
             assert!(matches!(
                 MOD::try_from((fo2, Bar::new(1.4))),
@@ -232,8 +240,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summary_formats_full_detail() -> Result<(), Box<dyn std::error::Error>> {
-            let m = MOD::try_from((Percent::new(0.32).ok_or("invalid")?, Bar::new(1.4)))?;
+        fn summary_formats_full_detail() -> Result<()> {
+            let m = MOD::try_from((
+                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Bar::new(1.4),
+            ))?;
 
             assert_eq!(
                 m.summary().to_string(),

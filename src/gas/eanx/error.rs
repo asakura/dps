@@ -1,5 +1,3 @@
-use std::fmt;
-
 use crate::units::Percent;
 
 /// Error returned when an [`EANxBlend`] cannot be constructed.
@@ -22,29 +20,18 @@ use crate::units::Percent;
 ///     Err(InvalidEANx::BlendCeilingExceeded(_))
 /// ));
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, thiserror::Error)]
 pub enum InvalidEANx {
     /// FO₂ is below the 10 % minimum for a breathable EAN mix.
+    #[error("O₂ fraction {0} is below the 10 % minimum")]
     O2TooLow(Percent),
     /// FO₂ exceeds the physical ceiling for this blend method.
     ///
     /// For [`Psa`] the ceiling is ≈ 95.7 %: the point at which all N₂
     /// would be depleted and the output is pure O₂ + Ar.
+    #[error("O₂ fraction {0} exceeds the blend method ceiling")]
     BlendCeilingExceeded(Percent),
 }
-
-impl fmt::Display for InvalidEANx {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::O2TooLow(p) => write!(f, "O₂ fraction {p} is below the 10 % minimum"),
-            Self::BlendCeilingExceeded(p) => {
-                write!(f, "O₂ fraction {p} exceeds the blend method ceiling")
-            }
-        }
-    }
-}
-
-impl std::error::Error for InvalidEANx {}
 
 #[cfg(test)]
 mod tests {

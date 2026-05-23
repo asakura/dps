@@ -8,8 +8,8 @@ use super::constants::{
     AIR_N2, AIR_NARCOTIC, EAN_MIN_O2, GAS_CONSTANT, SEAWATER, STANDARD_TEMP_K, SURFACE_PRESSURE,
 };
 
-mod errors;
-pub use errors::InvalidEANx;
+mod error;
+pub use error::InvalidEANx;
 
 mod operating_depth;
 pub use operating_depth::{MOD, MODSummary};
@@ -517,9 +517,9 @@ impl<M: BlendMethod + PartialEq> approx::RelativeEq for EANxBlend<M> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::gas::blend::Psa;
     use crate::gas::constants::{AIR_N2, AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
-    use super::*;
     use crate::units::{Bar, Meters, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -607,8 +607,8 @@ mod tests {
         }
 
         #[test]
-        fn fo2_is_preserved() -> Result<(), Box<dyn std::error::Error>> {
-            let fo2 = Percent::new(0.32).ok_or("0.32 is in [0.0, 1.0]")?;
+        fn fo2_is_preserved() -> Result<()> {
+            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is in [0.0, 1.0]"))?;
             assert_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).fo2(), fo2);
 
             Ok(())
@@ -657,8 +657,8 @@ mod tests {
         }
 
         #[test]
-        fn fo2_is_preserved() -> Result<(), Box<dyn std::error::Error>> {
-            let fo2 = Percent::new(0.10).ok_or("0.10 is in [0.0, 1.0]")?;
+        fn fo2_is_preserved() -> Result<()> {
+            let fo2 = Percent::new(0.10).ok_or_else(|| eyre!("0.10 is in [0.0, 1.0]"))?;
             assert_eq!(ean(0.10)?.minimod_at(Bar::new(0.16)).fo2(), fo2);
 
             Ok(())
@@ -896,20 +896,20 @@ mod tests {
         use super::*;
 
         #[test]
-        fn at_30m_1_4_bar() -> Result<(), Box<dyn std::error::Error>> {
+        fn at_30m_1_4_bar() -> Result<()> {
             let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4))
-                .ok_or("fo2 = 0.35 is above the 10 % minimum")?;
+                .ok_or_else(|| eyre!("fo2 = 0.35 is above the 10 % minimum"))?;
             assert_relative_eq!(best.fo2().value(), 0.35, epsilon = 1e-9);
 
             Ok(())
         }
 
         #[test]
-        fn ppo2_at_target_equals_limit() -> Result<(), Box<dyn std::error::Error>> {
+        fn ppo2_at_target_equals_limit() -> Result<()> {
             let depth = Meters::new(40.0);
             let ppo2_max = Bar::new(1.4);
-            let best =
-                EANx::best_mix(depth, ppo2_max).ok_or("fo2 = 0.28 is above the 10 % minimum")?;
+            let best = EANx::best_mix(depth, ppo2_max)
+                .ok_or_else(|| eyre!("fo2 = 0.28 is above the 10 % minimum"))?;
 
             assert_relative_eq!(best.ppo2_at(depth), ppo2_max, epsilon = 1e-9);
 
@@ -917,10 +917,10 @@ mod tests {
         }
 
         #[test]
-        fn shallow_depth_clamps_to_pure_o2() -> Result<(), Box<dyn std::error::Error>> {
+        fn shallow_depth_clamps_to_pure_o2() -> Result<()> {
             // fo2 = 1.4 / (4/10 + 1) = 1.4 / 1.4 = 1.0
             let best = EANx::best_mix(Meters::new(4.0), Bar::new(1.4))
-                .ok_or("fo2 = 1.0 is above the 10 % minimum")?;
+                .ok_or_else(|| eyre!("fo2 = 1.0 is above the 10 % minimum"))?;
 
             assert_relative_eq!(best.fo2().value(), 1.0, epsilon = 1e-9);
 

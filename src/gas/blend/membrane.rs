@@ -1,8 +1,6 @@
-use std::fmt;
-
+use super::{BlendMethod, sealed};
 use crate::gas::components::GasComponents;
 use crate::gas::constants::{AIR_DILUENT, AIR_OTHER};
-use super::{BlendMethod, sealed};
 
 /// Membrane separator blending.
 ///
@@ -154,32 +152,22 @@ impl BlendMethod for Membrane {
 /// // fn2 + far + fco2 > 1 − fo2
 /// assert!(Membrane::from_analysis(0.32, 0.60, 0.10, 0.005).is_err());
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, thiserror::Error)]
+#[error("membrane diluent fractions are invalid: fn2 + far + fco2 must not exceed (1 − fo2)")]
 pub struct InvalidMembraneFractions;
-
-impl fmt::Display for InvalidMembraneFractions {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "membrane diluent fractions are invalid: \
-             fn2 + far + fco2 must not exceed (1 − fo2)"
-        )
-    }
-}
-
-impl std::error::Error for InvalidMembraneFractions {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use color_eyre::Result;
 
     #[test]
     #[expect(
         clippy::similar_names,
         reason = "fo2/fn2/fco2 are standard gas-fraction notation; the 'f' prefix and gas suffix make each distinct in context"
     )]
-    fn from_analysis_roundtrips_components() -> Result<(), Box<dyn std::error::Error>> {
+    fn from_analysis_roundtrips_components() -> Result<()> {
         let fo2 = 0.32_f64;
         let fn2 = 0.65_f64;
         let far = 0.025_f64;
@@ -217,7 +205,7 @@ mod tests {
     }
 
     #[test]
-    fn diluent_ratios_are_fo2_independent() -> Result<(), Box<dyn std::error::Error>> {
+    fn diluent_ratios_are_fo2_independent() -> Result<()> {
         // A membrane is characterised at one FO₂ but the diluent N₂/Ar ratio must
         // hold at any target FO₂ for the same equipment settings.
         let fo2_analysis = 0.32_f64;

@@ -1,6 +1,6 @@
+use super::{BlendMethod, sealed};
 use crate::gas::components::GasComponents;
 use crate::gas::constants::{PSA_AR_PER_O2, PSA_OTHER_PER_O2};
-use super::{BlendMethod, sealed};
 
 /// Pressure-swing adsorption (PSA) blending.
 ///
@@ -48,8 +48,8 @@ impl BlendMethod for Psa {
 
 #[cfg(test)]
 mod tests {
-    use crate::gas::constants::{AIR_AR, AIR_O2};
     use super::*;
+    use crate::gas::constants::{AIR_AR, AIR_O2};
     use approx::assert_relative_eq;
 
     #[test]
