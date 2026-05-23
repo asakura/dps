@@ -189,7 +189,7 @@ impl From<PpO2Row<'_>> for Row<'static> {
         let mut cells = vec![Cell::from(format!("{:>3} m", r.depth))];
 
         for mix in r.mixes {
-            let ppo2 = mix.ppo2_at(depth);
+            let ppo2 = mix.ppo2_at(depth).pressure();
 
             cells.push(
                 Cell::from(format!("{:.2}", ppo2.value())).style(ppo2_cell_color(ppo2, r.theme)),
@@ -219,7 +219,7 @@ impl Widget for PpO2TabStatus<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         match self.tab.selection {
             Some((depth, mix)) => {
-                let ppo2 = mix.ppo2_at(depth);
+                let ppo2 = mix.ppo2_at(depth).pressure();
                 let text = format!(
                     " \u{25c6} {}  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
                     mix,

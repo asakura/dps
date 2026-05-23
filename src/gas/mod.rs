@@ -44,7 +44,10 @@ pub mod error;
 pub use blend::{BlendMethod, InvalidMembraneFractions, Membrane, PartialPressure, Psa};
 pub use components::GasComponents;
 pub use eanx::InvalidEANx;
-pub use eanx::{EANx, EANxBlend, EANxDetail, MOD, MODSummary, MiniMOD, MiniMODSummary};
+pub use eanx::{
+    EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, MND, MNDSummary, MOD,
+    MODSummary, MiniMOD, MiniMODSummary, PPO2, Ppo2Summary,
+};
 pub use error::Error as GasError;
 
 #[cfg(test)]

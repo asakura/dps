@@ -4,21 +4,31 @@ use crate::units::{Bar, Meters, Percent};
 
 use super::blend::{BlendMethod, PartialPressure};
 use super::components::GasComponents;
-use super::constants::{
-    AIR_N2, AIR_NARCOTIC, EAN_MIN_O2, GAS_CONSTANT, SEAWATER, STANDARD_TEMP_K, SURFACE_PRESSURE,
-};
+use super::constants::{EAN_MIN_O2, GAS_CONSTANT, SEAWATER, STANDARD_TEMP_K, SURFACE_PRESSURE};
 
 mod detail;
 pub use detail::EANxDetail;
 
+mod equivalent_air_depth;
+pub use equivalent_air_depth::{EAD, EADSummary};
+
+mod equivalent_narcotic_depth;
+pub use equivalent_narcotic_depth::{END, ENDSummary};
+
 mod error;
 pub use error::InvalidEANx;
+
+mod maximum_narcotic_depth;
+pub use maximum_narcotic_depth::{MND, MNDSummary};
+
+mod minimum_operating_depth;
+pub use minimum_operating_depth::{MiniMOD, MiniMODSummary};
 
 mod operating_depth;
 pub use operating_depth::{MOD, MODSummary};
 
-mod minimum_operating_depth;
-pub use minimum_operating_depth::{MiniMOD, MiniMODSummary};
+mod ppo2;
+pub use ppo2::{PPO2, Ppo2Summary};
 
 /// Enriched Air Nitrox, modelled by O₂ fraction and blending method.
 ///
@@ -187,11 +197,11 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
     /// // Air at 30 m: (30/10 + 1) × 0.21 = 0.84 bar
-    /// assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).value(), 0.84, epsilon = 1e-9);
+    /// assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).pressure().value(), 0.84, epsilon = 1e-9);
     /// ```
     #[must_use]
-    pub fn ppo2_at(self, depth: Meters) -> Bar {
-        (depth / SEAWATER + SURFACE_PRESSURE) * self.fo2
+    pub fn ppo2_at(self, depth: Meters) -> PPO2 {
+        PPO2::new(self.fo2, depth)
     }
 
     /// Maximum Operating Depth for a given ppO₂ limit (O₂ toxicity constraint).
@@ -259,19 +269,15 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// # use approx::assert_relative_eq;
     /// // Air at any depth has END == actual depth
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
-    /// assert_relative_eq!(air.end_at(Meters::new(30.0)), Meters::new(30.0), epsilon = 1e-6);
+    /// assert_relative_eq!(air.end_at(Meters::new(30.0)).end(), Meters::new(30.0), epsilon = 1e-6);
     ///
     /// // EANx 32 at 30 m has a shallower END than 30 m
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert!(ean32.end_at(Meters::new(30.0)) < Meters::new(30.0));
+    /// assert!(ean32.end_at(Meters::new(30.0)).end() < Meters::new(30.0));
     /// ```
     #[must_use]
-    pub fn end_at(self, depth: Meters) -> Meters {
-        let abs = depth / SEAWATER + SURFACE_PRESSURE;
-        let narcotic_ratio = self.components().narcotic() / AIR_NARCOTIC;
-        let end_pressure = abs * narcotic_ratio;
-
-        (end_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER
+    pub fn end_at(self, depth: Meters) -> END {
+        END::new(self.fo2, self.components().narcotic(), depth)
     }
 
     /// Maximum Narcotic Depth for a given END limit.
@@ -287,23 +293,11 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// let end_limit = Meters::new(30.0);
     /// let mnd = ean32.mnd_at(end_limit);
     /// // end_at(mnd) recovers the limit
-    /// assert_relative_eq!(ean32.end_at(mnd), end_limit, epsilon = 1e-6);
+    /// assert_relative_eq!(ean32.end_at(Meters::from(mnd)).end(), end_limit, epsilon = 1e-6);
     /// ```
     #[must_use]
-    pub fn mnd_at(self, end_limit: Meters) -> Meters {
-        let narcotic = self.components().narcotic();
-
-        // All valid EAN mixes have N₂ and/or Ar; a zero narcotic fraction
-        // cannot occur in practice.
-        debug_assert!(
-            narcotic >= 1e-9,
-            "narcotic fraction is zero — impossible for any EAN mix"
-        );
-
-        let end_abs = end_limit / SEAWATER + SURFACE_PRESSURE;
-        let mnd_pressure = end_abs / (narcotic / AIR_NARCOTIC);
-
-        (mnd_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER
+    pub fn mnd_at(self, end_limit: Meters) -> MND {
+        MND::new(self.fo2, self.components().narcotic(), end_limit)
     }
 
     /// Equivalent Air Depth at a given actual depth.
@@ -319,18 +313,15 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// # use approx::assert_relative_eq;
     /// // Air's EAD equals actual depth
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
-    /// assert_relative_eq!(air.ead_at(Meters::new(30.0)), Meters::new(30.0), epsilon = 1e-6);
+    /// assert_relative_eq!(air.ead_at(Meters::new(30.0)).ead(), Meters::new(30.0), epsilon = 1e-6);
     ///
     /// // Enriched air has shallower EAD (less N₂ → less decompression obligation)
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert!(ean32.ead_at(Meters::new(30.0)) < Meters::new(30.0));
+    /// assert!(ean32.ead_at(Meters::new(30.0)).ead() < Meters::new(30.0));
     /// ```
     #[must_use]
-    pub fn ead_at(self, depth: Meters) -> Meters {
-        let abs = depth / SEAWATER + SURFACE_PRESSURE;
-        let ead_pressure = abs * (self.fn2() / AIR_N2);
-
-        (ead_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER
+    pub fn ead_at(self, depth: Meters) -> EAD {
+        EAD::new(self.fo2, self.fn2(), depth)
     }
 
     /// Gas density in g/L at the given depth, at 20 °C (standard reference).
@@ -375,7 +366,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn cns_rate_at(self, depth: Meters) -> f64 {
-        let limit = super::constants::cns_limit_minutes(self.ppo2_at(depth).value());
+        let limit = super::constants::cns_limit_minutes(self.ppo2_at(depth).pressure().value());
 
         if limit == 0.0 {
             f64::INFINITY
@@ -403,7 +394,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn otu_rate_at(self, depth: Meters) -> f64 {
-        let ppo2 = self.ppo2_at(depth).value();
+        let ppo2 = self.ppo2_at(depth).pressure().value();
 
         if ppo2 <= 0.5 {
             0.0
@@ -465,7 +456,7 @@ impl EANxBlend<PartialPressure> {
     /// assert_relative_eq!(best.fo2().value(), 0.35, epsilon = 1e-9);
     ///
     /// // Verify that ppO₂ at target depth equals the limit
-    /// assert_relative_eq!(best.ppo2_at(Meters::new(30.0)), Bar::new(1.4), epsilon = 1e-9);
+    /// assert_relative_eq!(best.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(1.4), epsilon = 1e-9);
     /// ```
     #[must_use]
     pub fn best_mix(target_depth: Meters, ppo2_max: Bar) -> Option<Self> {
@@ -563,7 +554,7 @@ impl<M: BlendMethod + PartialEq> approx::RelativeEq for EANxBlend<M> {
 mod tests {
     use super::*;
     use crate::gas::blend::Psa;
-    use crate::gas::constants::{AIR_N2, AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
+    use crate::gas::constants::AIR_O2;
     use crate::units::{Bar, Meters, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -731,129 +722,6 @@ mod tests {
         }
     }
 
-    mod ppo2_at {
-        use super::*;
-
-        #[test]
-        fn ppo2_at_surface_equals_fo2() -> Result<()> {
-            assert_relative_eq!(ean(0.32)?.ppo2_at(Meters::new(0.0)), Bar::new(0.32));
-            Ok(())
-        }
-
-        #[test]
-        fn ppo2_at_air_30m() -> Result<()> {
-            let expected = Bar::new((30.0_f64 / 10.0 + 1.0) * 0.21);
-            assert_relative_eq!(ean(0.21)?.ppo2_at(Meters::new(30.0)), expected);
-
-            Ok(())
-        }
-
-        #[test]
-        fn ppo2_at_eanx40_10m() -> Result<()> {
-            let expected = Bar::new((10.0_f64 / 10.0 + 1.0) * 0.40);
-            assert_relative_eq!(ean(0.40)?.ppo2_at(Meters::new(10.0)), expected);
-
-            Ok(())
-        }
-    }
-
-    mod end_at {
-        use super::*;
-
-        #[test]
-        fn ean32_pp_at_30m() -> Result<()> {
-            let mix = ean(0.32)?;
-            let c = mix.components();
-            let narcotic_mix = AR_NARCOTIC_POTENCY.mul_add(c.ar(), c.n2());
-            let expected = Meters::new(40.0 * narcotic_mix / AIR_NARCOTIC - 10.0);
-
-            assert_relative_eq!(mix.end_at(Meters::new(30.0)), expected, epsilon = 1e-9);
-
-            Ok(())
-        }
-
-        #[test]
-        fn air_end_equals_depth() -> Result<()> {
-            let depth = Meters::new(30.0);
-            assert_relative_eq!(ean(AIR_O2)?.end_at(depth), depth, epsilon = 1e-6);
-
-            Ok(())
-        }
-
-        #[test]
-        fn end_at_surface_is_zero() -> Result<()> {
-            assert_relative_eq!(
-                ean(0.32)?.end_at(Meters::new(0.0)),
-                Meters::new(0.0),
-                epsilon = 1e-9
-            );
-
-            Ok(())
-        }
-
-        #[test]
-        fn higher_fo2_gives_lower_end() -> Result<()> {
-            let depth = Meters::new(40.0);
-            assert!(ean(0.32)?.end_at(depth) < ean(0.21)?.end_at(depth));
-
-            Ok(())
-        }
-    }
-
-    mod mnd_at {
-        use super::*;
-
-        #[test]
-        fn mnd_at_is_inverse_of_end_at() -> Result<()> {
-            let mix = ean(0.32)?;
-            let end_limit = Meters::new(30.0);
-            let mnd = mix.mnd_at(end_limit);
-
-            assert_relative_eq!(mix.end_at(mnd), end_limit, epsilon = 1e-6);
-
-            Ok(())
-        }
-
-        #[test]
-        fn air_mnd_equals_end_limit() -> Result<()> {
-            let limit = Meters::new(30.0);
-
-            assert_relative_eq!(ean(AIR_O2)?.mnd_at(limit), limit, epsilon = 1e-6);
-
-            Ok(())
-        }
-    }
-
-    mod ead_at {
-        use super::*;
-
-        #[test]
-        fn ean32_pp_at_30m() -> Result<()> {
-            let mix = ean(0.32)?;
-            let expected = Meters::new(40.0 * mix.fn2() / AIR_N2 - 10.0);
-
-            assert_relative_eq!(mix.ead_at(Meters::new(30.0)), expected, epsilon = 1e-9);
-
-            Ok(())
-        }
-
-        #[test]
-        fn air_ead_equals_depth() -> Result<()> {
-            let depth = Meters::new(30.0);
-            assert_relative_eq!(ean(AIR_O2)?.ead_at(depth), depth, epsilon = 1e-6);
-
-            Ok(())
-        }
-
-        #[test]
-        fn ead_is_less_than_depth_for_enriched_air() -> Result<()> {
-            let depth = Meters::new(30.0);
-            assert!(ean(0.32)?.ead_at(depth) < depth);
-
-            Ok(())
-        }
-    }
-
     mod gas_density_at {
         use super::*;
 
@@ -955,7 +823,7 @@ mod tests {
             let best = EANx::best_mix(depth, ppo2_max)
                 .ok_or_else(|| eyre!("fo2 = 0.28 is above the 10 % minimum"))?;
 
-            assert_relative_eq!(best.ppo2_at(depth), ppo2_max, epsilon = 1e-9);
+            assert_relative_eq!(best.ppo2_at(depth).pressure(), ppo2_max, epsilon = 1e-9);
 
             Ok(())
         }
