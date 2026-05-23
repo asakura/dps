@@ -3,7 +3,7 @@ use std::fmt;
 use crate::units::{Bar, Meters, Percent};
 
 use super::error::InvalidEANx;
-use super::fmt_gas_name;
+use super::gas_name;
 use crate::gas::constants::{EAN_MIN_O2, SEAWATER, SURFACE_PRESSURE};
 
 /// Maximum Operating Depth for a gas mix at a ppO₂ limit.
@@ -172,18 +172,10 @@ pub struct MODSummary(MOD);
 
 impl fmt::Display for MODSummary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        struct GasName(Percent);
-
-        impl fmt::Display for GasName {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                fmt_gas_name(self.0, f)
-            }
-        }
-
         write!(
             f,
             "{}  MOD {}  @ ppO\u{2082} {}",
-            GasName(self.0.fo2),
+            gas_name(self.0.fo2),
             self.0,
             self.0.ppo2_max
         )

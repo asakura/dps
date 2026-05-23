@@ -442,32 +442,39 @@ impl EANxBlend<PartialPressure> {
 
 impl<M: BlendMethod> fmt::Display for EANxBlend<M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt_gas_name(self.fo2, f)
+        write!(f, "{}", gas_name(self.fo2))
     }
 }
 
-/// Shared gas-name formatter used by `EANxBlend` Display and the summary types.
-pub(super) fn fmt_gas_name(fo2: Percent, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let pct = fo2.value().mul_add(100.0, -0.5).ceil() as u8;
-    let name = match pct {
-        10 => "Hypoxic 10",
-        12 => "Hypoxic 12",
-        14 => "Hypoxic 14",
-        16 => "Hypoxic 16",
-        18 => "Hypoxic 18",
-        21 => "Air",
-        28 => "EANx 28",
-        30 => "EANx 30",
-        32 => "EANx 32",
-        36 => "EANx 36",
-        40 => "EANx 40",
-        50 => "O₂ 50%",
-        80 => "O₂ 80%",
-        100 => "Pure O₂",
-        _ => return write!(f, "{fo2}"),
-    };
+pub(super) fn gas_name(fo2: Percent) -> impl fmt::Display {
+    struct GasName(Percent);
 
-    write!(f, "{name}")
+    impl fmt::Display for GasName {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let pct = self.0.value().mul_add(100.0, -0.5).ceil() as u8;
+            let name = match pct {
+                10 => "Hypoxic 10",
+                12 => "Hypoxic 12",
+                14 => "Hypoxic 14",
+                16 => "Hypoxic 16",
+                18 => "Hypoxic 18",
+                21 => "Air",
+                28 => "EANx 28",
+                30 => "EANx 30",
+                32 => "EANx 32",
+                36 => "EANx 36",
+                40 => "EANx 40",
+                50 => "O₂ 50%",
+                80 => "O₂ 80%",
+                100 => "Pure O₂",
+                _ => return write!(f, "{}", self.0),
+            };
+
+            write!(f, "{name}")
+        }
+    }
+
+    GasName(fo2)
 }
 
 /// Constructs an [`EANx`] (partial-pressure nitrox) from an oxygen fraction.

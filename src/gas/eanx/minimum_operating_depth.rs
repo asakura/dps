@@ -3,7 +3,7 @@ use std::fmt;
 use crate::units::{Bar, Meters, Percent};
 
 use super::error::InvalidEANx;
-use super::fmt_gas_name;
+use super::gas_name;
 use crate::gas::constants::{EAN_MIN_O2, SEAWATER, SURFACE_PRESSURE};
 
 /// Minimum Operating Depth for a hypoxic gas mix at a ppO₂ floor.
@@ -148,18 +148,10 @@ pub struct MiniMODSummary(MiniMOD);
 
 impl fmt::Display for MiniMODSummary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        struct GasName(Percent);
-
-        impl fmt::Display for GasName {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                fmt_gas_name(self.0, f)
-            }
-        }
-
         write!(
             f,
             "{}  MiniMOD {}  @ ppO\u{2082} {}",
-            GasName(self.0.fo2),
+            gas_name(self.0.fo2),
             self.0,
             self.0.ppo2_min
         )
