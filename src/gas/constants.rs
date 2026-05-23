@@ -1,8 +1,8 @@
-use crate::units::{Bar, MetersPerBar};
+use crate::units::{Bar, MetersPerBar, Percent};
 
 pub(super) const SURFACE_PRESSURE: Bar = Bar::new(1.0);
 pub(super) const SEAWATER: MetersPerBar = MetersPerBar::new(10.0);
-pub(super) const EAN_MIN_O2: f64 = 0.10;
+pub(super) const EAN_MIN_O2: Percent = Percent::new(0.10).unwrap();
 
 // Dry air mole fractions (NOAA standard atmosphere)
 //

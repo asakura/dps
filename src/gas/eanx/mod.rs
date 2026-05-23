@@ -94,7 +94,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ));
     /// ```
     pub fn new(fo2: Percent, method: M) -> Result<Self, InvalidEANx> {
-        if fo2.value() < EAN_MIN_O2 {
+        if fo2 < EAN_MIN_O2 {
             return Err(InvalidEANx::O2TooLow(fo2));
         }
 
@@ -460,8 +460,7 @@ impl EANxBlend<PartialPressure> {
     /// ```
     #[must_use]
     pub fn best_mix(target_depth: Meters, ppo2_max: Bar) -> Option<Self> {
-        let abs = (target_depth / SEAWATER + SURFACE_PRESSURE).value();
-        let fo2 = (ppo2_max.value() / abs).min(1.0);
+        let fo2 = (ppo2_max / (target_depth / SEAWATER + SURFACE_PRESSURE)).min(1.0);
         let pct = Percent::new(fo2)?;
 
         Self::new(pct, PartialPressure).ok()

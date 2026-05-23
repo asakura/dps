@@ -101,7 +101,7 @@ impl MOD {
     }
 
     fn new_inner(fo2: Percent, ppo2_max: Bar) -> Result<Self, InvalidEANx> {
-        if fo2.value() < EAN_MIN_O2 {
+        if fo2 < EAN_MIN_O2 {
             return Err(InvalidEANx::O2TooLow(fo2));
         }
 
