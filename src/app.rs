@@ -70,6 +70,10 @@ enum MatchResult {
 }
 
 impl Default for App {
+    /// Creates an `App` with hardcoded rates and [`Config::default`] — no disk I/O.
+    ///
+    /// Intended for tests and harness use. For production, use [`App::new`], which
+    /// loads configuration from disk and propagates errors.
     fn default() -> Self {
         Self::from_config(4.0, 60.0, Config::default())
     }
