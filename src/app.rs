@@ -159,26 +159,33 @@ impl App {
             .frame_rate(self.frame_rate);
         tui.enter()?;
 
+        let mut needs_render = true;
+
         loop {
             match tui.next_event().await {
                 Some(Event::Render) => {
-                    tui.draw(|f| self.render(f))?;
+                    if needs_render {
+                        tui.draw(|f| self.render(f))?;
+                        needs_render = false;
+                    }
+                }
+                Some(Event::Init | Event::Resize(_, _)) => {
+                    needs_render = true;
                 }
                 Some(Event::Key(key)) => {
                     if matches!(self.handle_key(key), Action::Quit) {
                         break;
                     }
+                    needs_render = true;
                 }
                 Some(Event::Quit | Event::Closed) | None => break,
                 Some(
                     Event::Error
-                    | Event::Init
                     | Event::Tick
                     | Event::FocusGained
                     | Event::FocusLost
                     | Event::Paste(_)
-                    | Event::Mouse(_)
-                    | Event::Resize(_, _),
+                    | Event::Mouse(_),
                 ) => {}
             }
         }
