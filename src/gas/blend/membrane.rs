@@ -153,6 +153,7 @@ impl BlendMethod for Membrane {
 /// assert!(Membrane::from_analysis(0.32, 0.60, 0.10, 0.005).is_err());
 /// ```
 #[derive(Debug, Clone, Copy, thiserror::Error)]
+#[non_exhaustive]
 #[error("membrane diluent fractions are invalid: fn2 + far + fco2 must not exceed (1 − fo2)")]
 pub struct InvalidMembraneFractions;
 

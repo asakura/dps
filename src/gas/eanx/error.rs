@@ -21,6 +21,7 @@ use crate::units::Percent;
 /// ));
 /// ```
 #[derive(Debug, Clone, Copy, thiserror::Error)]
+#[non_exhaustive]
 pub enum InvalidEANx {
     /// FO₂ is below the 10 % minimum for a breathable EAN mix.
     #[error("O₂ fraction {0} is below the 10 % minimum")]
