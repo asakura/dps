@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::units::{Bar, GramsPerLitre, Meters, Percent};
+use crate::units::{Bar, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
 use super::blend::{BlendMethod, PartialPressure};
 use super::components::GasComponents;
@@ -393,13 +393,13 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// assert!(ean32.otu_rate_at(Meters::new(40.0)) > 0.0);
     /// ```
     #[must_use]
-    pub fn otu_rate_at(self, depth: Meters) -> f64 {
+    pub fn otu_rate_at(self, depth: Meters) -> OTUPerMinute {
         let ppo2 = f64::from(self.ppo2_at(depth).pressure());
 
         if ppo2 <= 0.5 {
-            0.0
+            OTUPerMinute::new(0.0)
         } else {
-            (ppo2 - 0.5_f64).powf(0.83)
+            OTUPerMinute::new((ppo2 - 0.5_f64).powf(0.83))
         }
     }
 
@@ -554,7 +554,7 @@ mod tests {
     use super::*;
     use crate::gas::blend::Psa;
     use crate::gas::constants::AIR_O2;
-    use crate::units::{Bar, GramsPerLitre, Meters, Percent};
+    use crate::units::{Bar, GramsPerLitre, Meters, OTUPerMinute, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
     use rstest::*;
@@ -782,7 +782,7 @@ mod tests {
         #[test]
         fn zero_below_0_5_bar() -> Result<()> {
             // Air at surface: ppO₂ = 0.21 bar
-            assert_relative_eq!(ean(0.21)?.otu_rate_at(Meters::new(0.0)), 0.0);
+            assert_relative_eq!(ean(0.21)?.otu_rate_at(Meters::new(0.0)), OTUPerMinute::new(0.0));
 
             Ok(())
         }
@@ -791,7 +791,7 @@ mod tests {
         fn follows_noaa_formula() -> Result<()> {
             // EANx32 at 40 m: ppO₂ = 5 × 0.32 = 1.6 bar
             // OTU = (1.6 − 0.5)^0.83 = 1.1^0.83
-            let expected = (1.6_f64 - 0.5).powf(0.83);
+            let expected = OTUPerMinute::new((1.6_f64 - 0.5).powf(0.83));
 
             assert_relative_eq!(
                 ean(0.32)?.otu_rate_at(Meters::new(40.0)),

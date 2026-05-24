@@ -4,12 +4,14 @@ mod bar;
 mod grams_per_litre;
 mod meters;
 mod meters_per_bar;
+mod otu_per_minute;
 mod percent;
 
 pub use bar::Bar;
 pub use grams_per_litre::GramsPerLitre;
 pub use meters::Meters;
 pub use meters_per_bar::MetersPerBar;
+pub use otu_per_minute::OTUPerMinute;
 pub use percent::Percent;
 
 use std::ops::{Div, Mul};
