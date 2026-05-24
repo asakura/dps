@@ -1,0 +1,244 @@
+//! Newtype wrappers for physical units used in dive calculations.
+
+mod bar;
+mod meters;
+mod meters_per_bar;
+mod percent;
+
+pub use bar::Bar;
+pub use meters::Meters;
+pub use meters_per_bar::MetersPerBar;
+pub use percent::Percent;
+
+use std::ops::{Div, Mul};
+
+/// Generates standard impls for a newtype unit struct backed by f64.
+///
+/// Provides: `new`, `value`, `max`, `Display`, `From<f64>`, `From<T> for f64`,
+/// `Add`, `Sub`, `Neg`, `Mul<f64>`, `Div<f64>`, `Mul<T> for f64`, `Div` (ratio),
+/// `Mul<Percent>`, and `Div<Percent>`.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! unit_newtype {
+    ($ty:ident, $suffix:literal) => {
+        impl $ty {
+            /// Constructs a value from a raw `f64`.
+            pub const fn new(val: f64) -> Self {
+                Self(val)
+            }
+
+            /// Returns the underlying `f64`.
+            pub const fn value(self) -> f64 {
+                self.0
+            }
+
+            /// Returns the greater of two values.
+            #[must_use]
+            pub const fn max(self, other: Self) -> Self {
+                Self(self.0.max(other.0))
+            }
+
+            /// Computes `self * scalar + addend` with a single rounding.
+            #[must_use]
+            pub const fn mul_add(self, scalar: f64, addend: Self) -> Self {
+                Self(self.0.mul_add(scalar, addend.0))
+            }
+        }
+
+        impl ::std::fmt::Display for $ty {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+                write!(f, "{:.1} {}", self.0, $suffix)
+            }
+        }
+
+        impl ::std::convert::From<f64> for $ty {
+            fn from(v: f64) -> Self {
+                Self(v)
+            }
+        }
+
+        impl ::std::convert::From<$ty> for f64 {
+            fn from(v: $ty) -> Self {
+                v.0
+            }
+        }
+
+        impl ::std::ops::Add for $ty {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self {
+                Self(self.0 + rhs.0)
+            }
+        }
+
+        impl ::std::ops::Sub for $ty {
+            type Output = Self;
+
+            fn sub(self, rhs: Self) -> Self {
+                Self(self.0 - rhs.0)
+            }
+        }
+
+        impl ::std::ops::Mul<f64> for $ty {
+            type Output = Self;
+
+            fn mul(self, rhs: f64) -> Self {
+                Self(self.0 * rhs)
+            }
+        }
+
+        impl ::std::ops::Div<f64> for $ty {
+            type Output = Self;
+
+            fn div(self, rhs: f64) -> Self {
+                Self(self.0 / rhs)
+            }
+        }
+
+        impl ::std::ops::Mul<$ty> for f64 {
+            type Output = $ty;
+
+            fn mul(self, rhs: $ty) -> $ty {
+                $ty(self * rhs.0)
+            }
+        }
+
+        impl ::std::ops::Div for $ty {
+            type Output = f64;
+
+            fn div(self, rhs: Self) -> f64 {
+                self.0 / rhs.0
+            }
+        }
+
+        impl ::std::ops::Neg for $ty {
+            type Output = Self;
+
+            fn neg(self) -> Self {
+                Self(-self.0)
+            }
+        }
+
+        impl ::std::ops::Mul<$crate::units::Percent> for $ty {
+            type Output = Self;
+
+            fn mul(self, rhs: $crate::units::Percent) -> Self {
+                Self(self.0 * rhs.value())
+            }
+        }
+
+        impl ::std::ops::Div<$crate::units::Percent> for $ty {
+            type Output = Self;
+
+            fn div(self, rhs: $crate::units::Percent) -> Self {
+                Self(self.0 / rhs.value())
+            }
+        }
+
+        impl ::approx::AbsDiffEq for $ty {
+            type Epsilon = f64;
+
+            fn default_epsilon() -> f64 {
+                f64::default_epsilon()
+            }
+
+            fn abs_diff_eq(&self, other: &Self, epsilon: f64) -> bool {
+                self.0.abs_diff_eq(&other.0, epsilon)
+            }
+        }
+
+        impl ::approx::RelativeEq for $ty {
+            fn default_max_relative() -> f64 {
+                f64::default_max_relative()
+            }
+
+            fn relative_eq(&self, other: &Self, epsilon: f64, max_relative: f64) -> bool {
+                self.0.relative_eq(&other.0, epsilon, max_relative)
+            }
+        }
+
+        #[cfg(test)]
+        mod unit_newtype_tests {
+            use super::*;
+
+            #[test]
+            fn display() {
+                assert_eq!($ty::new(10.0).to_string(), concat!("10.0 ", $suffix));
+            }
+
+            #[test]
+            fn from_f64() {
+                ::approx::assert_relative_eq!($ty::from(5.0_f64), $ty::new(5.0));
+            }
+
+            #[test]
+            fn f64_from() {
+                ::approx::assert_relative_eq!(f64::from($ty::new(5.0)), 5.0);
+            }
+
+            #[test]
+            fn f64_mul() {
+                ::approx::assert_relative_eq!(2.0_f64 * $ty::new(5.0), $ty::new(10.0));
+            }
+
+            #[test]
+            fn ratio_div() {
+                let ratio: f64 = $ty::new(10.0) / $ty::new(2.0);
+                ::approx::assert_relative_eq!(ratio, 5.0);
+            }
+
+            #[test]
+            fn neg() {
+                ::approx::assert_relative_eq!(-$ty::new(5.0), $ty::new(-5.0));
+            }
+        }
+    };
+}
+
+/// Meters / `MetersPerBar` → Bar  (depth → gauge pressure)
+///
+/// ```no_run
+/// use dps::units::{Bar, Meters, MetersPerBar};
+/// let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
+/// assert_eq!(gauge.value(), 3.0);
+/// ```
+impl Div<MetersPerBar> for Meters {
+    type Output = Bar;
+
+    fn div(self, rhs: MetersPerBar) -> Bar {
+        Bar::new(self.value() / rhs.value())
+    }
+}
+
+/// Bar × `MetersPerBar` → Meters  (gauge pressure → depth)
+///
+/// ```no_run
+/// use dps::units::{Bar, Meters, MetersPerBar};
+/// let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
+/// assert_eq!(depth.value(), 30.0);
+/// ```
+impl Mul<MetersPerBar> for Bar {
+    type Output = Meters;
+
+    fn mul(self, rhs: MetersPerBar) -> Meters {
+        Meters::new(self.value() * rhs.value())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn meters_div_meters_per_bar_gives_bar() {
+        let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
+        assert_relative_eq!(gauge, Bar::new(3.0));
+    }
+
+    #[test]
+    fn bar_mul_meters_per_bar_gives_meters() {
+        let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
+        assert_relative_eq!(depth, Meters::new(30.0));
+    }
+}
