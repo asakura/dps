@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::units::{Bar, GramsPerLitre, Meters, OTUPerMinute, Percent};
+use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
 use super::blend::{BlendMethod, PartialPressure};
 use super::components::GasComponents;
@@ -355,25 +355,25 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Uses the NOAA single-dive CNS exposure limit table. Multiply by exposure
     /// time in minutes to get the fraction of the CNS limit consumed.
     ///
-    /// - Returns `0.0` for `ppO₂ ≤ 0.5 bar` (below the CNS threshold).
-    /// - Returns [`f64::INFINITY`] for `ppO₂ > 1.6 bar` (not recommended).
+    /// - Returns `0.0 CNS%/min` for `ppO₂ ≤ 0.5 bar` (below the CNS threshold).
+    /// - Returns [`f64::INFINITY`] CNS%/min for `ppO₂ > 1.6 bar` (not recommended).
     ///
     /// ```no_run
     /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps::units::{CnsRatePerMinute, Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// // At MOD (33.75 m), ppO₂ = 1.4 bar → limit 150 min → rate = 1/150 per min
+    /// // At MOD (33.75 m), ppO₂ = 1.4 bar → limit 150 min → rate ≈ 0.667 CNS%/min
     /// let rate = ean32.cns_rate_at(Meters::new(33.75));
-    /// assert!((rate - 1.0 / 150.0).abs() < 1e-9);
+    /// assert!((f64::from(rate) - 100.0 / 150.0).abs() < 1e-9);
     /// ```
     #[must_use]
-    pub fn cns_rate_at(self, depth: Meters) -> f64 {
+    pub fn cns_rate_at(self, depth: Meters) -> CnsRatePerMinute {
         let limit = super::constants::cns_limit_minutes(self.ppo2_at(depth).pressure().into());
 
         if limit == 0.0 {
-            f64::INFINITY
+            CnsRatePerMinute::new(f64::INFINITY)
         } else {
-            1.0 / limit
+            CnsRatePerMinute::new(100.0 / limit)
         }
     }
 
@@ -556,7 +556,7 @@ mod tests {
     use super::*;
     use crate::gas::blend::Psa;
     use crate::gas::constants::AIR_O2;
-    use crate::units::{Bar, GramsPerLitre, Meters, OTUPerMinute, Percent};
+    use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
     use rstest::*;
@@ -750,7 +750,10 @@ mod tests {
 
         #[test]
         fn zero_below_threshold() -> Result<()> {
-            assert_relative_eq!(ean(0.21)?.cns_rate_at(Meters::new(0.0)), 0.0);
+            assert_relative_eq!(
+                ean(0.21)?.cns_rate_at(Meters::new(0.0)),
+                CnsRatePerMinute::new(0.0)
+            );
 
             Ok(())
         }
@@ -762,7 +765,7 @@ mod tests {
             // 1.36 bar falls in the 1.30–1.40 range → 150 min limit.
             assert_relative_eq!(
                 ean(0.32)?.cns_rate_at(Meters::new(32.5)),
-                1.0 / 150.0,
+                CnsRatePerMinute::new(100.0 / 150.0),
                 epsilon = 1e-9
             );
 
@@ -772,7 +775,10 @@ mod tests {
         #[test]
         fn above_1_6_bar_is_infinite() -> Result<()> {
             // Pure O₂ at 7 m: ppO₂ = (7/10 + 1) × 1.0 = 1.7 bar
-            assert_relative_eq!(ean(1.0)?.cns_rate_at(Meters::new(7.0)), f64::INFINITY);
+            assert_eq!(
+                ean(1.0)?.cns_rate_at(Meters::new(7.0)),
+                CnsRatePerMinute::new(f64::INFINITY)
+            );
 
             Ok(())
         }

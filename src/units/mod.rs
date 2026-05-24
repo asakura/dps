@@ -1,6 +1,7 @@
 //! Newtype wrappers for physical units used in dive calculations.
 
 mod bar;
+mod cns_rate_per_minute;
 mod grams_per_litre;
 mod meters;
 mod meters_per_bar;
@@ -8,6 +9,7 @@ mod otu_per_minute;
 mod percent;
 
 pub use bar::Bar;
+pub use cns_rate_per_minute::CnsRatePerMinute;
 pub use grams_per_litre::GramsPerLitre;
 pub use meters::Meters;
 pub use meters_per_bar::MetersPerBar;
