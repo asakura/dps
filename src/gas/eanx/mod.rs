@@ -383,14 +383,14 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// ```no_run
     /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps::units::{Meters, OTUPerMinute, Percent};
     /// // Below 0.5 bar threshold: zero OTU
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
-    /// assert_eq!(air.otu_rate_at(Meters::new(0.0)), 0.0);
+    /// assert_eq!(air.otu_rate_at(Meters::new(0.0)), OTUPerMinute::new(0.0));
     ///
     /// // EANx 32 at 40 m: ppO₂ = 1.6 bar → (1.6 − 0.5)^0.83 ≈ 0.918 OTU/min
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert!(ean32.otu_rate_at(Meters::new(40.0)) > 0.0);
+    /// assert!(ean32.otu_rate_at(Meters::new(40.0)) > OTUPerMinute::new(0.0));
     /// ```
     #[must_use]
     pub fn otu_rate_at(self, depth: Meters) -> OTUPerMinute {
