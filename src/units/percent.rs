@@ -44,6 +44,24 @@ impl From<Percent> for f64 {
     }
 }
 
+/// Ratio of two fractions; the result is dimensionless.
+///
+/// ```no_run
+/// use dps::units::Percent;
+/// # use approx::assert_relative_eq;
+/// let n2 = Percent::new(0.7808).unwrap();
+/// let diluent = Percent::new(0.7906).unwrap();
+/// let ratio: f64 = n2 / diluent;
+/// assert_relative_eq!(ratio, 0.7808 / 0.7906, epsilon = 1e-9);
+/// ```
+impl std::ops::Div for Percent {
+    type Output = f64;
+
+    fn div(self, rhs: Self) -> f64 {
+        self.0 / rhs.0
+    }
+}
+
 impl fmt::Display for Percent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let pct = self.0 * 100.0;
@@ -118,6 +136,16 @@ mod tests {
     #[test]
     fn f64_from_percent() -> Result<(), &'static str> {
         assert_relative_eq!(f64::from(Percent::new(0.40).ok_or("invalid")?), 0.40);
+        Ok(())
+    }
+
+    #[test]
+    fn div_gives_dimensionless_ratio() -> Result<(), &'static str> {
+        let a = Percent::new(0.32).ok_or("invalid")?;
+        let b = Percent::new(0.68).ok_or("invalid")?;
+
+        assert_relative_eq!(a / b, 0.32 / 0.68);
+
         Ok(())
     }
 }

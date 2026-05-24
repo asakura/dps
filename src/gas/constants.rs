@@ -11,12 +11,32 @@ pub(super) const EAN_MIN_O2: Percent = Percent::new(0.10).unwrap();
 // The resulting N₂ value (≈ 78.077 %) differs from the independently published
 // 78.084 % by ~0.007 %; this is within the rounding of the source data.
 
-pub(super) const AIR_O2: f64 = 0.209_46;
-pub(super) const AIR_AR: f64 = 0.009_34;
-pub(super) const AIR_CO2: f64 = 0.000_407; // NOAA GML 2017 annual mean (≈ 406.6 ppm); fixed for model consistency
-pub(super) const AIR_OTHER: f64 = 0.000_027_4; // Ne, He, CH₄, Kr, H₂, N₂O, Xe, …
-pub(super) const AIR_N2: f64 = 1.0 - AIR_O2 - AIR_AR - AIR_CO2 - AIR_OTHER;
-pub(super) const AIR_DILUENT: f64 = 1.0 - AIR_O2; // non-O₂ total
+// The _RAW constants exist solely so that derived constants (AIR_N2, AIR_DILUENT,
+// AIR_NARCOTIC, PSA_*) can be computed in const context.  Ideally these would
+// chain off the typed Percent constants via From<Percent> for f64, but trait
+// method calls in const expressions require const trait impls, which are still
+// unstable as of Rust 1.88 (tracking issue rust-lang/rust#67792).  Once
+// `#![feature(const_trait_impl)]` is stabilised the _RAW layer can be removed
+// and the derivations rewritten as e.g. `f64::from(AIR_O2)`.
+const AIR_O2_RAW: f64 = 0.209_46;
+const AIR_AR_RAW: f64 = 0.009_34;
+const AIR_CO2_RAW: f64 = 0.000_407;
+const AIR_OTHER_RAW: f64 = 0.000_027_4;
+const AIR_N2_RAW: f64 = 1.0 - AIR_O2_RAW - AIR_AR_RAW - AIR_CO2_RAW - AIR_OTHER_RAW;
+
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "derived constants use AIR_O2_RAW for const arithmetic until const_trait_impl stabilises; AIR_O2 replaces it once f64::from(Percent) is usable in const context"
+    )
+)]
+pub(super) const AIR_O2: Percent = Percent::new(AIR_O2_RAW).unwrap();
+pub(super) const AIR_AR: Percent = Percent::new(AIR_AR_RAW).unwrap();
+pub(super) const AIR_CO2: Percent = Percent::new(AIR_CO2_RAW).unwrap(); // NOAA GML 2017 annual mean (≈ 406.6 ppm); fixed for model consistency
+pub(super) const AIR_OTHER: Percent = Percent::new(AIR_OTHER_RAW).unwrap(); // Ne, He, CH₄, Kr, H₂, N₂O, Xe, …
+pub(super) const AIR_N2: Percent = Percent::new(AIR_N2_RAW).unwrap();
+pub(super) const AIR_DILUENT: Percent = Percent::new(1.0 - AIR_O2_RAW).unwrap(); // non-O₂ total
 
 // Narcosis
 //
@@ -25,7 +45,8 @@ pub(super) const AIR_DILUENT: f64 = 1.0 - AIR_O2; // non-O₂ total
 // is negligible and excluded.
 
 pub(super) const AR_NARCOTIC_POTENCY: f64 = 1.5;
-pub(super) const AIR_NARCOTIC: f64 = AIR_N2 + AR_NARCOTIC_POTENCY * AIR_AR;
+pub(super) const AIR_NARCOTIC: Percent =
+    Percent::new(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW).unwrap();
 
 // Molecular weights (g/mol)
 
@@ -47,8 +68,8 @@ pub(super) const STANDARD_TEMP_K: f64 = 293.15; // 20 °C reference temperature
 // Zeolite PSA cannot separate Ar from O₂; both concentrate at the same rate.
 // Noble traces (Ne, He, Kr, …) similarly pass through unretained.
 
-pub(super) const PSA_AR_PER_O2: f64 = AIR_AR / AIR_O2;
-pub(super) const PSA_OTHER_PER_O2: f64 = AIR_OTHER / AIR_O2;
+pub(super) const PSA_AR_PER_O2: f64 = AIR_AR_RAW / AIR_O2_RAW;
+pub(super) const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 
 // CNS clock
 

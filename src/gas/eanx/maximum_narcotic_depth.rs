@@ -90,7 +90,7 @@ impl MND {
         );
 
         let end_abs = end_limit / SEAWATER + SURFACE_PRESSURE;
-        let mnd_pressure = end_abs / (narcotic / AIR_NARCOTIC);
+        let mnd_pressure = end_abs / (narcotic / f64::from(AIR_NARCOTIC));
         let mnd = (mnd_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
 
         Self {
@@ -193,7 +193,7 @@ mod tests {
         #[test]
         fn display_shows_mnd_depth() -> Result<()> {
             // Air: MND == END limit == 30.0 m
-            let m = ean(AIR_O2)?.mnd_at(Meters::new(30.0));
+            let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
             assert_eq!(m.to_string(), "30.0 m");
 
@@ -202,7 +202,7 @@ mod tests {
 
         #[test]
         fn mnd_accessor_returns_meters() -> Result<()> {
-            let m = ean(AIR_O2)?.mnd_at(Meters::new(30.0));
+            let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
             assert_relative_eq!(m.mnd(), Meters::new(30.0), epsilon = 1e-9);
 
@@ -231,7 +231,7 @@ mod tests {
 
         #[test]
         fn from_gives_meters() -> Result<()> {
-            let m = ean(AIR_O2)?.mnd_at(Meters::new(30.0));
+            let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
             assert_eq!(Meters::from(m), m.mnd());
 
@@ -273,7 +273,7 @@ mod tests {
         #[test]
         fn summary_formats_full_detail() -> Result<()> {
             // Air: MND == 30.0 m at END limit 30.0 m
-            let m = ean(AIR_O2)?.mnd_at(Meters::new(30.0));
+            let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
             assert_eq!(m.summary().to_string(), "Air  MND 30.0 m  @ END 30.0 m");
 

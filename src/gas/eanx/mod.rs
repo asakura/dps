@@ -345,7 +345,9 @@ impl<M: BlendMethod> EANxBlend<M> {
     pub fn gas_density_at(self, depth: Meters) -> GramsPerLitre {
         let abs_pa = f64::from(depth / SEAWATER + SURFACE_PRESSURE) * 1e5;
 
-        GramsPerLitre::new(abs_pa * self.components().molar_mass() / (GAS_CONSTANT * STANDARD_TEMP_K))
+        GramsPerLitre::new(
+            abs_pa * self.components().molar_mass() / (GAS_CONSTANT * STANDARD_TEMP_K),
+        )
     }
 
     /// CNS O₂ toxicity rate in fraction of single-dive limit per minute.
@@ -726,7 +728,7 @@ mod tests {
 
         #[test]
         fn air_at_surface_is_approximately_1_19_g_per_l() -> Result<()> {
-            let density = ean(AIR_O2)?.gas_density_at(Meters::new(0.0));
+            let density = ean(f64::from(AIR_O2))?.gas_density_at(Meters::new(0.0));
             assert_relative_eq!(density, GramsPerLitre::new(1.188), epsilon = 0.002);
 
             Ok(())
@@ -782,7 +784,10 @@ mod tests {
         #[test]
         fn zero_below_0_5_bar() -> Result<()> {
             // Air at surface: ppO₂ = 0.21 bar
-            assert_relative_eq!(ean(0.21)?.otu_rate_at(Meters::new(0.0)), OTUPerMinute::new(0.0));
+            assert_relative_eq!(
+                ean(0.21)?.otu_rate_at(Meters::new(0.0)),
+                OTUPerMinute::new(0.0)
+            );
 
             Ok(())
         }

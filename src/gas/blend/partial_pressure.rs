@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn air_fractions_sum_to_one() {
         assert_relative_eq!(
-            PartialPressure.components(AIR_O2).sum(),
+            PartialPressure.components(f64::from(AIR_O2)).sum(),
             1.0,
             epsilon = 1e-12
         );
@@ -62,12 +62,12 @@ mod tests {
 
     #[test]
     fn air_recovers_standard_air_composition() {
-        let c = PartialPressure.components(AIR_O2);
+        let c = PartialPressure.components(f64::from(AIR_O2));
 
-        assert_relative_eq!(c.o2(), AIR_O2, epsilon = 1e-9);
-        assert_relative_eq!(c.n2(), AIR_N2, epsilon = 1e-6);
-        assert_relative_eq!(c.ar(), AIR_AR, epsilon = 1e-6);
-        assert_relative_eq!(c.co2(), AIR_CO2, epsilon = 1e-9);
+        assert_relative_eq!(c.o2(), f64::from(AIR_O2), epsilon = 1e-9);
+        assert_relative_eq!(c.n2(), f64::from(AIR_N2), epsilon = 1e-6);
+        assert_relative_eq!(c.ar(), f64::from(AIR_AR), epsilon = 1e-6);
+        assert_relative_eq!(c.co2(), f64::from(AIR_CO2), epsilon = 1e-9);
     }
 
     #[test]

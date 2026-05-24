@@ -85,7 +85,7 @@ impl EAD {
 
     pub(super) fn new(fo2: Percent, fn2: f64, depth: Meters) -> Self {
         let abs = depth / SEAWATER + SURFACE_PRESSURE;
-        let ead_pressure = abs * (fn2 / AIR_N2);
+        let ead_pressure = abs * (fn2 / f64::from(AIR_N2));
         let ead = (ead_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
 
         Self {
@@ -188,7 +188,7 @@ mod tests {
         #[test]
         fn display_shows_ead_depth() -> Result<()> {
             // Air at 30 m: EAD == actual depth == 30.0 m
-            let e = ean(AIR_O2)?.ead_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.ead_at(Meters::new(30.0));
 
             assert_eq!(e.to_string(), "30.0 m");
 
@@ -197,7 +197,7 @@ mod tests {
 
         #[test]
         fn ead_accessor_returns_meters() -> Result<()> {
-            let e = ean(AIR_O2)?.ead_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.ead_at(Meters::new(30.0));
 
             assert_relative_eq!(e.ead(), Meters::new(30.0), epsilon = 1e-9);
 
@@ -226,7 +226,7 @@ mod tests {
 
         #[test]
         fn from_gives_meters() -> Result<()> {
-            let e = ean(AIR_O2)?.ead_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.ead_at(Meters::new(30.0));
 
             assert_eq!(Meters::from(e), e.ead());
 
@@ -259,7 +259,7 @@ mod tests {
         #[test]
         fn ean32_pp_formula_at_30m() -> Result<()> {
             let mix = ean(0.32)?;
-            let expected = Meters::new(40.0 * mix.fn2() / AIR_N2 - 10.0);
+            let expected = Meters::new(40.0 * mix.fn2() / f64::from(AIR_N2) - 10.0);
 
             assert_relative_eq!(
                 mix.ead_at(Meters::new(30.0)).ead(),
@@ -277,7 +277,7 @@ mod tests {
         #[test]
         fn summary_formats_full_detail() -> Result<()> {
             // Air at 30 m: EAD == 30.0 m
-            let e = ean(AIR_O2)?.ead_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.ead_at(Meters::new(30.0));
 
             assert_eq!(e.summary().to_string(), "Air  EAD 30.0 m  @ 30.0 m");
 

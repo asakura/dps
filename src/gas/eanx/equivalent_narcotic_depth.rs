@@ -85,7 +85,7 @@ impl END {
 
     pub(super) fn new(fo2: Percent, narcotic: f64, depth: Meters) -> Self {
         let abs = depth / SEAWATER + SURFACE_PRESSURE;
-        let end_pressure = abs * (narcotic / AIR_NARCOTIC);
+        let end_pressure = abs * (narcotic / f64::from(AIR_NARCOTIC));
         let end = (end_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
 
         Self {
@@ -188,7 +188,7 @@ mod tests {
         #[test]
         fn display_shows_end_depth() -> Result<()> {
             // Air at 30 m: END == actual depth == 30.0 m
-            let e = ean(AIR_O2)?.end_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
             assert_eq!(e.to_string(), "30.0 m");
 
@@ -197,7 +197,7 @@ mod tests {
 
         #[test]
         fn end_accessor_returns_meters() -> Result<()> {
-            let e = ean(AIR_O2)?.end_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
             assert_relative_eq!(e.end(), Meters::new(30.0), epsilon = 1e-9);
 
@@ -226,7 +226,7 @@ mod tests {
 
         #[test]
         fn from_gives_meters() -> Result<()> {
-            let e = ean(AIR_O2)?.end_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
             assert_eq!(Meters::from(e), e.end());
 
@@ -261,7 +261,7 @@ mod tests {
             let mix = ean(0.32)?;
             let c = mix.components();
             let narcotic_mix = AR_NARCOTIC_POTENCY.mul_add(c.ar(), c.n2());
-            let expected = Meters::new(40.0 * narcotic_mix / AIR_NARCOTIC - 10.0);
+            let expected = Meters::new(40.0 * narcotic_mix / f64::from(AIR_NARCOTIC) - 10.0);
 
             assert_relative_eq!(
                 mix.end_at(Meters::new(30.0)).end(),
@@ -287,7 +287,7 @@ mod tests {
         #[test]
         fn summary_formats_full_detail() -> Result<()> {
             // Air at 30 m: END == 30.0 m
-            let e = ean(AIR_O2)?.end_at(Meters::new(30.0));
+            let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
             assert_eq!(e.summary().to_string(), "Air  END 30.0 m  @ 30.0 m");
 
