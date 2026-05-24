@@ -16,8 +16,8 @@ use crate::gas::constants::{EAN_MIN_O2, SEAWATER, SURFACE_PRESSURE};
 /// use dps::units::{Bar, Percent};
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// let m = ean32.mod_at(Bar::new(1.4));
-/// assert_eq!(m.to_string(), "33.8 m");
-/// assert_eq!(m.summary().to_string(), "EANx 32  MOD 33.8 m  @ ppO₂ 1.4 bar");
+/// assert_eq!(m.to_string(), "33.4 m");
+/// assert_eq!(m.summary().to_string(), "EANx 32  MOD 33.4 m  @ ppO₂ 1.4 bar");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MOD {
@@ -34,7 +34,7 @@ impl MOD {
     /// use dps::units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.75), epsilon = 1e-6);
+    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.44), epsilon = 0.01);
     /// ```
     #[must_use]
     pub const fn depth(self) -> Meters {
@@ -75,7 +75,7 @@ impl MOD {
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(
     ///     ean32.mod_at(Bar::new(1.4)).summary().to_string(),
-    ///     "EANx 32  MOD 33.8 m  @ ppO₂ 1.4 bar",
+    ///     "EANx 32  MOD 33.4 m  @ ppO₂ 1.4 bar",
     /// );
     /// ```
     #[must_use]
@@ -211,7 +211,7 @@ mod tests {
                 Bar::new(1.4),
             ))?;
 
-            assert_eq!(m.to_string(), "33.8 m");
+            assert_eq!(m.to_string(), "33.4 m");
 
             Ok(())
         }
@@ -252,7 +252,7 @@ mod tests {
 
             assert_eq!(
                 m.summary().to_string(),
-                "EANx 32  MOD 33.8 m  @ ppO₂ 1.4 bar"
+                "EANx 32  MOD 33.4 m  @ ppO₂ 1.4 bar"
             );
 
             Ok(())

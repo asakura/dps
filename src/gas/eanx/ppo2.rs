@@ -177,7 +177,7 @@ mod tests {
 
         #[test]
         fn display_shows_ppo2_bar_value() -> Result<()> {
-            // EANx 32 at 33.75 m: (33.75/10 + 1) × 0.32 = 4.375 × 0.32 = 1.4 bar
+            // EANx 32 at 33.75 m: (33.75/9.948 + 1.013) × 0.32 ≈ 1.410 bar → displays as "1.4 bar"
             let p = ean(0.32)?.ppo2_at(Meters::new(33.75));
 
             assert_eq!(p.to_string(), "1.4 bar");
@@ -187,9 +187,13 @@ mod tests {
 
         #[test]
         fn ppo2_accessor_returns_bar() -> Result<()> {
-            let p = ean(0.32)?.ppo2_at(Meters::new(33.75));
+            // Use the MOD depth so ppO₂ = 1.4 bar exactly by construction
+            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let ppo2_target = Bar::new(1.4);
+            let mod_depth = (ppo2_target / fo2 - SURFACE_PRESSURE) * SEAWATER;
+            let p = ean(0.32)?.ppo2_at(mod_depth);
 
-            assert_relative_eq!(p.pressure(), Bar::new(1.4), epsilon = 1e-9);
+            assert_relative_eq!(p.pressure(), ppo2_target, epsilon = 1e-9);
 
             Ok(())
         }
@@ -224,17 +228,22 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_at_surface_equals_fo2() -> Result<()> {
+        fn ppo2_at_surface_equals_surface_pressure_times_fo2() -> Result<()> {
+            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+
             assert_relative_eq!(
                 ean(0.32)?.ppo2_at(Meters::new(0.0)).pressure(),
-                Bar::new(0.32)
+                SURFACE_PRESSURE * fo2
             );
+
             Ok(())
         }
 
         #[test]
         fn ppo2_at_air_30m() -> Result<()> {
-            let expected = Bar::new((30.0_f64 / 10.0 + 1.0) * 0.21);
+            let expected = (Meters::new(30.0) / SEAWATER + SURFACE_PRESSURE)
+                * Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?;
+
             assert_relative_eq!(ean(0.21)?.ppo2_at(Meters::new(30.0)).pressure(), expected);
 
             Ok(())
@@ -242,7 +251,9 @@ mod tests {
 
         #[test]
         fn ppo2_at_eanx40_10m() -> Result<()> {
-            let expected = Bar::new((10.0_f64 / 10.0 + 1.0) * 0.40);
+            let expected = (Meters::new(10.0) / SEAWATER + SURFACE_PRESSURE)
+                * Percent::new(0.40).ok_or_else(|| eyre!("invalid"))?;
+
             assert_relative_eq!(ean(0.40)?.ppo2_at(Meters::new(10.0)).pressure(), expected);
 
             Ok(())

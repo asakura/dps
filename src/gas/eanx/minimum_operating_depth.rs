@@ -16,8 +16,8 @@ use crate::gas::constants::{EAN_MIN_O2, SEAWATER, SURFACE_PRESSURE};
 /// use dps::units::{Bar, Percent};
 /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
 /// let m = h10.minimod_at(Bar::new(0.16));
-/// assert_eq!(m.to_string(), "6.0 m");
-/// assert_eq!(m.summary().to_string(), "Hypoxic 10  MiniMOD 6.0 m  @ ppO₂ 0.16 bar");
+/// assert_eq!(m.to_string(), "5.8 m");
+/// assert_eq!(m.summary().to_string(), "Hypoxic 10  MiniMOD 5.8 m  @ ppO₂ 0.16 bar");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MiniMOD {
@@ -34,7 +34,7 @@ impl MiniMOD {
     /// use dps::units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
-    /// assert_relative_eq!(h10.minimod_at(Bar::new(0.16)).depth(), Meters::new(6.0), epsilon = 1e-9);
+    /// assert_relative_eq!(h10.minimod_at(Bar::new(0.16)).depth(), Meters::new(5.84), epsilon = 0.01);
     /// ```
     #[must_use]
     pub const fn depth(self) -> Meters {
@@ -75,7 +75,7 @@ impl MiniMOD {
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
     /// assert_eq!(
     ///     h10.minimod_at(Bar::new(0.16)).summary().to_string(),
-    ///     "Hypoxic 10  MiniMOD 6.0 m  @ ppO₂ 0.16 bar",
+    ///     "Hypoxic 10  MiniMOD 5.8 m  @ ppO₂ 0.16 bar",
     /// );
     /// ```
     #[must_use]
@@ -212,7 +212,7 @@ mod tests {
                 Bar::new(0.16),
             ))?;
 
-            assert_eq!(m.to_string(), "6.0 m");
+            assert_eq!(m.to_string(), "5.8 m");
 
             Ok(())
         }
@@ -232,7 +232,7 @@ mod tests {
         #[test]
         fn summary_formats_full_detail() -> Result<()> {
             // Bar displays with one decimal: 0.16 → "0.2 bar". Use 0.2 for a clean round-trip.
-            // minimod depth = (0.2 / 0.10 − 1) × 10 = 10.0 m
+            // minimod depth = (0.2 / 0.10 − 1.013) × 9.948 ≈ 9.82 m → "9.8 m"
             let m = MiniMOD::try_from((
                 Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?,
                 Bar::new(0.2),
@@ -240,7 +240,7 @@ mod tests {
 
             assert_eq!(
                 m.summary().to_string(),
-                "Hypoxic 10  MiniMOD 10.0 m  @ ppO₂ 0.2 bar"
+                "Hypoxic 10  MiniMOD 9.8 m  @ ppO₂ 0.2 bar"
             );
 
             Ok(())
@@ -259,7 +259,7 @@ mod tests {
 
             assert_eq!(
                 m.summary().to_string(),
-                "EANx 32  MiniMOD 33.8 m  @ ppO₂ 1.4 bar"
+                "EANx 32  MiniMOD 33.4 m  @ ppO₂ 1.4 bar"
             );
 
             Ok(())

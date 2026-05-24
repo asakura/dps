@@ -189,7 +189,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// ppO₂ at the given depth.
     ///
-    /// Formula: `ppO₂ = (depth / 10 m/bar + 1 bar) × FO₂`
+    /// Formula: `ppO₂ = (depth / 9.948 m/bar + 1.013 bar) × FO₂`
     ///
     /// ```no_run
     /// use dps::gas::EANx;
@@ -206,14 +206,14 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// Maximum Operating Depth for a given ppO₂ limit (O₂ toxicity constraint).
     ///
-    /// Formula: `MOD = (ppO₂_max / FO₂ − 1 bar) × 10 m/bar`
+    /// Formula: `MOD = (ppO₂_max / FO₂ − 1.013 bar) × 9.948 m/bar`
     ///
     /// ```no_run
     /// use dps::gas::EANx;
     /// use dps::units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.75), epsilon = 1e-6);
+    /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.44), epsilon = 0.01);
     /// ```
     ///
     /// # Panics
@@ -231,15 +231,15 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Minimum Operating Depth for a given ppO₂ floor (hypoxia threshold).
     ///
     /// Returns 0 m for mixes that are normoxic or hyperoxic at the surface.
-    /// Formula: `depth = (ppO₂_min / FO₂ − 1 bar) × 10 m/bar`, clamped to 0.
+    /// Formula: `depth = (ppO₂_min / FO₂ − 1.013 bar) × 9.948 m/bar`, clamped to 0.
     ///
     /// ```no_run
     /// use dps::gas::EANx;
     /// use dps::units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
-    /// // Hypoxic 10 % mix: minimum depth at ppO₂ 0.16 bar = 6.0 m
+    /// // Hypoxic 10 % mix: minimum depth at ppO₂ 0.16 bar ≈ 5.84 m
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
-    /// assert_relative_eq!(h10.minimod_at(Bar::new(0.16)).depth(), Meters::new(6.0), epsilon = 1e-9);
+    /// assert_relative_eq!(h10.minimod_at(Bar::new(0.16)).depth(), Meters::new(5.84), epsilon = 0.01);
     ///
     /// // Normoxic air: no minimum depth
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
@@ -329,17 +329,17 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Computed via the ideal gas law: `ρ = P × M / (R × T)`.
     /// Dense gas increases work of breathing and CO₂ retention risk at depth.
     ///
-    /// Note: uses 1 bar as surface pressure; the commonly cited air density of
-    /// 1.204 g/L is for 1 atm (101 325 Pa). At 1 bar this model gives ≈ 1.188 g/L.
+    /// Uses 1 atm (1.013 bar) as surface pressure and standard seawater density
+    /// (1025 kg/m³), giving ≈ 1.204 g/L for dry air at 20 °C.
     ///
     /// ```no_run
     /// use dps::gas::EANx;
     /// use dps::units::{Meters, Percent};
-    /// // Density doubles from surface to 10 m (pressure doubles)
+    /// // Density doubles at the depth where absolute pressure = 2 × P_surface (≈ 10.1 m)
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// let d0 = ean32.gas_density_at(Meters::new(0.0));
-    /// let d10 = ean32.gas_density_at(Meters::new(10.0));
-    /// assert!((d10 / d0 - 2.0).abs() < 1e-9);
+    /// let d_double = ean32.gas_density_at(Meters::new(10.08));
+    /// assert!((d_double / d0 - 2.0).abs() < 0.001);
     /// ```
     #[must_use]
     pub fn gas_density_at(self, depth: Meters) -> GramsPerLitre {
@@ -454,8 +454,8 @@ impl EANxBlend<PartialPressure> {
     /// use dps::units::{Bar, Meters};
     /// # use approx::assert_relative_eq;
     /// let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4)).unwrap();
-    /// // FO₂ = 1.4 / (30/10 + 1) = 0.35
-    /// assert_relative_eq!(f64::from(best.fo2()), 0.35, epsilon = 1e-9);
+    /// // FO₂ = 1.4 / (30/9.948 + 1.013) ≈ 0.347
+    /// assert_relative_eq!(f64::from(best.fo2()), 0.347, epsilon = 0.001);
     ///
     /// // Verify that ppO₂ at target depth equals the limit
     /// assert_relative_eq!(best.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(1.4), epsilon = 1e-9);
@@ -555,7 +555,7 @@ impl<M: BlendMethod + PartialEq> approx::RelativeEq for EANxBlend<M> {
 mod tests {
     use super::*;
     use crate::gas::blend::Psa;
-    use crate::gas::constants::AIR_O2;
+    use crate::gas::constants::{AIR_O2, SEAWATER, SURFACE_PRESSURE};
     use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -609,7 +609,9 @@ mod tests {
 
         #[test]
         fn mod_at_eanx32_1_4_bar() -> Result<()> {
-            let expected = Meters::new((1.4_f64 / 0.32 - 1.0) * 10.0);
+            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let expected = (Bar::new(1.4) / fo2 - SURFACE_PRESSURE) * SEAWATER;
+
             assert_relative_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).depth(), expected);
 
             Ok(())
@@ -617,7 +619,9 @@ mod tests {
 
         #[test]
         fn mod_at_eanx40_1_4_bar() -> Result<()> {
-            let expected = Meters::new((1.4_f64 / 0.40 - 1.0) * 10.0);
+            let fo2 = Percent::new(0.40).ok_or_else(|| eyre!("invalid"))?;
+            let expected = (Bar::new(1.4) / fo2 - SURFACE_PRESSURE) * SEAWATER;
+
             assert_relative_eq!(ean(0.40)?.mod_at(Bar::new(1.4)).depth(), expected);
 
             Ok(())
@@ -625,7 +629,9 @@ mod tests {
 
         #[test]
         fn mod_at_pure_o2_1_6_bar() -> Result<()> {
-            let expected = Meters::new((1.6_f64 / 1.0 - 1.0) * 10.0);
+            let fo2 = Percent::new(1.0).ok_or_else(|| eyre!("invalid"))?;
+            let expected = (Bar::new(1.6) / fo2 - SURFACE_PRESSURE) * SEAWATER;
+
             assert_relative_eq!(ean(1.0)?.mod_at(Bar::new(1.6)).depth(), expected);
 
             Ok(())
@@ -681,7 +687,8 @@ mod tests {
 
         #[test]
         fn hypoxic_10_percent_at_0_16_bar() -> Result<()> {
-            let expected = Meters::new((0.16_f64 / 0.10 - 1.0) * 10.0);
+            let fo2 = Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?;
+            let expected = (Bar::new(0.16) / fo2 - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
 
             assert_relative_eq!(
                 ean(0.10)?.minimod_at(Bar::new(0.16)).depth(),
@@ -727,19 +734,21 @@ mod tests {
         use super::*;
 
         #[test]
-        fn air_at_surface_is_approximately_1_19_g_per_l() -> Result<()> {
+        fn air_at_surface_is_approximately_1_20_g_per_l() -> Result<()> {
             let density = ean(f64::from(AIR_O2))?.gas_density_at(Meters::new(0.0));
-            assert_relative_eq!(density, GramsPerLitre::new(1.188), epsilon = 0.002);
+            assert_relative_eq!(density, GramsPerLitre::new(1.204), epsilon = 0.002);
 
             Ok(())
         }
 
         #[test]
-        fn density_doubles_at_10m() -> Result<()> {
+        fn density_doubles_at_one_atmosphere_depth() -> Result<()> {
+            // pressure doubles at depth = SURFACE_PRESSURE × SEAWATER ≈ 10.08 m
             let surface = ean(0.32)?.gas_density_at(Meters::new(0.0));
-            let at_10m = ean(0.32)?.gas_density_at(Meters::new(10.0));
+            let double_depth = SURFACE_PRESSURE * SEAWATER;
+            let at_double = ean(0.32)?.gas_density_at(double_depth);
 
-            assert_relative_eq!(at_10m, surface * 2.0, epsilon = 1e-9);
+            assert_relative_eq!(at_double, surface * 2.0, epsilon = 1e-9);
 
             Ok(())
         }
@@ -760,9 +769,8 @@ mod tests {
 
         #[test]
         fn at_1_4_bar_limit_is_150_minutes() -> Result<()> {
-            // EANx32 at 32.5 m: ppO₂ = (32.5/10 + 1) × 0.32 = 4.25 × 0.32 = 1.36 bar
-            // 4.25 is exact in binary, so no boundary-rounding issue here.
-            // 1.36 bar falls in the 1.30–1.40 range → 150 min limit.
+            // EANx32 at 32.5 m: ppO₂ = (32.5/9.948 + 1.013) × 0.32 ≈ 1.370 bar
+            // Falls in the 1.30–1.40 range → 150 min limit.
             assert_relative_eq!(
                 ean(0.32)?.cns_rate_at(Meters::new(32.5)),
                 CnsRatePerMinute::new(100.0 / 150.0),
@@ -774,7 +782,7 @@ mod tests {
 
         #[test]
         fn above_1_6_bar_is_infinite() -> Result<()> {
-            // Pure O₂ at 7 m: ppO₂ = (7/10 + 1) × 1.0 = 1.7 bar
+            // Pure O₂ at 7 m: ppO₂ = (7/9.948 + 1.013) × 1.0 ≈ 1.717 bar
             assert_eq!(
                 ean(1.0)?.cns_rate_at(Meters::new(7.0)),
                 CnsRatePerMinute::new(f64::INFINITY)
@@ -789,7 +797,7 @@ mod tests {
 
         #[test]
         fn zero_below_0_5_bar() -> Result<()> {
-            // Air at surface: ppO₂ = 0.21 bar
+            // Air at surface: ppO₂ ≈ 0.21 bar < 0.5 → zero OTU
             assert_relative_eq!(
                 ean(0.21)?.otu_rate_at(Meters::new(0.0)),
                 OTUPerMinute::new(0.0)
@@ -800,15 +808,12 @@ mod tests {
 
         #[test]
         fn follows_noaa_formula() -> Result<()> {
-            // EANx32 at 40 m: ppO₂ = 5 × 0.32 = 1.6 bar
-            // OTU = (1.6 − 0.5)^0.83 = 1.1^0.83
-            let expected = OTUPerMinute::new((1.6_f64 - 0.5).powf(0.83));
+            let depth = Meters::new(40.0);
+            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let ppo2 = f64::from((depth / SEAWATER + SURFACE_PRESSURE) * fo2);
+            let expected = OTUPerMinute::new((ppo2 - 0.5_f64).powf(0.83));
 
-            assert_relative_eq!(
-                ean(0.32)?.otu_rate_at(Meters::new(40.0)),
-                expected,
-                epsilon = 1e-9
-            );
+            assert_relative_eq!(ean(0.32)?.otu_rate_at(depth), expected, epsilon = 1e-9);
 
             Ok(())
         }
@@ -819,9 +824,13 @@ mod tests {
 
         #[test]
         fn at_30m_1_4_bar() -> Result<()> {
-            let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4))
-                .ok_or_else(|| eyre!("fo2 = 0.35 is above the 10 % minimum"))?;
-            assert_relative_eq!(f64::from(best.fo2()), 0.35, epsilon = 1e-9);
+            let depth = Meters::new(30.0);
+            let ppo2_max = Bar::new(1.4);
+            let expected_fo2 = ppo2_max / (depth / SEAWATER + SURFACE_PRESSURE);
+            let best = EANx::best_mix(depth, ppo2_max)
+                .ok_or_else(|| eyre!("fo2 is above the 10 % minimum"))?;
+
+            assert_relative_eq!(f64::from(best.fo2()), expected_fo2.min(1.0), epsilon = 1e-9);
 
             Ok(())
         }
@@ -840,9 +849,9 @@ mod tests {
 
         #[test]
         fn shallow_depth_clamps_to_pure_o2() -> Result<()> {
-            // fo2 = 1.4 / (4/10 + 1) = 1.4 / 1.4 = 1.0
-            let best = EANx::best_mix(Meters::new(4.0), Bar::new(1.4))
-                .ok_or_else(|| eyre!("fo2 = 1.0 is above the 10 % minimum"))?;
+            // fo2 = 1.4 / (3/9.948 + 1.013) ≈ 1.065 > 1.0 → clamps to 1.0
+            let best = EANx::best_mix(Meters::new(3.0), Bar::new(1.4))
+                .ok_or_else(|| eyre!("fo2 is above the 10 % minimum"))?;
 
             assert_relative_eq!(f64::from(best.fo2()), 1.0, epsilon = 1e-9);
 

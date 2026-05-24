@@ -170,7 +170,9 @@ impl approx::RelativeEq for END {
 mod tests {
     use super::*;
     use crate::gas::EANx;
-    use crate::gas::constants::{AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
+    use crate::gas::constants::{
+        AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY, SEAWATER, SURFACE_PRESSURE,
+    };
     use crate::units::{Meters, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -261,7 +263,10 @@ mod tests {
             let mix = ean(0.32)?;
             let c = mix.components();
             let narcotic_mix = AR_NARCOTIC_POTENCY.mul_add(c.ar(), c.n2());
-            let expected = Meters::new(40.0 * narcotic_mix / f64::from(AIR_NARCOTIC) - 10.0);
+            let depth = Meters::new(30.0);
+            let abs = depth / SEAWATER + SURFACE_PRESSURE;
+            let end_pressure = abs * (narcotic_mix / f64::from(AIR_NARCOTIC));
+            let expected = (end_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
 
             assert_relative_eq!(
                 mix.end_at(Meters::new(30.0)).end(),

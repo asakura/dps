@@ -26,7 +26,7 @@
 //!
 //! // O₂ toxicity depth limit
 //! let m = ean32.mod_at(Bar::new(1.4));
-//! assert_eq!(m.to_string(), "33.8 m");
+//! assert_eq!(m.to_string(), "33.4 m");
 //!
 //! // Narcotic equivalent depth at 30 m
 //! let end = ean32.end_at(Meters::new(30.0));

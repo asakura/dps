@@ -170,7 +170,7 @@ impl approx::RelativeEq for EAD {
 mod tests {
     use super::*;
     use crate::gas::EANx;
-    use crate::gas::constants::{AIR_N2, AIR_O2};
+    use crate::gas::constants::{AIR_N2, AIR_O2, SEAWATER, SURFACE_PRESSURE};
     use crate::units::{Meters, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -259,7 +259,10 @@ mod tests {
         #[test]
         fn ean32_pp_formula_at_30m() -> Result<()> {
             let mix = ean(0.32)?;
-            let expected = Meters::new(40.0 * mix.fn2() / f64::from(AIR_N2) - 10.0);
+            let depth = Meters::new(30.0);
+            let abs = depth / SEAWATER + SURFACE_PRESSURE;
+            let ead_pressure = abs * (mix.fn2() / f64::from(AIR_N2));
+            let expected = (ead_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
 
             assert_relative_eq!(
                 mix.ead_at(Meters::new(30.0)).ead(),
