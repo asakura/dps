@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::units::{Bar, Meters, Percent};
+use crate::units::{Bar, GramsPerLitre, Meters, Percent};
 
 use super::blend::{BlendMethod, PartialPressure};
 use super::components::GasComponents;
@@ -342,10 +342,10 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// assert!((d10 / d0 - 2.0).abs() < 1e-9);
     /// ```
     #[must_use]
-    pub fn gas_density_at(self, depth: Meters) -> f64 {
+    pub fn gas_density_at(self, depth: Meters) -> GramsPerLitre {
         let abs_pa = f64::from(depth / SEAWATER + SURFACE_PRESSURE) * 1e5;
 
-        abs_pa * self.components().molar_mass() / (GAS_CONSTANT * STANDARD_TEMP_K)
+        GramsPerLitre::new(abs_pa * self.components().molar_mass() / (GAS_CONSTANT * STANDARD_TEMP_K))
     }
 
     /// CNS O₂ toxicity rate in fraction of single-dive limit per minute.
@@ -554,7 +554,7 @@ mod tests {
     use super::*;
     use crate::gas::blend::Psa;
     use crate::gas::constants::AIR_O2;
-    use crate::units::{Bar, Meters, Percent};
+    use crate::units::{Bar, GramsPerLitre, Meters, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
     use rstest::*;
@@ -727,7 +727,7 @@ mod tests {
         #[test]
         fn air_at_surface_is_approximately_1_19_g_per_l() -> Result<()> {
             let density = ean(AIR_O2)?.gas_density_at(Meters::new(0.0));
-            assert_relative_eq!(density, 1.188, epsilon = 0.002);
+            assert_relative_eq!(density, GramsPerLitre::new(1.188), epsilon = 0.002);
 
             Ok(())
         }
