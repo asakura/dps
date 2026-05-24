@@ -326,6 +326,7 @@ mod tests {
 
     mod visible_columns_fn {
         use super::*;
+        use approx::assert_relative_eq;
 
         #[test]
         fn full_window_returns_all_nine_columns() {
@@ -342,9 +343,9 @@ mod tests {
 
             assert_eq!(cols.len(), 3);
 
-            assert!((cols[0].value() - 1.3).abs() < 1e-9); // (5+0)*0.1+0.8
-            assert!((cols[1].value() - 1.4).abs() < 1e-9); // (5+1)*0.1+0.8
-            assert!((cols[2].value() - 1.5).abs() < 1e-9); // (5+2)*0.1+0.8
+            assert_relative_eq!(cols[0], Bar::new(1.3), epsilon = 1e-9); // (5+0)*0.1+0.8
+            assert_relative_eq!(cols[1], Bar::new(1.4), epsilon = 1e-9); // (5+1)*0.1+0.8
+            assert_relative_eq!(cols[2], Bar::new(1.5), epsilon = 1e-9); // (5+2)*0.1+0.8
         }
     }
 

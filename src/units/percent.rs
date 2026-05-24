@@ -6,7 +6,7 @@ use std::fmt;
 /// # use approx::assert_relative_eq;
 /// use dps::units::Percent;
 /// let p = Percent::new(0.32).unwrap();
-/// assert_relative_eq!(p.value(), 0.32);
+/// assert_relative_eq!(f64::from(p), 0.32);
 /// assert_eq!(p.to_string(), "32 %");
 /// assert_eq!(Percent::new(1.0).unwrap().to_string(), "100 %");
 /// assert_eq!(Percent::new(0.999).unwrap().to_string(), "99.9 %");
@@ -35,19 +35,6 @@ impl Percent {
         } else {
             None
         }
-    }
-
-    /// Returns the underlying fraction in [0.0, 1.0].
-    ///
-    /// ```no_run
-    /// use dps::units::Percent;
-    /// # use approx::assert_relative_eq;
-    /// let p = Percent::new(0.32).unwrap();
-    /// assert_relative_eq!(p.value(), 0.32);
-    /// ```
-    #[must_use]
-    pub const fn value(self) -> f64 {
-        self.0
     }
 }
 

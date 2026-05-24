@@ -98,7 +98,7 @@ impl<M: BlendMethod> EANxBlend<M> {
             return Err(InvalidEANx::O2TooLow(fo2));
         }
 
-        if !method.is_valid_fo2(fo2.value()) {
+        if !method.is_valid_fo2(fo2.into()) {
             return Err(InvalidEANx::BlendCeilingExceeded(fo2));
         }
 
@@ -112,7 +112,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// use dps::units::Percent;
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert_relative_eq!(ean32.fo2().value(), 0.32);
+    /// assert_relative_eq!(f64::from(ean32.fo2()), 0.32);
     /// ```
     #[must_use]
     pub const fn fo2(self) -> Percent {
@@ -130,7 +130,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn components(self) -> GasComponents {
-        self.method.components(self.fo2.value())
+        self.method.components(self.fo2.into())
     }
 
     /// N₂ fraction.
@@ -197,7 +197,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
     /// // Air at 30 m: (30/10 + 1) × 0.21 = 0.84 bar
-    /// assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).pressure().value(), 0.84, epsilon = 1e-9);
+    /// assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(0.84), epsilon = 1e-9);
     /// ```
     #[must_use]
     pub fn ppo2_at(self, depth: Meters) -> PPO2 {
@@ -343,7 +343,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn gas_density_at(self, depth: Meters) -> f64 {
-        let abs_pa = (depth / SEAWATER + SURFACE_PRESSURE).value() * 1e5;
+        let abs_pa = f64::from(depth / SEAWATER + SURFACE_PRESSURE) * 1e5;
 
         abs_pa * self.components().molar_mass() / (GAS_CONSTANT * STANDARD_TEMP_K)
     }
@@ -366,7 +366,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn cns_rate_at(self, depth: Meters) -> f64 {
-        let limit = super::constants::cns_limit_minutes(self.ppo2_at(depth).pressure().value());
+        let limit = super::constants::cns_limit_minutes(self.ppo2_at(depth).pressure().into());
 
         if limit == 0.0 {
             f64::INFINITY
@@ -394,7 +394,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn otu_rate_at(self, depth: Meters) -> f64 {
-        let ppo2 = self.ppo2_at(depth).pressure().value();
+        let ppo2 = f64::from(self.ppo2_at(depth).pressure());
 
         if ppo2 <= 0.5 {
             0.0
@@ -453,7 +453,7 @@ impl EANxBlend<PartialPressure> {
     /// # use approx::assert_relative_eq;
     /// let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4)).unwrap();
     /// // FO₂ = 1.4 / (30/10 + 1) = 0.35
-    /// assert_relative_eq!(best.fo2().value(), 0.35, epsilon = 1e-9);
+    /// assert_relative_eq!(f64::from(best.fo2()), 0.35, epsilon = 1e-9);
     ///
     /// // Verify that ppO₂ at target depth equals the limit
     /// assert_relative_eq!(best.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(1.4), epsilon = 1e-9);
@@ -478,7 +478,7 @@ pub(super) fn gas_name(fo2: Percent) -> impl fmt::Display {
 
     impl fmt::Display for GasName {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let pct = self.0.value().mul_add(100.0, -0.5).ceil() as u8;
+            let pct = f64::from(self.0).mul_add(100.0, -0.5).ceil() as u8;
             let name = match pct {
                 10 => "Hypoxic 10",
                 12 => "Hypoxic 12",
@@ -810,7 +810,7 @@ mod tests {
         fn at_30m_1_4_bar() -> Result<()> {
             let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4))
                 .ok_or_else(|| eyre!("fo2 = 0.35 is above the 10 % minimum"))?;
-            assert_relative_eq!(best.fo2().value(), 0.35, epsilon = 1e-9);
+            assert_relative_eq!(f64::from(best.fo2()), 0.35, epsilon = 1e-9);
 
             Ok(())
         }
@@ -833,7 +833,7 @@ mod tests {
             let best = EANx::best_mix(Meters::new(4.0), Bar::new(1.4))
                 .ok_or_else(|| eyre!("fo2 = 1.0 is above the 10 % minimum"))?;
 
-            assert_relative_eq!(best.fo2().value(), 1.0, epsilon = 1e-9);
+            assert_relative_eq!(f64::from(best.fo2()), 1.0, epsilon = 1e-9);
 
             Ok(())
         }

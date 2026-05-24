@@ -192,7 +192,7 @@ impl From<PpO2Row<'_>> for Row<'static> {
             let ppo2 = mix.ppo2_at(depth).pressure();
 
             cells.push(
-                Cell::from(format!("{:.2}", ppo2.value())).style(ppo2_cell_color(ppo2, r.theme)),
+                Cell::from(format!("{:.2}", f64::from(ppo2))).style(ppo2_cell_color(ppo2, r.theme)),
             );
         }
 
@@ -224,7 +224,7 @@ impl Widget for PpO2TabStatus<'_> {
                     " \u{25c6} {}  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
                     mix,
                     depth,
-                    ppo2.value(),
+                    f64::from(ppo2),
                 );
 
                 Paragraph::new(text)

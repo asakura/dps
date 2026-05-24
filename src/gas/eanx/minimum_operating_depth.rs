@@ -172,7 +172,6 @@ impl fmt::Display for MiniMODSummary {
     }
 }
 
-#[cfg(test)]
 impl approx::AbsDiffEq for MiniMOD {
     type Epsilon = f64;
 
@@ -185,7 +184,6 @@ impl approx::AbsDiffEq for MiniMOD {
     }
 }
 
-#[cfg(test)]
 impl approx::RelativeEq for MiniMOD {
     fn default_max_relative() -> f64 {
         f64::default_max_relative()

@@ -189,7 +189,7 @@ mod tests {
         fn ppo2_accessor_returns_bar() -> Result<()> {
             let p = ean(0.32)?.ppo2_at(Meters::new(33.75));
 
-            assert_relative_eq!(p.pressure().value(), 1.4, epsilon = 1e-9);
+            assert_relative_eq!(p.pressure(), Bar::new(1.4), epsilon = 1e-9);
 
             Ok(())
         }

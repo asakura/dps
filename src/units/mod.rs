@@ -14,7 +14,7 @@ use std::ops::{Div, Mul};
 
 /// Generates standard impls for a newtype unit struct backed by f64.
 ///
-/// Provides: `new`, `value`, `max`, `Display`, `From<f64>`, `From<T> for f64`,
+/// Provides: `new`, `max`, `Display`, `From<f64>`, `From<T> for f64`,
 /// `Add`, `Sub`, `Neg`, `Mul<f64>`, `Div<f64>`, `Mul<T> for f64`, `Div` (ratio),
 /// `Mul<Percent>`, and `Div<Percent>`.
 #[doc(hidden)]
@@ -25,11 +25,6 @@ macro_rules! unit_newtype {
             /// Constructs a value from a raw `f64`.
             pub const fn new(val: f64) -> Self {
                 Self(val)
-            }
-
-            /// Returns the underlying `f64`.
-            pub const fn value(self) -> f64 {
-                self.0
             }
 
             /// Returns the greater of two values.
@@ -123,7 +118,7 @@ macro_rules! unit_newtype {
             type Output = Self;
 
             fn mul(self, rhs: $crate::units::Percent) -> Self {
-                Self(self.0 * rhs.value())
+                Self(self.0 * f64::from(rhs))
             }
         }
 
@@ -131,7 +126,7 @@ macro_rules! unit_newtype {
             type Output = Self;
 
             fn div(self, rhs: $crate::units::Percent) -> Self {
-                Self(self.0 / rhs.value())
+                Self(self.0 / f64::from(rhs))
             }
         }
 
@@ -200,13 +195,13 @@ macro_rules! unit_newtype {
 /// ```no_run
 /// use dps::units::{Bar, Meters, MetersPerBar};
 /// let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
-/// assert_eq!(gauge.value(), 3.0);
+/// assert_eq!(gauge, Bar::new(3.0));
 /// ```
 impl Div<MetersPerBar> for Meters {
     type Output = Bar;
 
     fn div(self, rhs: MetersPerBar) -> Bar {
-        Bar::new(self.value() / rhs.value())
+        Bar::new(f64::from(self) / f64::from(rhs))
     }
 }
 
@@ -215,13 +210,13 @@ impl Div<MetersPerBar> for Meters {
 /// ```no_run
 /// use dps::units::{Bar, Meters, MetersPerBar};
 /// let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
-/// assert_eq!(depth.value(), 30.0);
+/// assert_eq!(depth, Meters::new(30.0));
 /// ```
 impl Mul<MetersPerBar> for Bar {
     type Output = Meters;
 
     fn mul(self, rhs: MetersPerBar) -> Meters {
-        Meters::new(self.value() * rhs.value())
+        Meters::new(f64::from(self) * f64::from(rhs))
     }
 }
 

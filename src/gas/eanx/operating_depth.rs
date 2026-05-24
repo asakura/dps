@@ -142,7 +142,6 @@ impl From<MOD> for Meters {
     }
 }
 
-#[cfg(test)]
 impl approx::AbsDiffEq for MOD {
     type Epsilon = f64;
 
@@ -155,7 +154,6 @@ impl approx::AbsDiffEq for MOD {
     }
 }
 
-#[cfg(test)]
 impl approx::RelativeEq for MOD {
     fn default_max_relative() -> f64 {
         f64::default_max_relative()
