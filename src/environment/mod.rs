@@ -44,6 +44,51 @@ use std::fmt;
 
 use crate::units::{Bar, MetersPerBar};
 
+/// ISO standard atmosphere sea-level pressure.
+const SEA_LEVEL_PRESSURE_BAR: Bar = Bar::new(1.013_25);
+
+/// Conversion factor from pascals to bar (100 000 Pa = 1 bar).
+const PA_PER_BAR: f64 = 1e5;
+
+/// Standard acceleration due to gravity per ISO 80000-3, in m/s².
+const STANDARD_GRAVITY: f64 = 9.806_65;
+
+/// ISO standard seawater density at 35 ‰ salinity, 15 °C, 0 dbar (ISO 19901-7), in kg/m³.
+const ISO_SEAWATER_DENSITY: f64 = 1025.0;
+
+/// Pure-water baseline in the linear density approximation ρ(S,T) ≈ 1000 + 0.8S − 0.2T, in kg/m³.
+const DENSITY_BASE: f64 = 1000.0;
+
+/// Salinity coefficient in the linear density approximation, in kg/(m³·‰).
+const DENSITY_SALINITY_COEFF: f64 = 0.8;
+
+/// Temperature coefficient in the linear density approximation, in kg/(m³·°C).
+const DENSITY_TEMP_COEFF: f64 = -0.2;
+
+/// ICAO ISA sea-level pressure used in the barometric altitude formula, in Pa.
+const ICAO_SEA_LEVEL_PA: f64 = 101_325.0;
+
+/// Normalized temperature lapse rate L/T₀ in m⁻¹, where L = 0.0065 K/m and T₀ = 288.15 K.
+const ICAO_TEMP_GRADIENT: f64 = 2.255_77e-5;
+
+/// Barometric exponent g·M/(R·L) in the ICAO ISA formula (dimensionless).
+const ICAO_PRESSURE_EXPONENT: f64 = 5.255_88;
+
+/// Upper altitude bound (Mt Everest summit), in metres.
+const MAX_ALTITUDE_M: f64 = 8_849.0;
+
+/// Upper salinity bound accepted by the density model, in ‰.
+const MAX_SALINITY_PPT: f64 = 350.0;
+
+/// Lower temperature bound accepted by the density model (seawater freezing point), in °C.
+const MIN_TEMP_C: f64 = -2.0;
+
+/// Upper temperature bound accepted by the density model, in °C.
+const MAX_TEMP_C: f64 = 40.0;
+
+/// Default water temperature used for freshwater and salinity-only constructors, in °C.
+const FRESHWATER_TEMP_C: f64 = 20.0;
+
 /// Dive environment parameters for depth↔pressure conversion.
 ///
 /// Encapsulates surface pressure (varies with altitude) and water density
@@ -124,8 +169,8 @@ impl DiveEnvironment {
         // ρ = 1025 kg/m³ (ISO oceanic standard, 35 ‰, 15 °C, 0 dbar)
         // g = 9.806 65 m/s² (standard gravity)
         Self {
-            surface_pressure: Bar::new(1.013_25),
-            water_density: MetersPerBar::new(1e5 / (1025.0 * 9.806_65)),
+            surface_pressure: SEA_LEVEL_PRESSURE_BAR,
+            water_density: MetersPerBar::new(PA_PER_BAR / (ISO_SEAWATER_DENSITY * STANDARD_GRAVITY)),
         }
     }
 
@@ -144,8 +189,8 @@ impl DiveEnvironment {
     #[must_use]
     pub const fn freshwater() -> Self {
         Self {
-            surface_pressure: Bar::new(1.013_25),
-            water_density: water_density_from(0.0, 20.0),
+            surface_pressure: SEA_LEVEL_PRESSURE_BAR,
+            water_density: water_density_from(0.0, FRESHWATER_TEMP_C),
         }
     }
 
@@ -165,7 +210,7 @@ impl DiveEnvironment {
     #[must_use]
     pub const fn ocean(ocean: Ocean) -> Self {
         Self {
-            surface_pressure: Bar::new(1.013_25),
+            surface_pressure: SEA_LEVEL_PRESSURE_BAR,
             water_density: water_density_from(ocean.salinity_ppt(), ocean.typical_temperature_c()),
         }
     }
@@ -310,8 +355,8 @@ impl DiveEnvironment {
         validate_salinity(salinity_ppt)?;
 
         Ok(Self {
-            surface_pressure: Bar::new(1.013_25),
-            water_density: water_density_from(salinity_ppt, 20.0),
+            surface_pressure: SEA_LEVEL_PRESSURE_BAR,
+            water_density: water_density_from(salinity_ppt, FRESHWATER_TEMP_C),
         })
     }
 
@@ -344,7 +389,7 @@ impl DiveEnvironment {
         validate_temperature(temp_c)?;
 
         Ok(Self {
-            surface_pressure: Bar::new(1.013_25),
+            surface_pressure: SEA_LEVEL_PRESSURE_BAR,
             water_density: water_density_from(salinity_ppt, temp_c),
         })
     }
@@ -516,20 +561,20 @@ impl PositiveFinite for f64 {
 /// Accuracy: within ±2 kg/m³ for S ∈ [0, 45] ‰ and T ∈ [0, 35] °C,
 /// which covers all practical dive environments.
 const fn density_kg_m3(salinity_ppt: f64, temp_c: f64) -> f64 {
-    (-0.2f64).mul_add(temp_c, 0.8f64.mul_add(salinity_ppt, 1000.0))
+    DENSITY_TEMP_COEFF.mul_add(temp_c, DENSITY_SALINITY_COEFF.mul_add(salinity_ppt, DENSITY_BASE))
 }
 
 const fn water_density_from(salinity_ppt: f64, temp_c: f64) -> MetersPerBar {
-    MetersPerBar::new(1e5 / (density_kg_m3(salinity_ppt, temp_c) * 9.806_65))
+    MetersPerBar::new(PA_PER_BAR / (density_kg_m3(salinity_ppt, temp_c) * STANDARD_GRAVITY))
 }
 
 /// ICAO barometric formula: P(h) = 101325 × (1 − 2.25577×10⁻⁵ × h)^5.25588 Pa
 fn altitude_to_pressure_bar(meters_asl: f64) -> Bar {
-    Bar::new(101_325.0 * (2.255_77e-5f64.mul_add(-meters_asl, 1.0)).powf(5.255_88) / 1e5)
+    Bar::new(ICAO_SEA_LEVEL_PA * (ICAO_TEMP_GRADIENT.mul_add(-meters_asl, 1.0)).powf(ICAO_PRESSURE_EXPONENT) / PA_PER_BAR)
 }
 
 fn validate_altitude(meters_asl: f64) -> Result<(), DiveEnvironmentError> {
-    if !meters_asl.is_finite() || !(0.0..=8_849.0).contains(&meters_asl) {
+    if !meters_asl.is_finite() || !(0.0..=MAX_ALTITUDE_M).contains(&meters_asl) {
         Err(DiveEnvironmentError::AltitudeOutOfRange(meters_asl))
     } else {
         Ok(())
@@ -537,7 +582,7 @@ fn validate_altitude(meters_asl: f64) -> Result<(), DiveEnvironmentError> {
 }
 
 fn validate_salinity(salinity_ppt: f64) -> Result<(), DiveEnvironmentError> {
-    if !salinity_ppt.is_finite() || !(0.0..=350.0).contains(&salinity_ppt) {
+    if !salinity_ppt.is_finite() || !(0.0..=MAX_SALINITY_PPT).contains(&salinity_ppt) {
         Err(DiveEnvironmentError::SalinityOutOfRange(salinity_ppt))
     } else {
         Ok(())
@@ -545,7 +590,7 @@ fn validate_salinity(salinity_ppt: f64) -> Result<(), DiveEnvironmentError> {
 }
 
 fn validate_temperature(temp_c: f64) -> Result<(), DiveEnvironmentError> {
-    if !temp_c.is_finite() || !(-2.0..=40.0).contains(&temp_c) {
+    if !temp_c.is_finite() || !(MIN_TEMP_C..=MAX_TEMP_C).contains(&temp_c) {
         Err(DiveEnvironmentError::TemperatureOutOfRange(temp_c))
     } else {
         Ok(())
@@ -573,14 +618,16 @@ mod tests {
     }
 
     #[test]
-    fn standard_and_iso_formula_agree() {
-        let iso = DiveEnvironment::with_salinity_at_temperature(35.0, 15.0)
-            .expect("35 ppt / 15 °C is valid");
+    fn standard_and_iso_formula_agree() -> Result<()> {
+        let iso = DiveEnvironment::with_salinity_at_temperature(35.0, 15.0)?;
+
         assert_relative_eq!(
             f64::from(iso.water_density()),
             f64::from(DiveEnvironment::standard().water_density()),
             epsilon = 1e-9
         );
+
+        Ok(())
     }
 
     #[test]
