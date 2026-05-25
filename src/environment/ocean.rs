@@ -2,7 +2,7 @@
 ///
 /// Use [`crate::environment::DiveEnvironment::ocean`] to obtain a [`crate::environment::DiveEnvironment`]
 /// for a given body of water.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Ocean {
     // Five oceans
     /// Pacific Ocean — 34.5 ‰, 17 °C.
@@ -64,8 +64,7 @@ impl Ocean {
             Self::Caribbean => 36.0,
             Self::Indian | Self::Pacific => 34.5,
             Self::Mediterranean => 38.0,
-            Self::PersianGulf => 40.0,
-            Self::RedSea => 40.0,
+            Self::PersianGulf | Self::RedSea => 40.0,
         }
     }
 
