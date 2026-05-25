@@ -7,10 +7,10 @@
 pub enum Lake {
     // Extreme altitude > 5 000 m
     /// Ojos del Salado crater lake, Argentina/Chile — 6 390 m, ~0 °C.
-    /// Highest lake in the world; no documented dive.
+    /// World's highest crater lake; world-record dive by Marcel Korkus in 2019.
     OjosDeSalado,
     /// Licancabur volcano crater lake, Bolivia/Chile — 5 916 m, ~2 °C.
-    /// Highest documented dive; explored for NASA astrobiology research.
+    /// Explored for NASA astrobiology research (Cabrol/SETI, 2006).
     Licancabur,
 
     // High altitude > 1 500 m
