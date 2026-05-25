@@ -1,6 +1,6 @@
 use crate::units::Percent;
 
-/// Error returned when an [`EANxBlend`] cannot be constructed.
+/// Error returned when an [`EANxBlend`](crate::gas::EANxBlend) cannot be constructed.
 ///
 /// ```no_run
 /// use dps::gas::{EANxBlend, InvalidEANx, PartialPressure, Psa};
@@ -28,7 +28,7 @@ pub enum InvalidEANx {
     O2TooLow(Percent),
     /// FO₂ exceeds the physical ceiling for this blend method.
     ///
-    /// For [`Psa`] the ceiling is ≈ 95.7 %: the point at which all N₂
+    /// For [`Psa`](crate::gas::Psa) the ceiling is ≈ 95.7 %: the point at which all N₂
     /// would be depleted and the output is pure O₂ + Ar.
     #[error("O₂ fraction {0} exceeds the blend method ceiling")]
     BlendCeilingExceeded(Percent),

@@ -9,7 +9,7 @@ use crate::gas::constants::EAN_MIN_O2;
 
 /// Minimum Operating Depth for a hypoxic gas mix at a ppO₂ floor.
 ///
-/// Produced by [`EANxBlend::minimod_at`]. The blend method is erased at this
+/// Produced by [`EANxBlend::minimod_at`](crate::gas::EANxBlend::minimod_at). The blend method is erased at this
 /// boundary because `MiniMOD` depends only on FO₂ and `ppO₂_min`.
 ///
 /// ```no_run

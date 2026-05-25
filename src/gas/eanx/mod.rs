@@ -35,7 +35,7 @@ pub use ppo2::{PPO2, Ppo2Summary};
 /// Enriched Air Nitrox, modelled by O₂ fraction and blending method.
 ///
 /// The blend method determines the full gas composition (N₂, Ar, CO₂, traces)
-/// from the O₂ fraction. See the [module documentation](self) for a comparison
+/// from the O₂ fraction. See the [module documentation](crate::gas) for a comparison
 /// of the three available methods.
 ///
 /// Use the [`EANx`] type alias for the common partial-pressure case.

@@ -9,7 +9,7 @@ use crate::gas::constants::EAN_MIN_O2;
 
 /// Maximum Operating Depth for a gas mix at a ppO₂ limit.
 ///
-/// Produced by [`EANxBlend::mod_at`]. The blend method is erased at this boundary
+/// Produced by [`EANxBlend::mod_at`](crate::gas::EANxBlend::mod_at). The blend method is erased at this boundary
 /// because MOD depends only on FO₂ and `ppO₂_max`.
 ///
 /// ```no_run

@@ -97,7 +97,7 @@ use ratatui::style::{Color, Modifier, Style};
 /// Fields are private; use [`Theme::default`] for the built-in Frappé theme,
 /// or obtain the active config-driven theme via
 /// [`crate::config::Config::active_theme`]. Config code constructs themes via
-/// [`Theme::new`] in `crate::config::theme`.
+/// `Theme::new` in `crate::config::theme`.
 ///
 /// All colours are accessed through semantic style methods (`danger()`,
 /// `safe()`, `selection()`, …).

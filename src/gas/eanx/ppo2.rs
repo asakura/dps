@@ -7,7 +7,7 @@ use crate::environment::DiveEnvironment;
 
 /// Partial pressure of O₂ at a given depth.
 ///
-/// Produced by [`EANxBlend::ppo2_at`]. The blend method is erased at this
+/// Produced by [`EANxBlend::ppo2_at`](crate::gas::EANxBlend::ppo2_at). The blend method is erased at this
 /// boundary because ppO₂ depends only on FO₂ and depth.
 ///
 /// ```no_run
@@ -110,7 +110,7 @@ impl From<PPO2> for Bar {
 pub struct Ppo2Summary(PPO2);
 
 impl Ppo2Summary {
-    /// Unwraps the inner [`Ppo2`].
+    /// Unwraps the inner [`PPO2`].
     #[must_use]
     pub const fn into_inner(self) -> PPO2 {
         self.0

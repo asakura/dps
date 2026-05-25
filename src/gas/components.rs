@@ -5,7 +5,7 @@ use super::constants::{AR_NARCOTIC_POTENCY, MW_AR, MW_CO2, MW_N2, MW_O2, MW_OTHE
 /// Invariant: `o2() + n2() + ar() + co2() + other() = 1.0`
 /// (within floating-point precision).
 ///
-/// Produced exclusively by [`EANxBlend::components`]; the fields are private to
+/// Produced exclusively by [`EANxBlend::components`](crate::gas::EANxBlend::components); the fields are private to
 /// prevent construction of invalid mixes outside the blend-method machinery.
 ///
 /// ```no_run

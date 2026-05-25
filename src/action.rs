@@ -31,7 +31,7 @@ pub enum Movement {
     GotoBottom,
 }
 
-/// Outcome returned by [`crate::components::Component::handle_key`] and [`crate::app::App::handle_key`].
+/// Outcome returned by [`crate::components::Component::handle_action`] and [`crate::app::App::handle_key`].
 ///
 /// `Display` is implemented manually so that `Move(Down)` renders as `"Down"` rather than `"Move"`,
 /// keeping the display output consistent with the flat config format.

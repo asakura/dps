@@ -8,7 +8,7 @@ use crate::gas::constants::AIR_NARCOTIC;
 
 /// Maximum Narcotic Depth for a given END limit.
 ///
-/// Produced by [`EANxBlend::mnd_at`]. The blend method is erased at this
+/// Produced by [`EANxBlend::mnd_at`](crate::gas::EANxBlend::mnd_at). The blend method is erased at this
 /// boundary; only FO₂ (for the gas name) and the narcotic fraction matter.
 ///
 /// ```no_run

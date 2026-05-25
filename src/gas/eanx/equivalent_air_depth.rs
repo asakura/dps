@@ -8,7 +8,7 @@ use crate::gas::constants::AIR_N2;
 
 /// Equivalent Air Depth at a given actual depth.
 ///
-/// Produced by [`EANxBlend::ead_at`]. The blend method is erased at this
+/// Produced by [`EANxBlend::ead_at`](crate::gas::EANxBlend::ead_at). The blend method is erased at this
 /// boundary; only FO₂ (for the gas name) and the N₂ fraction matter.
 ///
 /// ```no_run

@@ -11,8 +11,8 @@ use crate::gas::constants::{PSA_AR_PER_O2, PSA_OTHER_PER_O2};
 /// - CO₂ is essentially absent from the output.
 /// - N₂ is the remainder once O₂, Ar, and traces are accounted for.
 ///
-/// The practical ceiling is FO₂ ≈ 95.7 % (where N₂ → 0); [`EANxBlend::new`]
-/// rejects values above this ceiling with [`InvalidEANx::BlendCeilingExceeded`].
+/// The practical ceiling is FO₂ ≈ 95.7 % (where N₂ → 0); [`EANxBlend::new`](crate::gas::EANxBlend::new)
+/// rejects values above this ceiling with [`InvalidEANx::BlendCeilingExceeded`](crate::gas::InvalidEANx::BlendCeilingExceeded).
 ///
 /// ```no_run
 /// use dps::gas::{EANxBlend, Psa};
