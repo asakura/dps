@@ -5,46 +5,46 @@
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Ocean {
     // Five oceans
-    /// Pacific Ocean — 34.5 ‰, 17 °C.
+    /// Pacific Ocean — $\pu{34.5 ‰}$, $\pu{17 ^\circ C}$.
     Pacific,
-    /// Atlantic Ocean — 35.5 ‰, 17 °C.
+    /// Atlantic Ocean — $\pu{35.5 ‰}$, $\pu{17 ^\circ C}$.
     Atlantic,
-    /// Indian Ocean — 34.5 ‰, 26 °C.
+    /// Indian Ocean — $\pu{34.5 ‰}$, $\pu{26 ^\circ C}$.
     Indian,
-    /// Arctic Ocean — 28.0 ‰, 2 °C.
+    /// Arctic Ocean — $\pu{28.0 ‰}$, $\pu{2 ^\circ C}$.
     Arctic,
-    /// Southern Ocean — 34.0 ‰, 2 °C.
+    /// Southern Ocean — $\pu{34.0 ‰}$, $\pu{2 ^\circ C}$.
     Southern,
 
     // Major diving seas
-    /// Mediterranean Sea — 38.0 ‰, 18 °C.
+    /// Mediterranean Sea — $\pu{38.0 ‰}$, $\pu{18 ^\circ C}$.
     Mediterranean,
-    /// Red Sea — 40.0 ‰, 26 °C.
+    /// Red Sea — $\pu{40.0 ‰}$, $\pu{26 ^\circ C}$.
     RedSea,
-    /// Caribbean Sea — 36.0 ‰, 27 °C.
+    /// Caribbean Sea — $\pu{36.0 ‰}$, $\pu{27 ^\circ C}$.
     Caribbean,
-    /// Baltic Sea — 7.0 ‰, 10 °C.
+    /// Baltic Sea — $\pu{7.0 ‰}$, $\pu{10 ^\circ C}$.
     BalticSea,
-    /// Black Sea — 18.0 ‰, 14 °C.
+    /// Black Sea — $\pu{18.0 ‰}$, $\pu{14 ^\circ C}$.
     BlackSea,
-    /// Persian Gulf — 40.0 ‰, 28 °C.
+    /// Persian Gulf — $\pu{40.0 ‰}$, $\pu{28 ^\circ C}$.
     PersianGulf,
-    /// North Sea — 34.5 ‰, 10 °C.
+    /// North Sea — $\pu{34.5 ‰}$, $\pu{10 ^\circ C}$.
     NorthSea,
-    /// Coral Sea — 35.5 ‰, 26 °C.
+    /// Coral Sea — $\pu{35.5 ‰}$, $\pu{26 ^\circ C}$.
     CoralSea,
-    /// Andaman Sea — 33.0 ‰, 28 °C.
+    /// Andaman Sea — $\pu{33.0 ‰}$, $\pu{28 ^\circ C}$.
     AndamanSea,
-    /// South China Sea — 33.0 ‰, 28 °C.
+    /// South China Sea — $\pu{33.0 ‰}$, $\pu{28 ^\circ C}$.
     SouthChinaSea,
-    /// Banda Sea — 34.0 ‰, 28 °C.
+    /// Banda Sea — $\pu{34.0 ‰}$, $\pu{28 ^\circ C}$.
     BandaSea,
-    /// Celebes Sea — 34.0 ‰, 28 °C.
+    /// Celebes Sea — $\pu{34.0 ‰}$, $\pu{28 ^\circ C}$.
     CelebesSea,
 }
 
 impl Ocean {
-    /// Representative surface salinity in parts per thousand (‰).
+    /// Representative surface salinity in parts per thousand ($\text{‰}$).
     ///
     /// ```
     /// use dps::environment::Ocean;
@@ -68,7 +68,7 @@ impl Ocean {
         }
     }
 
-    /// Representative surface temperature in °C.
+    /// Representative surface temperature in $^\circ\text{C}$.
     ///
     /// ```
     /// use dps::environment::Ocean;

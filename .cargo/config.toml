@@ -7,3 +7,4 @@ rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 
 [build]
 rustc-wrapper = "sccache"
+rustdocflags = ["--html-after-content", "mhchem_after.html"]

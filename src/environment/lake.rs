@@ -1,57 +1,57 @@
 /// Notable freshwater dive sites, keyed by altitude and typical water temperature.
 ///
-/// All variants are freshwater (salinity ≈ 0 ‰). Use
+/// All variants are freshwater (salinity $\approx \pu{0 ‰}$). Use
 /// [`crate::environment::DiveEnvironment::lake`] to obtain a
 /// [`crate::environment::DiveEnvironment`] for a given lake.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Lake {
     // Extreme altitude > 5 000 m
-    /// Ojos del Salado crater lake, Argentina/Chile — 6 390 m, ~0 °C.
+    /// Ojos del Salado crater lake, Argentina/Chile — $\pu{6390 m}$, ${\approx}\pu{0 ^\circ C}$.
     /// World's highest crater lake; world-record dive by Marcel Korkus in 2019.
     OjosDeSalado,
-    /// Licancabur volcano crater lake, Bolivia/Chile — 5 916 m, ~2 °C.
+    /// Licancabur volcano crater lake, Bolivia/Chile — $\pu{5916 m}$, ${\approx}\pu{2 ^\circ C}$.
     /// Explored for NASA astrobiology research (Cabrol/SETI, 2006).
     Licancabur,
 
     // High altitude > 1 500 m
-    /// Lake Titicaca, Bolivia/Peru — 3 812 m, ~12 °C.
+    /// Lake Titicaca, Bolivia/Peru — $\pu{3812 m}$, ${\approx}\pu{12 ^\circ C}$.
     Titicaca,
-    /// Lake Tahoe, USA — 1 897 m, ~10 °C.
+    /// Lake Tahoe, USA — $\pu{1897 m}$, ${\approx}\pu{10 ^\circ C}$.
     Tahoe,
-    /// Crater Lake, Oregon, USA — 1 882 m, ~4 °C.
+    /// Crater Lake, Oregon, USA — $\pu{1882 m}$, ${\approx}\pu{4 ^\circ C}$.
     CraterLake,
-    /// Lake Atitlán, Guatemala — 1 562 m, ~18 °C.
+    /// Lake Atitlán, Guatemala — $\pu{1562 m}$, ${\approx}\pu{18 ^\circ C}$.
     Atitlan,
 
     // Mid altitude 500–1 500 m
-    /// Lake Tanganyika, East Africa — 773 m, ~25 °C.
+    /// Lake Tanganyika, East Africa — $\pu{773 m}$, ${\approx}\pu{25 ^\circ C}$.
     Tanganyika,
-    /// Lake Ohrid, North Macedonia/Albania — 693 m, ~14 °C.
+    /// Lake Ohrid, North Macedonia/Albania — $\pu{693 m}$, ${\approx}\pu{14 ^\circ C}$.
     Ohrid,
 
     // Low altitude < 500 m
-    /// Lake Malawi, East Africa — 474 m, ~24 °C.
+    /// Lake Malawi, East Africa — $\pu{474 m}$, ${\approx}\pu{24 ^\circ C}$.
     Malawi,
-    /// Lake Baikal, Russia — 456 m, ~6 °C.
+    /// Lake Baikal, Russia — $\pu{456 m}$, ${\approx}\pu{6 ^\circ C}$.
     Baikal,
-    /// Lake Bled, Slovenia — 475 m, ~12 °C.
+    /// Lake Bled, Slovenia — $\pu{475 m}$, ${\approx}\pu{12 ^\circ C}$.
     Bled,
-    /// Lake Constance, Germany/Austria/Switzerland — 395 m, ~10 °C.
+    /// Lake Constance, Germany/Austria/Switzerland — $\pu{395 m}$, ${\approx}\pu{10 ^\circ C}$.
     Constance,
-    /// Lake Taupō, New Zealand — 357 m, ~15 °C.
+    /// Lake Taupō, New Zealand — $\pu{357 m}$, ${\approx}\pu{15 ^\circ C}$.
     Taupo,
 
     // Sea-level freshwater dive sites
-    /// Yucatán cenote systems, Mexico — 0 m, ~24 °C.
+    /// Yucatán cenote systems, Mexico — $\pu{0 m}$, ${\approx}\pu{24 ^\circ C}$.
     /// Cave/sinkhole groundwater systems; freshwater density applies.
     Cenotes,
-    /// Florida spring systems, USA — 0 m, ~22 °C.
+    /// Florida spring systems, USA — $\pu{0 m}$, ${\approx}\pu{22 ^\circ C}$.
     /// Constant-temperature groundwater springs.
     FloridaSprings,
 }
 
 impl Lake {
-    /// Altitude above sea level in metres.
+    /// Altitude above sea level in $\text{m}$.
     ///
     /// ```
     /// use dps::environment::Lake;
@@ -79,7 +79,7 @@ impl Lake {
         }
     }
 
-    /// Typical water temperature in °C.
+    /// Typical water temperature in $^\circ\text{C}$.
     ///
     /// ```
     /// use dps::environment::Lake;

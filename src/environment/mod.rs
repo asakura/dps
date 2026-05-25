@@ -1,7 +1,7 @@
 //! Depth↔pressure conversion for variable dive environments.
 //!
-//! Standard dive tables are built on two fixed constants: 1.013 25 bar at the
-//! surface and roughly 10.0 m of seawater per bar of gauge pressure. That is
+//! Standard dive tables are built on two fixed constants: $\pu{1.01325 bar}$ at the
+//! surface and roughly $\pu{10.0 m}$ of seawater per bar of gauge pressure. That is
 //! fine for a generic ocean dive, but the moment you leave those conditions —
 //! high altitude, fresh water, the hypersaline Red Sea — both numbers shift,
 //! and any deco calculation that ignores the shift is wrong.
@@ -13,51 +13,51 @@
 //!
 //! Every depth↔pressure conversion in the library comes down to:
 //!
-//! ```text
-//! P_abs = P_surface + depth / water_density
-//! ```
+//! $$
+//! P_\text{abs} = P_\text{surface} + \frac{\text{depth}}{\text{water density}}
+//! $$
 //!
-//! `P_surface` is the atmospheric pressure at the dive site (bar).
-//! `water_density` is the column height that produces one bar of gauge
+//! $P_\text{surface}$ is the atmospheric pressure at the dive site in bars.
+//! $\text{water density}$ is the column height that produces one bar of gauge
 //! pressure, expressed as metres per bar. [`DiveEnvironment`] holds exactly
 //! these two values — nothing more.
 //!
 //! # Water density
 //!
 //! The mass of a one-metre water column determines how quickly pressure builds
-//! with depth. ISO standard seawater (35 ‰ salinity, 15 °C) has a density of
-//! 1025 kg/m³, giving roughly 9.95 m/bar. Real conditions span 8 ‰ in the
-//! Baltic to 41 ‰ in the Red Sea, and temperatures from 2 °C polar water to
-//! 28 °C tropical reefs. Both shift density enough to affect deco margins:
+//! with depth. ISO standard seawater ($\pu{35 ‰}$ salinity, $\pu{15 ^{\circ}C}$) has a density of
+//! $\pu{1025 kg/m^3}$, giving roughly $\pu{9.95 m/bar}$. Real conditions span $\pu{8 ‰}$ in the
+//! Baltic to $\pu{41 ‰}$ in the Red Sea, and temperatures from $\pu{2 ^{\circ}C}$ polar water to
+//! $\pu{28 ^{\circ}C}$ tropical reefs. Both shift density enough to affect deco margins:
 //! salt makes water heavier, heat makes it lighter.
 //!
 //! Rather than the full TEOS-10 equation of state, this module uses a linear
 //! approximation anchored at the ISO reference point:
 //!
-//! ```text
-//! ρ(S, T) ≈ 1000 + 0.8 × S − 0.2 × T  [kg/m³]
-//! ```
+//! $$
+//! \rho(S, T) \approx 1000 + 0.8 \times S - 0.2 \times T \quad [\pu{kg/m^3}]
+//! $$
 //!
-//! At (35 ‰, 15 °C) this yields exactly 1025 kg/m³. Across all practical
-//! dive conditions (S ∈ [0, 45] ‰, T ∈ [0, 35] °C) the error stays within
-//! ±2 kg/m³ — smaller than the uncertainty budget of any real deco model.
+//! At ($\pu{35 ‰}$, $\pu{15 ^\circ C}$) this yields exactly $\pu{1025 kg/m^3}$. Across all practical
+//! dive conditions ($S \in [0, 45]\ \text{‰}$, $T \in [0, 35]\ ^\circ\text{C}$) the error stays within
+//! $\pm\pu{2 kg/m^3}$ — smaller than the uncertainty budget of any real deco model.
 //!
 //! # Surface pressure and altitude
 //!
 //! Atmosphere thins with altitude. The ICAO International Standard Atmosphere
 //! gives the pressure at height h as:
 //!
-//! ```text
-//! P(h) = 101 325 × (1 − 2.255 77×10⁻⁵ × h)^5.255 88  [Pa]
-//! ```
+//! $$
+//! P(h) = 101325 \times (1 - 2.25577 \times 10^{-5} \cdot h)^{5.25588} \quad [\text{Pa}]
+//! $$
 //!
-//! At sea level this evaluates to 101 325 Pa (1.013 25 bar). At Lake Titicaca
-//! (3 812 m) it drops to roughly 0.63 bar — a surface pressure that pushes a
+//! At sea level this evaluates to $\pu{101325 Pa}$ ($\pu{1.01325 bar}$). At Lake Titicaca
+//! ($\pu{3812 m}$) it drops to roughly $\pu{0.63 bar}$ — a surface pressure that pushes a
 //! diver well into altitude-adjustment territory before they hit the water.
 //!
-//! The two coefficients come from atmospheric physics: `2.255 77×10⁻⁵` is
-//! L/T₀, the temperature lapse rate (0.0065 K/m) divided by ISA sea-level
-//! temperature (288.15 K); `5.255 88` is g·M/(R·L), standard gravity times
+//! The two coefficients come from atmospheric physics: $2.25577 \times 10^{-5}$ is
+//! L/T₀, the temperature lapse rate ($\pu{0.0065 K/m}$) divided by ISA sea-level
+//! temperature ($\pu{288.15 K}$); $5.25588$ is g·M/(R·L), standard gravity times
 //! molar mass of dry air divided by the universal gas constant times the lapse
 //! rate.
 //!
@@ -65,16 +65,16 @@
 //!
 //! | Constructor | Salinity | Temperature | Altitude |
 //! |---|---|---|---|
-//! | [`DiveEnvironment::standard`] | 35 ‰ ISO seawater | 15 °C | sea level |
-//! | [`DiveEnvironment::freshwater`] | 0 ‰ | 20 °C | sea level |
+//! | [`DiveEnvironment::standard`] | $\pu{35 ‰}$ ISO seawater | $\pu{15 ^\circ C}$ | sea level |
+//! | [`DiveEnvironment::freshwater`] | $\pu{0 ‰}$ | $\pu{20 ^\circ C}$ | sea level |
 //! | [`DiveEnvironment::ocean`] | from [`Ocean`] variant | from [`Ocean`] variant | sea level |
-//! | [`DiveEnvironment::lake`] | 0 ‰ | from [`Lake`] variant | from [`Lake`] variant |
+//! | [`DiveEnvironment::lake`] | $\pu{0 ‰}$ | from [`Lake`] variant | from [`Lake`] variant |
 //!
 //! Seventeen [`Ocean`] variants cover the five major oceans and twelve popular
 //! dive seas, each keyed to representative surface salinity and temperature.
 //! Fifteen [`Lake`] variants span sea-level systems (Florida springs, Yucatán
-//! cenotes) through extreme-altitude sites (Licancabur at 5 916 m, Ojos del
-//! Salado at 6 390 m).
+//! cenotes) through extreme-altitude sites (Licancabur at $\pu{5916 m}$, Ojos del
+//! Salado at $\pu{6390 m}$).
 //!
 //! For anything not covered by a preset, the fallible constructors
 //! [`DiveEnvironment::new`], [`DiveEnvironment::at_altitude`], and
@@ -179,11 +179,11 @@ pub enum DiveEnvironmentError {
     SurfacePressureNotPositive(Bar),
     /// Water density (m/bar) must be finite and positive.
     WaterDensityNotPositive(MetersPerBar),
-    /// Altitude must be in \[0.0, 8 849.0\] m.
+    /// Altitude must be in $[0.0, 8849.0]\ \text{m}$.
     AltitudeOutOfRange(f64),
-    /// Salinity must be in \[0.0, 350.0\] ‰.
+    /// Salinity must be in $[0.0, 350.0]\ \text{‰}$.
     SalinityOutOfRange(f64),
-    /// Temperature must be in \[−2.0, 40.0\] °C.
+    /// Temperature must be in $[-2.0, 40.0]\ ^\circ\text{C}$.
     TemperatureOutOfRange(f64),
 }
 
@@ -214,7 +214,7 @@ impl std::error::Error for DiveEnvironmentError {}
 impl DiveEnvironment {
     // Infallible presets
 
-    /// ISO standard seawater at sea level: 35 ‰, 15 °C, 1.01325 bar.
+    /// ISO standard seawater at sea level: $\pu{35 ‰}$, $\pu{15 ^\circ C}$, $\pu{1.01325 bar}$.
     ///
     /// This is the baseline used by dive tables, certification agencies, and
     /// dive computers.
@@ -241,7 +241,7 @@ impl DiveEnvironment {
         }
     }
 
-    /// Fresh water at sea level: 0 ‰ salinity, 20 °C.
+    /// Fresh water at sea level: $\pu{0 ‰}$ salinity, $\pu{20 ^\circ C}$.
     ///
     /// Suitable for quarry, river, and cave diving at sea level.
     ///
@@ -352,12 +352,12 @@ impl DiveEnvironment {
     /// Seawater environment at the given altitude above sea level.
     ///
     /// Surface pressure is derived via the ICAO barometric formula. Water density
-    /// uses ISO standard seawater (35 ‰, 15 °C).
+    /// uses ISO standard seawater ($\pu{35 ‰}$, $\pu{15 ^\circ C}$).
     ///
     /// # Errors
     ///
     /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `meters_asl` is outside
-    /// `[0.0, 8 849.0]` or non-finite.
+    /// $[0.0, 8849.0]\ \text{m}$ or non-finite.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
@@ -379,12 +379,12 @@ impl DiveEnvironment {
     /// Freshwater environment at the given altitude above sea level.
     ///
     /// Surface pressure is derived via the ICAO barometric formula. Water density
-    /// uses fresh water at 20 °C.
+    /// uses fresh water at $\pu{20 ^\circ C}$.
     ///
     /// # Errors
     ///
     /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `meters_asl` is outside
-    /// `[0.0, 8 849.0]` or non-finite.
+    /// $[0.0, 8849.0]\,\text{m}$ or non-finite.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
@@ -403,12 +403,12 @@ impl DiveEnvironment {
         })
     }
 
-    /// Sea-level environment for the given salinity at 20 °C.
+    /// Sea-level environment for the given salinity at $\pu{20 ^\circ C}$.
     ///
     /// # Errors
     ///
     /// [`DiveEnvironmentError::SalinityOutOfRange`] if `salinity_ppt` is outside
-    /// `[0.0, 350.0]` or non-finite.
+    /// $[0.0, 350.0]\,\text{‰}$ or non-finite.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
@@ -434,8 +434,8 @@ impl DiveEnvironment {
     ///
     /// # Errors
     ///
-    /// - [`DiveEnvironmentError::SalinityOutOfRange`] if `salinity_ppt` is outside `[0.0, 350.0]`.
-    /// - [`DiveEnvironmentError::TemperatureOutOfRange`] if `temp_c` is outside `[−2.0, 40.0]`.
+    /// - [`DiveEnvironmentError::SalinityOutOfRange`] if `salinity_ppt` is outside $[0.0, 350.0]\ \text{‰}$.
+    /// - [`DiveEnvironmentError::TemperatureOutOfRange`] if `temp_c` is outside $[-2.0, 40.0]\ ^\circ\text{C}$.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
@@ -471,7 +471,7 @@ impl DiveEnvironment {
     /// # Errors
     ///
     /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `meters_asl` is outside
-    /// `[0.0, 8 849.0]` or non-finite.
+    /// $[0.0, 8849.0]\ \text{m}$ or non-finite.
     ///
     /// ```
     /// use dps::environment::{DiveEnvironment, Ocean};
@@ -594,7 +594,9 @@ impl DiveEnvironment {
 
     /// Absolute pressure at the given depth.
     ///
-    /// `P_abs = P_surface + depth / water_density`
+    /// $$
+    /// P_\text{abs} = P_\text{surface} + \frac{\text{depth}}{\text{water density}}
+    /// $$
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
@@ -618,9 +620,11 @@ impl DiveEnvironment {
 
     /// Depth at which the given absolute pressure occurs.
     ///
-    /// `depth = (P_abs − P_surface) × water_density`
+    /// $$
+    /// \text{depth} = (P_\text{abs} - P_\text{surface}) \times \text{water density}
+    /// $$
     ///
-    /// Returns [`Meters::new(0.0)`] when `absolute_pressure ≤ surface_pressure`
+    /// Returns [`Meters::new(0.0)`](crate::units::Meters) when `absolute_pressure ≤ surface_pressure`
     /// (at or above the surface).
     ///
     /// ```
@@ -671,11 +675,13 @@ impl PositiveFinite for f64 {
 
 /// Linear water density approximation valid for diving conditions.
 ///
-/// ρ(S, T) ≈ 1000 + 0.8 × S − 0.2 × T  kg/m³
+/// $$
+/// \rho(S, T) \approx 1000 + 0.8 \times S - 0.2 \times T \; [\text{kg/m}^3]
+/// $$
 ///
-/// Anchored at the ISO standard seawater reference (35 ‰, 15 °C → 1025 kg/m³),
+/// Anchored at the ISO standard seawater reference ($\pu{35 ‰}$, $\pu{15 ^\circ C}$ → $\pu{1025 kg/m^3}$),
 /// which is consistent with the hardcoded value used by [`DiveEnvironment::standard`].
-/// Accuracy: within ±2 kg/m³ for S ∈ [0, 45] ‰ and T ∈ [0, 35] °C,
+/// Accuracy: within ${\pm}\pu{2 kg/m^3}$ for $S \in [0, 45]\ \text{‰}$ and $T \in [0, 35]\ ^\circ\text{C}$,
 /// which covers all practical dive environments.
 const fn density_kg_m3(salinity_ppt: f64, temp_c: f64) -> f64 {
     DENSITY_TEMP_COEFF.mul_add(
@@ -688,7 +694,7 @@ const fn water_density_from(salinity_ppt: f64, temp_c: f64) -> MetersPerBar {
     MetersPerBar::new(PA_PER_BAR / (density_kg_m3(salinity_ppt, temp_c) * STANDARD_GRAVITY))
 }
 
-/// ICAO barometric formula: P(h) = 101325 × (1 − 2.25577×10⁻⁵ × h)^5.25588 Pa
+/// ICAO barometric formula: $P(h) = 101325 \times (1 - 2.25577 \times 10^{-5} \cdot h)^{5.25588}\ \text{Pa}$
 fn altitude_to_pressure_bar(meters_asl: f64) -> Bar {
     Bar::new(
         ICAO_SEA_LEVEL_PA
