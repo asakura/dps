@@ -4,7 +4,8 @@ use crate::units::{Bar, Meters, Percent};
 
 use super::error::InvalidEANx;
 use super::gas_name;
-use crate::gas::constants::{EAN_MIN_O2, SEAWATER, SURFACE_PRESSURE};
+use crate::environment::DiveEnvironment;
+use crate::gas::constants::EAN_MIN_O2;
 
 /// Minimum Operating Depth for a hypoxic gas mix at a ppO₂ floor.
 ///
@@ -86,8 +87,12 @@ impl MiniMOD {
     // Widened to `pub` under `#[cfg(test)]` so tests in sibling modules can
     // construct `MiniMOD` directly without going through `EANxBlend::minimod_at`.
     #[cfg(not(test))]
-    pub(super) fn new(fo2: Percent, ppo2_min: Bar) -> Result<Self, InvalidEANx> {
-        Self::new_inner(fo2, ppo2_min)
+    pub(super) fn new(
+        fo2: Percent,
+        ppo2_min: Bar,
+        env: DiveEnvironment,
+    ) -> Result<Self, InvalidEANx> {
+        Self::new_inner(fo2, ppo2_min, env)
     }
 
     #[cfg(test)]
@@ -96,17 +101,17 @@ impl MiniMOD {
         clippy::missing_errors_doc,
         reason = "test-only visibility widening"
     )]
-    pub fn new(fo2: Percent, ppo2_min: Bar) -> Result<Self, InvalidEANx> {
-        Self::new_inner(fo2, ppo2_min)
+    pub fn new(fo2: Percent, ppo2_min: Bar, env: DiveEnvironment) -> Result<Self, InvalidEANx> {
+        Self::new_inner(fo2, ppo2_min, env)
     }
 
-    fn new_inner(fo2: Percent, ppo2_min: Bar) -> Result<Self, InvalidEANx> {
+    fn new_inner(fo2: Percent, ppo2_min: Bar, env: DiveEnvironment) -> Result<Self, InvalidEANx> {
         if fo2 < EAN_MIN_O2 {
             return Err(InvalidEANx::O2TooLow(fo2));
         }
 
-        let gauge = ppo2_min / fo2 - SURFACE_PRESSURE;
-        let depth = gauge.max(Bar::new(0.0)) * SEAWATER;
+        let gauge = ppo2_min / fo2 - env.surface_pressure();
+        let depth = gauge.max(Bar::new(0.0)) * env.water_density();
 
         Ok(Self {
             depth,
@@ -120,7 +125,7 @@ impl TryFrom<(Percent, Bar)> for MiniMOD {
     type Error = InvalidEANx;
 
     fn try_from((fo2, ppo2_min): (Percent, Bar)) -> Result<Self, Self::Error> {
-        Self::new(fo2, ppo2_min)
+        Self::new(fo2, ppo2_min, DiveEnvironment::standard())
     }
 }
 

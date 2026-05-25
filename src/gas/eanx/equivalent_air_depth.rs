@@ -3,7 +3,8 @@ use std::fmt;
 use crate::units::{Bar, Meters, Percent};
 
 use super::gas_name;
-use crate::gas::constants::{AIR_N2, SEAWATER, SURFACE_PRESSURE};
+use crate::environment::DiveEnvironment;
+use crate::gas::constants::AIR_N2;
 
 /// Equivalent Air Depth at a given actual depth.
 ///
@@ -83,10 +84,10 @@ impl EAD {
         EADSummary(self)
     }
 
-    pub(super) fn new(fo2: Percent, fn2: f64, depth: Meters) -> Self {
-        let abs = depth / SEAWATER + SURFACE_PRESSURE;
+    pub(super) fn new(fo2: Percent, fn2: f64, depth: Meters, env: DiveEnvironment) -> Self {
+        let abs = depth / env.water_density() + env.surface_pressure();
         let ead_pressure = abs * (fn2 / f64::from(AIR_N2));
-        let ead = (ead_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
+        let ead = (ead_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
 
         Self {
             ead,
@@ -169,8 +170,9 @@ impl approx::RelativeEq for EAD {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
-    use crate::gas::constants::{AIR_N2, AIR_O2, SEAWATER, SURFACE_PRESSURE};
+    use crate::gas::constants::{AIR_N2, AIR_O2};
     use crate::units::{Meters, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -258,11 +260,13 @@ mod tests {
 
         #[test]
         fn ean32_pp_formula_at_30m() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let mix = ean(0.32)?;
             let depth = Meters::new(30.0);
-            let abs = depth / SEAWATER + SURFACE_PRESSURE;
+            let abs = depth / env.water_density() + env.surface_pressure();
             let ead_pressure = abs * (mix.fn2() / f64::from(AIR_N2));
-            let expected = (ead_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
+            let expected =
+                (ead_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
 
             assert_relative_eq!(
                 mix.ead_at(Meters::new(30.0)).ead(),

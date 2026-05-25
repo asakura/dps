@@ -19,6 +19,7 @@
 //! # Example
 //!
 //! ```no_run
+//! use dps::environment::DiveEnvironment;
 //! use dps::gas::{EANx, BlendMethod};
 //! use dps::units::{Bar, Meters, Percent};
 //!
@@ -32,7 +33,7 @@
 //! let end = ean32.end_at(Meters::new(30.0));
 //!
 //! // Best mix for a 30 m dive
-//! let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4)).unwrap();
+//! let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4), DiveEnvironment::standard()).unwrap();
 //! ```
 
 mod blend;

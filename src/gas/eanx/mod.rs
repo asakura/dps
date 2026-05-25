@@ -2,9 +2,11 @@ use std::fmt;
 
 use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
+use crate::environment::DiveEnvironment;
+
 use super::blend::{BlendMethod, PartialPressure};
 use super::components::GasComponents;
-use super::constants::{EAN_MIN_O2, GAS_CONSTANT, SEAWATER, STANDARD_TEMP_K, SURFACE_PRESSURE};
+use super::constants::{EAN_MIN_O2, GAS_CONSTANT, STANDARD_TEMP_K};
 
 mod detail;
 pub use detail::EANxDetail;
@@ -51,6 +53,7 @@ pub use ppo2::{PPO2, Ppo2Summary};
 pub struct EANxBlend<M: BlendMethod> {
     fo2: Percent,
     method: M,
+    env: DiveEnvironment,
 }
 
 /// Type alias for the most common case: partial-pressure blended nitrox.
@@ -102,7 +105,52 @@ impl<M: BlendMethod> EANxBlend<M> {
             return Err(InvalidEANx::BlendCeilingExceeded(fo2));
         }
 
-        Ok(Self { fo2, method })
+        Ok(Self {
+            fo2,
+            method,
+            env: DiveEnvironment::standard(),
+        })
+    }
+
+    /// Returns a copy of this blend configured for the given dive environment.
+    ///
+    /// All subsequent depth calculations (`ppo2_at`, `mod_at`, `ead_at`, …) will
+    /// use the provided surface pressure and water density instead of the
+    /// ISO sea-level defaults.
+    ///
+    /// ```
+    /// use dps::gas::EANx;
+    /// use dps::environment::{DiveEnvironment, Lake};
+    /// use dps::units::{Bar, Percent};
+    ///
+    /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+    ///
+    /// // At altitude, lower surface pressure means less absolute pressure at any given
+    /// // depth, so ppO₂ stays within the limit to a greater physical depth — MOD is deeper.
+    /// let titicaca = DiveEnvironment::lake(Lake::Titicaca);
+    /// assert!(ean32.with_environment(titicaca).mod_at(Bar::new(1.4)).depth()
+    ///     > ean32.mod_at(Bar::new(1.4)).depth());
+    /// ```
+    #[must_use]
+    pub const fn with_environment(self, env: DiveEnvironment) -> Self {
+        Self { env, ..self }
+    }
+
+    /// The dive environment used by this blend's depth calculations.
+    ///
+    /// Defaults to [`DiveEnvironment::standard`] (ISO sea-level seawater).
+    ///
+    /// ```
+    /// use dps::gas::EANx;
+    /// use dps::environment::DiveEnvironment;
+    /// use dps::units::Percent;
+    ///
+    /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// assert_eq!(ean32.env(), DiveEnvironment::standard());
+    /// ```
+    #[must_use]
+    pub const fn env(self) -> DiveEnvironment {
+        self.env
     }
 
     /// O₂ fraction.
@@ -201,7 +249,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn ppo2_at(self, depth: Meters) -> PPO2 {
-        PPO2::new(self.fo2, depth)
+        PPO2::new(self.fo2, depth, self.env)
     }
 
     /// Maximum Operating Depth for a given ppO₂ limit (O₂ toxicity constraint).
@@ -225,7 +273,8 @@ impl<M: BlendMethod> EANxBlend<M> {
         reason = "EANxBlend invariant: fo2 >= 10 % is checked at construction, so MOD::new never returns Err here"
     )]
     pub fn mod_at(self, ppo2_max: Bar) -> MOD {
-        MOD::new(self.fo2, ppo2_max).expect("fo2 guaranteed >= 10 % at EANxBlend construction")
+        MOD::new(self.fo2, ppo2_max, self.env)
+            .expect("fo2 guaranteed >= 10 % at EANxBlend construction")
     }
 
     /// Minimum Operating Depth for a given ppO₂ floor (hypoxia threshold).
@@ -255,7 +304,8 @@ impl<M: BlendMethod> EANxBlend<M> {
         reason = "EANxBlend invariant: fo2 >= 10 % is checked at construction, so MiniMOD::new never returns Err here"
     )]
     pub fn minimod_at(self, ppo2_min: Bar) -> MiniMOD {
-        MiniMOD::new(self.fo2, ppo2_min).expect("fo2 guaranteed >= 10 % at EANxBlend construction")
+        MiniMOD::new(self.fo2, ppo2_min, self.env)
+            .expect("fo2 guaranteed >= 10 % at EANxBlend construction")
     }
 
     /// Equivalent Narcotic Depth at a given actual depth.
@@ -277,7 +327,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn end_at(self, depth: Meters) -> END {
-        END::new(self.fo2, self.components().narcotic(), depth)
+        END::new(self.fo2, self.components().narcotic(), depth, self.env)
     }
 
     /// Maximum Narcotic Depth for a given END limit.
@@ -297,7 +347,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn mnd_at(self, end_limit: Meters) -> MND {
-        MND::new(self.fo2, self.components().narcotic(), end_limit)
+        MND::new(self.fo2, self.components().narcotic(), end_limit, self.env)
     }
 
     /// Equivalent Air Depth at a given actual depth.
@@ -321,7 +371,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn ead_at(self, depth: Meters) -> EAD {
-        EAD::new(self.fo2, self.fn2(), depth)
+        EAD::new(self.fo2, self.fn2(), depth, self.env)
     }
 
     /// Gas density in g/L at the given depth, at 20 °C (standard reference).
@@ -343,7 +393,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ```
     #[must_use]
     pub fn gas_density_at(self, depth: Meters) -> GramsPerLitre {
-        let abs_pa = f64::from(depth / SEAWATER + SURFACE_PRESSURE) * 1e5;
+        let abs_pa =
+            f64::from(depth / self.env.water_density() + self.env.surface_pressure()) * 1e5;
 
         GramsPerLitre::new(
             abs_pa * self.components().molar_mass() / (GAS_CONSTANT * STANDARD_TEMP_K),
@@ -451,9 +502,10 @@ impl EANxBlend<PartialPressure> {
     ///
     /// ```no_run
     /// use dps::gas::EANx;
+    /// use dps::environment::DiveEnvironment;
     /// use dps::units::{Bar, Meters};
     /// # use approx::assert_relative_eq;
-    /// let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4)).unwrap();
+    /// let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4), DiveEnvironment::standard()).unwrap();
     /// // FO₂ = 1.4 / (30/9.948 + 1.013) ≈ 0.347
     /// assert_relative_eq!(f64::from(best.fo2()), 0.347, epsilon = 0.001);
     ///
@@ -461,11 +513,14 @@ impl EANxBlend<PartialPressure> {
     /// assert_relative_eq!(best.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(1.4), epsilon = 1e-9);
     /// ```
     #[must_use]
-    pub fn best_mix(target_depth: Meters, ppo2_max: Bar) -> Option<Self> {
-        let fo2 = (ppo2_max / (target_depth / SEAWATER + SURFACE_PRESSURE)).min(1.0);
+    pub fn best_mix(target_depth: Meters, ppo2_max: Bar, env: DiveEnvironment) -> Option<Self> {
+        let fo2 =
+            (ppo2_max / (target_depth / env.water_density() + env.surface_pressure())).min(1.0);
         let pct = Percent::new(fo2)?;
 
-        Self::new(pct, PartialPressure).ok()
+        Self::new(pct, PartialPressure)
+            .ok()
+            .map(|blend| blend.with_environment(env))
     }
 }
 
@@ -554,8 +609,9 @@ impl<M: BlendMethod + PartialEq> approx::RelativeEq for EANxBlend<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::environment::DiveEnvironment;
     use crate::gas::blend::Psa;
-    use crate::gas::constants::{AIR_O2, SEAWATER, SURFACE_PRESSURE};
+    use crate::gas::constants::AIR_O2;
     use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -579,6 +635,7 @@ mod tests {
         EANxBlend {
             fo2: Percent::new(fo2).unwrap_or_else(|| unreachable!("fo2 is in [0.0, 1.0]")),
             method: PartialPressure,
+            env: DiveEnvironment::standard(),
         }
     }
 
@@ -609,8 +666,9 @@ mod tests {
 
         #[test]
         fn mod_at_eanx32_1_4_bar() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
-            let expected = (Bar::new(1.4) / fo2 - SURFACE_PRESSURE) * SEAWATER;
+            let expected = (Bar::new(1.4) / fo2 - env.surface_pressure()) * env.water_density();
 
             assert_relative_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).depth(), expected);
 
@@ -619,8 +677,9 @@ mod tests {
 
         #[test]
         fn mod_at_eanx40_1_4_bar() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.40).ok_or_else(|| eyre!("invalid"))?;
-            let expected = (Bar::new(1.4) / fo2 - SURFACE_PRESSURE) * SEAWATER;
+            let expected = (Bar::new(1.4) / fo2 - env.surface_pressure()) * env.water_density();
 
             assert_relative_eq!(ean(0.40)?.mod_at(Bar::new(1.4)).depth(), expected);
 
@@ -629,8 +688,9 @@ mod tests {
 
         #[test]
         fn mod_at_pure_o2_1_6_bar() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let fo2 = Percent::new(1.0).ok_or_else(|| eyre!("invalid"))?;
-            let expected = (Bar::new(1.6) / fo2 - SURFACE_PRESSURE) * SEAWATER;
+            let expected = (Bar::new(1.6) / fo2 - env.surface_pressure()) * env.water_density();
 
             assert_relative_eq!(ean(1.0)?.mod_at(Bar::new(1.6)).depth(), expected);
 
@@ -687,8 +747,10 @@ mod tests {
 
         #[test]
         fn hypoxic_10_percent_at_0_16_bar() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?;
-            let expected = (Bar::new(0.16) / fo2 - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
+            let expected = (Bar::new(0.16) / fo2 - env.surface_pressure()).max(Bar::new(0.0))
+                * env.water_density();
 
             assert_relative_eq!(
                 ean(0.10)?.minimod_at(Bar::new(0.16)).depth(),
@@ -743,9 +805,10 @@ mod tests {
 
         #[test]
         fn density_doubles_at_one_atmosphere_depth() -> Result<()> {
-            // pressure doubles at depth = SURFACE_PRESSURE × SEAWATER ≈ 10.08 m
+            let env = DiveEnvironment::standard();
             let surface = ean(0.32)?.gas_density_at(Meters::new(0.0));
-            let double_depth = SURFACE_PRESSURE * SEAWATER;
+            // pressure doubles at depth = surface_pressure × water_density ≈ 10.08 m
+            let double_depth = env.surface_pressure() * env.water_density();
             let at_double = ean(0.32)?.gas_density_at(double_depth);
 
             assert_relative_eq!(at_double, surface * 2.0, epsilon = 1e-9);
@@ -808,9 +871,10 @@ mod tests {
 
         #[test]
         fn follows_noaa_formula() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let depth = Meters::new(40.0);
             let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
-            let ppo2 = f64::from((depth / SEAWATER + SURFACE_PRESSURE) * fo2);
+            let ppo2 = f64::from((depth / env.water_density() + env.surface_pressure()) * fo2);
             let expected = OTUPerMinute::new((ppo2 - 0.5_f64).powf(0.83));
 
             assert_relative_eq!(ean(0.32)?.otu_rate_at(depth), expected, epsilon = 1e-9);
@@ -824,10 +888,11 @@ mod tests {
 
         #[test]
         fn at_30m_1_4_bar() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let depth = Meters::new(30.0);
             let ppo2_max = Bar::new(1.4);
-            let expected_fo2 = ppo2_max / (depth / SEAWATER + SURFACE_PRESSURE);
-            let best = EANx::best_mix(depth, ppo2_max)
+            let expected_fo2 = ppo2_max / (depth / env.water_density() + env.surface_pressure());
+            let best = EANx::best_mix(depth, ppo2_max, env)
                 .ok_or_else(|| eyre!("fo2 is above the 10 % minimum"))?;
 
             assert_relative_eq!(f64::from(best.fo2()), expected_fo2.min(1.0), epsilon = 1e-9);
@@ -837,9 +902,10 @@ mod tests {
 
         #[test]
         fn ppo2_at_target_equals_limit() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let depth = Meters::new(40.0);
             let ppo2_max = Bar::new(1.4);
-            let best = EANx::best_mix(depth, ppo2_max)
+            let best = EANx::best_mix(depth, ppo2_max, env)
                 .ok_or_else(|| eyre!("fo2 = 0.28 is above the 10 % minimum"))?;
 
             assert_relative_eq!(best.ppo2_at(depth).pressure(), ppo2_max, epsilon = 1e-9);
@@ -850,7 +916,7 @@ mod tests {
         #[test]
         fn shallow_depth_clamps_to_pure_o2() -> Result<()> {
             // fo2 = 1.4 / (3/9.948 + 1.013) ≈ 1.065 > 1.0 → clamps to 1.0
-            let best = EANx::best_mix(Meters::new(3.0), Bar::new(1.4))
+            let best = EANx::best_mix(Meters::new(3.0), Bar::new(1.4), DiveEnvironment::standard())
                 .ok_or_else(|| eyre!("fo2 is above the 10 % minimum"))?;
 
             assert_relative_eq!(f64::from(best.fo2()), 1.0, epsilon = 1e-9);
@@ -861,7 +927,14 @@ mod tests {
         #[test]
         fn very_deep_returns_none() {
             // At extreme depth, required fo2 would be below 10 % minimum
-            assert!(EANx::best_mix(Meters::new(200.0), Bar::new(1.4)).is_none());
+            assert!(
+                EANx::best_mix(
+                    Meters::new(200.0),
+                    Bar::new(1.4),
+                    DiveEnvironment::standard()
+                )
+                .is_none()
+            );
         }
     }
 

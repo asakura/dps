@@ -3,7 +3,8 @@ use std::fmt;
 use crate::units::{Bar, Meters, Percent};
 
 use super::gas_name;
-use crate::gas::constants::{AIR_NARCOTIC, SEAWATER, SURFACE_PRESSURE};
+use crate::environment::DiveEnvironment;
+use crate::gas::constants::AIR_NARCOTIC;
 
 /// Equivalent Narcotic Depth at a given actual depth.
 ///
@@ -83,10 +84,10 @@ impl END {
         ENDSummary(self)
     }
 
-    pub(super) fn new(fo2: Percent, narcotic: f64, depth: Meters) -> Self {
-        let abs = depth / SEAWATER + SURFACE_PRESSURE;
+    pub(super) fn new(fo2: Percent, narcotic: f64, depth: Meters, env: DiveEnvironment) -> Self {
+        let abs = depth / env.water_density() + env.surface_pressure();
         let end_pressure = abs * (narcotic / f64::from(AIR_NARCOTIC));
-        let end = (end_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
+        let end = (end_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
 
         Self {
             end,
@@ -169,10 +170,9 @@ impl approx::RelativeEq for END {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
-    use crate::gas::constants::{
-        AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY, SEAWATER, SURFACE_PRESSURE,
-    };
+    use crate::gas::constants::{AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
     use crate::units::{Meters, Percent};
     use approx::assert_relative_eq;
     use color_eyre::{Result, eyre::eyre};
@@ -260,13 +260,15 @@ mod tests {
 
         #[test]
         fn ean32_pp_formula_at_30m() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let mix = ean(0.32)?;
             let c = mix.components();
             let narcotic_mix = AR_NARCOTIC_POTENCY.mul_add(c.ar(), c.n2());
             let depth = Meters::new(30.0);
-            let abs = depth / SEAWATER + SURFACE_PRESSURE;
+            let abs = depth / env.water_density() + env.surface_pressure();
             let end_pressure = abs * (narcotic_mix / f64::from(AIR_NARCOTIC));
-            let expected = (end_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
+            let expected =
+                (end_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
 
             assert_relative_eq!(
                 mix.end_at(Meters::new(30.0)).end(),

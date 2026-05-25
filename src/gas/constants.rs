@@ -1,11 +1,5 @@
-use crate::units::{Bar, MetersPerBar, Percent};
+use crate::units::Percent;
 
-// 1 standard atmosphere (101 325 Pa = 1.01325 bar exactly, ISO 2533)
-pub(super) const SURFACE_PRESSURE: Bar = Bar::new(1.013_25);
-// 1e5 Pa/bar ÷ (ρ_seawater × g) = 1e5 / (1025 kg/m³ × 9.80665 m/s²)
-// ρ = 1025 kg/m³: ISO oceanic standard (35 ‰, 15 °C, 0 dbar)
-// g = 9.80665 m/s²: standard gravity (ISO 80000-3)
-pub(super) const SEAWATER: MetersPerBar = MetersPerBar::new(1e5 / (1025.0 * 9.806_65));
 pub(super) const EAN_MIN_O2: Percent = Percent::new(0.10).unwrap();
 
 // Dry air mole fractions (NOAA standard atmosphere)

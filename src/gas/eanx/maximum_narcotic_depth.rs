@@ -3,7 +3,8 @@ use std::fmt;
 use crate::units::{Bar, Meters, Percent};
 
 use super::gas_name;
-use crate::gas::constants::{AIR_NARCOTIC, SEAWATER, SURFACE_PRESSURE};
+use crate::environment::DiveEnvironment;
+use crate::gas::constants::AIR_NARCOTIC;
 
 /// Maximum Narcotic Depth for a given END limit.
 ///
@@ -83,15 +84,20 @@ impl MND {
         MNDSummary(self)
     }
 
-    pub(super) fn new(fo2: Percent, narcotic: f64, end_limit: Meters) -> Self {
+    pub(super) fn new(
+        fo2: Percent,
+        narcotic: f64,
+        end_limit: Meters,
+        env: DiveEnvironment,
+    ) -> Self {
         debug_assert!(
             narcotic >= 1e-9,
             "narcotic fraction is zero — impossible for any EAN mix"
         );
 
-        let end_abs = end_limit / SEAWATER + SURFACE_PRESSURE;
+        let end_abs = end_limit / env.water_density() + env.surface_pressure();
         let mnd_pressure = end_abs / (narcotic / f64::from(AIR_NARCOTIC));
-        let mnd = (mnd_pressure - SURFACE_PRESSURE).max(Bar::new(0.0)) * SEAWATER;
+        let mnd = (mnd_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
 
         Self {
             mnd,

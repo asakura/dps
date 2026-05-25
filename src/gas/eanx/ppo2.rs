@@ -3,7 +3,7 @@ use std::fmt;
 use crate::units::{Bar, Meters, Percent};
 
 use super::gas_name;
-use crate::gas::constants::{SEAWATER, SURFACE_PRESSURE};
+use crate::environment::DiveEnvironment;
 
 /// Partial pressure of O₂ at a given depth.
 ///
@@ -81,8 +81,8 @@ impl PPO2 {
         Ppo2Summary(self)
     }
 
-    pub(super) fn new(fo2: Percent, depth: Meters) -> Self {
-        let ppo2 = (depth / SEAWATER + SURFACE_PRESSURE) * fo2;
+    pub(super) fn new(fo2: Percent, depth: Meters, env: DiveEnvironment) -> Self {
+        let ppo2 = (depth / env.water_density() + env.surface_pressure()) * fo2;
         Self { ppo2, fo2, depth }
     }
 }
@@ -160,6 +160,7 @@ impl approx::RelativeEq for PPO2 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
     use crate::units::{Bar, Meters, Percent};
     use approx::assert_relative_eq;
@@ -188,9 +189,10 @@ mod tests {
         #[test]
         fn ppo2_accessor_returns_bar() -> Result<()> {
             // Use the MOD depth so ppO₂ = 1.4 bar exactly by construction
+            let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
             let ppo2_target = Bar::new(1.4);
-            let mod_depth = (ppo2_target / fo2 - SURFACE_PRESSURE) * SEAWATER;
+            let mod_depth = (ppo2_target / fo2 - env.surface_pressure()) * env.water_density();
             let p = ean(0.32)?.ppo2_at(mod_depth);
 
             assert_relative_eq!(p.pressure(), ppo2_target, epsilon = 1e-9);
@@ -229,11 +231,12 @@ mod tests {
 
         #[test]
         fn ppo2_at_surface_equals_surface_pressure_times_fo2() -> Result<()> {
+            let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
 
             assert_relative_eq!(
                 ean(0.32)?.ppo2_at(Meters::new(0.0)).pressure(),
-                SURFACE_PRESSURE * fo2
+                env.surface_pressure() * fo2
             );
 
             Ok(())
@@ -241,7 +244,8 @@ mod tests {
 
         #[test]
         fn ppo2_at_air_30m() -> Result<()> {
-            let expected = (Meters::new(30.0) / SEAWATER + SURFACE_PRESSURE)
+            let env = DiveEnvironment::standard();
+            let expected = (Meters::new(30.0) / env.water_density() + env.surface_pressure())
                 * Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?;
 
             assert_relative_eq!(ean(0.21)?.ppo2_at(Meters::new(30.0)).pressure(), expected);
@@ -251,7 +255,8 @@ mod tests {
 
         #[test]
         fn ppo2_at_eanx40_10m() -> Result<()> {
-            let expected = (Meters::new(10.0) / SEAWATER + SURFACE_PRESSURE)
+            let env = DiveEnvironment::standard();
+            let expected = (Meters::new(10.0) / env.water_density() + env.surface_pressure())
                 * Percent::new(0.40).ok_or_else(|| eyre!("invalid"))?;
 
             assert_relative_eq!(ean(0.40)?.ppo2_at(Meters::new(10.0)).pressure(), expected);
