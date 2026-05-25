@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::units::{Bar, Meters, Percent};
+use crate::units::{Meters, Percent};
 
 use super::gas_name;
 use crate::environment::DiveEnvironment;
@@ -95,9 +95,9 @@ impl MND {
             "narcotic fraction is zero — impossible for any EAN mix"
         );
 
-        let end_abs = end_limit / env.water_density() + env.surface_pressure();
+        let end_abs = env.absolute_pressure(end_limit);
         let mnd_pressure = end_abs / (narcotic / f64::from(AIR_NARCOTIC));
-        let mnd = (mnd_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
+        let mnd = env.depth(mnd_pressure);
 
         Self {
             mnd,

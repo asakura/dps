@@ -3,7 +3,7 @@
 /// All variants are freshwater (salinity ≈ 0 ‰). Use
 /// [`crate::environment::DiveEnvironment::lake`] to obtain a
 /// [`crate::environment::DiveEnvironment`] for a given lake.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Lake {
     // Extreme altitude > 5 000 m
     /// Ojos del Salado crater lake, Argentina/Chile — 6 390 m, ~0 °C.

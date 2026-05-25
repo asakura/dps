@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::units::{Bar, Meters, Percent};
+use crate::units::{Meters, Percent};
 
 use super::gas_name;
 use crate::environment::DiveEnvironment;
@@ -85,9 +85,9 @@ impl END {
     }
 
     pub(super) fn new(fo2: Percent, narcotic: f64, depth: Meters, env: DiveEnvironment) -> Self {
-        let abs = depth / env.water_density() + env.surface_pressure();
+        let abs = env.absolute_pressure(depth);
         let end_pressure = abs * (narcotic / f64::from(AIR_NARCOTIC));
-        let end = (end_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
+        let end = env.depth(end_pressure);
 
         Self {
             end,
@@ -265,10 +265,9 @@ mod tests {
             let c = mix.components();
             let narcotic_mix = AR_NARCOTIC_POTENCY.mul_add(c.ar(), c.n2());
             let depth = Meters::new(30.0);
-            let abs = depth / env.water_density() + env.surface_pressure();
+            let abs = env.absolute_pressure(depth);
             let end_pressure = abs * (narcotic_mix / f64::from(AIR_NARCOTIC));
-            let expected =
-                (end_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
+            let expected = env.depth(end_pressure);
 
             assert_relative_eq!(
                 mix.end_at(Meters::new(30.0)).end(),

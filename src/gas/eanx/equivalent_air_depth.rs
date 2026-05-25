@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::units::{Bar, Meters, Percent};
+use crate::units::{Meters, Percent};
 
 use super::gas_name;
 use crate::environment::DiveEnvironment;
@@ -85,9 +85,9 @@ impl EAD {
     }
 
     pub(super) fn new(fo2: Percent, fn2: f64, depth: Meters, env: DiveEnvironment) -> Self {
-        let abs = depth / env.water_density() + env.surface_pressure();
+        let abs = env.absolute_pressure(depth);
         let ead_pressure = abs * (fn2 / f64::from(AIR_N2));
-        let ead = (ead_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
+        let ead = env.depth(ead_pressure);
 
         Self {
             ead,
@@ -263,10 +263,9 @@ mod tests {
             let env = DiveEnvironment::standard();
             let mix = ean(0.32)?;
             let depth = Meters::new(30.0);
-            let abs = depth / env.water_density() + env.surface_pressure();
+            let abs = env.absolute_pressure(depth);
             let ead_pressure = abs * (mix.fn2() / f64::from(AIR_N2));
-            let expected =
-                (ead_pressure - env.surface_pressure()).max(Bar::new(0.0)) * env.water_density();
+            let expected = env.depth(ead_pressure);
 
             assert_relative_eq!(
                 mix.ead_at(Meters::new(30.0)).ead(),

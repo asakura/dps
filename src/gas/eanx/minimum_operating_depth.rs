@@ -110,8 +110,7 @@ impl MiniMOD {
             return Err(InvalidEANx::O2TooLow(fo2));
         }
 
-        let gauge = ppo2_min / fo2 - env.surface_pressure();
-        let depth = gauge.max(Bar::new(0.0)) * env.water_density();
+        let depth = env.depth(ppo2_min / fo2);
 
         Ok(Self {
             depth,

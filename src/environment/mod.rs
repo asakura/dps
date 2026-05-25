@@ -110,7 +110,7 @@ pub use ocean::Ocean;
 
 use std::fmt;
 
-use crate::units::{Bar, MetersPerBar};
+use crate::units::{Bar, Meters, MetersPerBar};
 
 /// ISO standard atmosphere sea-level pressure.
 const SEA_LEVEL_PRESSURE_BAR: Bar = Bar::new(1.013_25);
@@ -235,7 +235,9 @@ impl DiveEnvironment {
     pub const fn standard() -> Self {
         Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
-            water_density: MetersPerBar::new(PA_PER_BAR / (ISO_SEAWATER_DENSITY * STANDARD_GRAVITY)),
+            water_density: MetersPerBar::new(
+                PA_PER_BAR / (ISO_SEAWATER_DENSITY * STANDARD_GRAVITY),
+            ),
         }
     }
 
@@ -587,6 +589,56 @@ impl DiveEnvironment {
     pub const fn water_density(self) -> MetersPerBar {
         self.water_density
     }
+
+    // Depth↔pressure
+
+    /// Absolute pressure at the given depth.
+    ///
+    /// `P_abs = P_surface + depth / water_density`
+    ///
+    /// ```
+    /// use dps::environment::DiveEnvironment;
+    /// use dps::units::Meters;
+    /// use approx::assert_relative_eq;
+    ///
+    /// let env = DiveEnvironment::standard();
+    /// // At the surface, absolute pressure equals surface pressure.
+    /// assert_relative_eq!(
+    ///     f64::from(env.absolute_pressure(Meters::new(0.0))),
+    ///     f64::from(env.surface_pressure()),
+    ///     epsilon = 1e-9
+    /// );
+    /// // Deeper means higher absolute pressure.
+    /// assert!(env.absolute_pressure(Meters::new(30.0)) > env.surface_pressure());
+    /// ```
+    #[must_use]
+    pub fn absolute_pressure(self, depth: Meters) -> Bar {
+        depth / self.water_density + self.surface_pressure
+    }
+
+    /// Depth at which the given absolute pressure occurs.
+    ///
+    /// `depth = (P_abs − P_surface) × water_density`
+    ///
+    /// Returns [`Meters::new(0.0)`] when `absolute_pressure ≤ surface_pressure`
+    /// (at or above the surface).
+    ///
+    /// ```
+    /// use dps::environment::DiveEnvironment;
+    /// use dps::units::Meters;
+    /// use approx::assert_relative_eq;
+    ///
+    /// let env = DiveEnvironment::standard();
+    /// let depth = Meters::new(30.0);
+    /// // Roundtrip: depth → pressure → depth.
+    /// assert_relative_eq!(env.depth(env.absolute_pressure(depth)), depth, epsilon = 1e-9);
+    /// // Surface pressure or lower maps to the surface.
+    /// assert_eq!(env.depth(env.surface_pressure()), Meters::new(0.0));
+    /// ```
+    #[must_use]
+    pub fn depth(self, absolute_pressure: Bar) -> Meters {
+        (absolute_pressure - self.surface_pressure).max(Bar::new(0.0)) * self.water_density
+    }
 }
 
 impl Default for DiveEnvironment {
@@ -626,7 +678,10 @@ impl PositiveFinite for f64 {
 /// Accuracy: within ±2 kg/m³ for S ∈ [0, 45] ‰ and T ∈ [0, 35] °C,
 /// which covers all practical dive environments.
 const fn density_kg_m3(salinity_ppt: f64, temp_c: f64) -> f64 {
-    DENSITY_TEMP_COEFF.mul_add(temp_c, DENSITY_SALINITY_COEFF.mul_add(salinity_ppt, DENSITY_BASE))
+    DENSITY_TEMP_COEFF.mul_add(
+        temp_c,
+        DENSITY_SALINITY_COEFF.mul_add(salinity_ppt, DENSITY_BASE),
+    )
 }
 
 const fn water_density_from(salinity_ppt: f64, temp_c: f64) -> MetersPerBar {
@@ -635,7 +690,11 @@ const fn water_density_from(salinity_ppt: f64, temp_c: f64) -> MetersPerBar {
 
 /// ICAO barometric formula: P(h) = 101325 × (1 − 2.25577×10⁻⁵ × h)^5.25588 Pa
 fn altitude_to_pressure_bar(meters_asl: f64) -> Bar {
-    Bar::new(ICAO_SEA_LEVEL_PA * (ICAO_TEMP_GRADIENT.mul_add(-meters_asl, 1.0)).powf(ICAO_PRESSURE_EXPONENT) / PA_PER_BAR)
+    Bar::new(
+        ICAO_SEA_LEVEL_PA
+            * (ICAO_TEMP_GRADIENT.mul_add(-meters_asl, 1.0)).powf(ICAO_PRESSURE_EXPONENT)
+            / PA_PER_BAR,
+    )
 }
 
 fn validate_altitude(meters_asl: f64) -> Result<(), DiveEnvironmentError> {
@@ -965,5 +1024,49 @@ mod tests {
     #[test]
     fn default_is_standard() {
         assert_eq!(DiveEnvironment::default(), DiveEnvironment::standard());
+    }
+
+    #[test]
+    fn absolute_pressure_at_surface_equals_surface_pressure() {
+        let env = DiveEnvironment::standard();
+        assert_eq!(
+            env.absolute_pressure(Meters::new(0.0)),
+            env.surface_pressure()
+        );
+    }
+
+    #[test]
+    fn absolute_pressure_increases_with_depth() {
+        let env = DiveEnvironment::standard();
+        assert!(
+            env.absolute_pressure(Meters::new(30.0)) > env.absolute_pressure(Meters::new(10.0))
+        );
+    }
+
+    #[test]
+    fn depth_roundtrip_standard() {
+        let env = DiveEnvironment::standard();
+        let d = Meters::new(30.0);
+        assert_relative_eq!(env.depth(env.absolute_pressure(d)), d, epsilon = 1e-9);
+    }
+
+    #[test]
+    fn depth_roundtrip_freshwater_at_altitude() -> Result<()> {
+        let env = DiveEnvironment::freshwater_at_altitude(2_000.0)?;
+        let d = Meters::new(18.0);
+        assert_relative_eq!(env.depth(env.absolute_pressure(d)), d, epsilon = 1e-9);
+        Ok(())
+    }
+
+    #[test]
+    fn depth_at_surface_pressure_is_zero() {
+        let env = DiveEnvironment::standard();
+        assert_eq!(env.depth(env.surface_pressure()), Meters::new(0.0));
+    }
+
+    #[test]
+    fn depth_clamps_below_surface_pressure() {
+        let env = DiveEnvironment::standard();
+        assert_eq!(env.depth(Bar::new(0.5)), Meters::new(0.0));
     }
 }

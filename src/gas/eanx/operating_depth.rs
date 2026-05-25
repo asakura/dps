@@ -110,8 +110,7 @@ impl MOD {
             return Err(InvalidEANx::O2TooLow(fo2));
         }
 
-        let gauge = ppo2_max / fo2 - env.surface_pressure();
-        let depth = (gauge * env.water_density()).max(Meters::new(0.0));
+        let depth = env.depth(ppo2_max / fo2);
 
         Ok(Self {
             depth,
