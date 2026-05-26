@@ -42,9 +42,9 @@ mod constants;
 mod eanx;
 pub mod error;
 
-pub use blend::{BlendMethod, InvalidMembraneFractions, Membrane, PartialPressure, Psa};
+pub use blend::{BlendMethod, InvalidMembraneFractionsError, Membrane, PartialPressure, Psa};
 pub use components::GasComponents;
-pub use eanx::InvalidEANx;
+pub use eanx::InvalidEANxError;
 pub use eanx::{
     EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, MND, MNDSummary, MOD,
     MODSummary, MiniMOD, MiniMODSummary, PPO2, Ppo2Summary,

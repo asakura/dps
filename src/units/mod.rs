@@ -243,6 +243,7 @@ macro_rules! unit_newtype {
             #[test]
             fn contains_inclusive_range() {
                 let v = $ty::new(5.0);
+
                 assert!(v.contains($ty::new(0.0)..=$ty::new(10.0)));
                 assert!(v.contains($ty::new(5.0)..=$ty::new(5.0)));
                 assert!(!v.contains($ty::new(6.0)..=$ty::new(10.0)));
@@ -251,6 +252,7 @@ macro_rules! unit_newtype {
             #[test]
             fn contains_exclusive_range() {
                 let v = $ty::new(5.0);
+
                 assert!(v.contains($ty::new(0.0)..$ty::new(10.0)));
                 assert!(!v.contains($ty::new(0.0)..$ty::new(5.0)));
             }

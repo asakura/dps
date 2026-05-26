@@ -18,7 +18,7 @@ mod equivalent_narcotic_depth;
 pub use equivalent_narcotic_depth::{END, ENDSummary};
 
 mod error;
-pub use error::InvalidEANx;
+pub use error::InvalidEANxError;
 
 mod maximum_narcotic_depth;
 pub use maximum_narcotic_depth::{MND, MNDSummary};
@@ -78,31 +78,31 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// # Errors
     ///
-    /// - [`InvalidEANx::O2TooLow`] if `fo2 < 10 %`.
-    /// - [`InvalidEANx::BlendCeilingExceeded`] if `fo2` is above the
+    /// - [`InvalidEANxError::O2TooLow`] if `fo2 < 10 %`.
+    /// - [`InvalidEANxError::BlendCeilingExceeded`] if `fo2` is above the
     ///   physical ceiling for `method` (PSA: ≈ 95.7 %).
     ///
     /// ```no_run
-    /// use dps::gas::{EANxBlend, Psa, InvalidEANx};
+    /// use dps::gas::{EANxBlend, Psa, InvalidEANxError};
     /// use dps::units::Percent;
     ///
     /// assert!(EANxBlend::new(Percent::new(0.32).unwrap(), Psa).is_ok());
     /// assert!(matches!(
     ///     EANxBlend::new(Percent::new(0.09).unwrap(), Psa),
-    ///     Err(InvalidEANx::O2TooLow(_))
+    ///     Err(InvalidEANxError::O2TooLow(_))
     /// ));
     /// assert!(matches!(
     ///     EANxBlend::new(Percent::new(0.99).unwrap(), Psa),
-    ///     Err(InvalidEANx::BlendCeilingExceeded(_))
+    ///     Err(InvalidEANxError::BlendCeilingExceeded(_))
     /// ));
     /// ```
-    pub fn new(fo2: Percent, method: M) -> Result<Self, InvalidEANx> {
+    pub fn new(fo2: Percent, method: M) -> Result<Self, InvalidEANxError> {
         if fo2 < EAN_MIN_O2 {
-            return Err(InvalidEANx::O2TooLow(fo2));
+            return Err(InvalidEANxError::O2TooLow(fo2));
         }
 
         if !method.is_valid_fo2(fo2.into()) {
-            return Err(InvalidEANx::BlendCeilingExceeded(fo2));
+            return Err(InvalidEANxError::BlendCeilingExceeded(fo2));
         }
 
         Ok(Self {
@@ -565,7 +565,7 @@ pub(super) fn gas_name(fo2: Percent) -> impl fmt::Display {
 ///
 /// # Errors
 ///
-/// Returns [`InvalidEANx::O2TooLow`] if `pct` is below 10 %.
+/// Returns [`InvalidEANxError::O2TooLow`] if `pct` is below 10 %.
 ///
 /// ```no_run
 /// use dps::gas::EANx;
@@ -575,7 +575,7 @@ pub(super) fn gas_name(fo2: Percent) -> impl fmt::Display {
 /// assert!(EANx::try_from(Percent::new(0.09).unwrap()).is_err());
 /// ```
 impl TryFrom<Percent> for EANx {
-    type Error = InvalidEANx;
+    type Error = InvalidEANxError;
 
     fn try_from(pct: Percent) -> Result<Self, Self::Error> {
         Self::new(pct, PartialPressure)

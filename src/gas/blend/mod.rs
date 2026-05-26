@@ -10,7 +10,7 @@ mod membrane;
 mod partial_pressure;
 mod psa;
 
-pub use membrane::{InvalidMembraneFractions, Membrane};
+pub use membrane::{InvalidMembraneFractionsError, Membrane};
 pub use partial_pressure::PartialPressure;
 pub use psa::Psa;
 

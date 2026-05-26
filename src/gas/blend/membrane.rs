@@ -54,7 +54,7 @@ impl Membrane {
     ///
     /// # Errors
     ///
-    /// Returns [`InvalidMembraneFractions`] if `fn2 + far + fco2 > 1 − fo2`.
+    /// Returns [`InvalidMembraneFractionsError`] if `fn2 + far + fco2 > 1 − fo2`.
     ///
     /// ```no_run
     /// use dps::gas::Membrane;
@@ -69,17 +69,17 @@ impl Membrane {
         fn2: f64,
         far: f64,
         fco2: f64,
-    ) -> Result<Self, InvalidMembraneFractions> {
+    ) -> Result<Self, InvalidMembraneFractionsError> {
         let diluent = 1.0 - fo2;
 
         if diluent < 1e-9 {
-            return Err(InvalidMembraneFractions);
+            return Err(InvalidMembraneFractionsError);
         }
 
         let fother = diluent - fn2 - far - fco2;
 
         if fother < -1e-6 {
-            return Err(InvalidMembraneFractions);
+            return Err(InvalidMembraneFractionsError);
         }
 
         Ok(Self {
@@ -152,14 +152,14 @@ impl BlendMethod for Membrane {
 /// Error returned when membrane diluent fractions are inconsistent.
 ///
 /// ```no_run
-/// use dps::gas::{Membrane, InvalidMembraneFractions};
+/// use dps::gas::{Membrane, InvalidMembraneFractionsError};
 /// // fn2 + far + fco2 > 1 − fo2
 /// assert!(Membrane::from_analysis(0.32, 0.60, 0.10, 0.005).is_err());
 /// ```
 #[derive(Debug, Clone, Copy, thiserror::Error)]
 #[non_exhaustive]
 #[error("membrane diluent fractions are invalid: fn2 + far + fco2 must not exceed (1 − fo2)")]
-pub struct InvalidMembraneFractions;
+pub struct InvalidMembraneFractionsError;
 
 #[cfg(test)]
 mod tests {
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn invalid_membrane_fractions_display_mentions_constraint() {
-        let msg = InvalidMembraneFractions.to_string();
+        let msg = InvalidMembraneFractionsError.to_string();
 
         assert!(
             msg.contains("fn2") || msg.contains("far") || msg.contains("fco2"),

@@ -16,10 +16,10 @@ pub(super) const EAN_MIN_O2: Percent = Percent::new(0.10).unwrap();
 // unstable as of Rust 1.88 (tracking issue rust-lang/rust#67792).  Once
 // `#![feature(const_trait_impl)]` is stabilised the _RAW layer can be removed
 // and the derivations rewritten as e.g. `f64::from(AIR_O2)`.
-const AIR_O2_RAW: f64 = 0.209_46;
-const AIR_AR_RAW: f64 = 0.009_34;
+pub(super) const AIR_O2_RAW: f64 = 0.209_46;
+pub(super) const AIR_AR_RAW: f64 = 0.009_34;
 const AIR_CO2_RAW: f64 = 0.000_407;
-const AIR_OTHER_RAW: f64 = 0.000_027_4;
+pub(super) const AIR_OTHER_RAW: f64 = 0.000_027_4;
 const AIR_N2_RAW: f64 = 1.0 - AIR_O2_RAW - AIR_AR_RAW - AIR_CO2_RAW - AIR_OTHER_RAW;
 
 #[cfg_attr(
@@ -46,28 +46,12 @@ pub(super) const AR_NARCOTIC_POTENCY: f64 = 1.5;
 pub(super) const AIR_NARCOTIC: Percent =
     Percent::new(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW).unwrap();
 
-// Molecular weights (g/mol)
-
-pub(super) const MW_O2: f64 = 31.9988;
-pub(super) const MW_N2: f64 = 28.0134;
-pub(super) const MW_AR: f64 = 39.948;
-pub(super) const MW_CO2: f64 = 44.0095;
-pub(super) const MW_OTHER: f64 = 20.1797; // Neon — dominant trace noble gas by mole fraction
-
 // Gas density
 //
 // ρ [g/L] = P [Pa] × M [g/mol] / (R [Pa·L/(mol·K)] × T [K])
 
 pub(super) const GAS_CONSTANT: f64 = 8314.46; // Pa·L/(mol·K)
 pub(super) const STANDARD_TEMP_K: f64 = 293.15; // 20 °C reference temperature
-
-// PSA blend constants
-//
-// Zeolite PSA cannot separate Ar from O₂; both concentrate at the same rate.
-// Noble traces (Ne, He, Kr, …) similarly pass through unretained.
-
-pub(super) const PSA_AR_PER_O2: f64 = AIR_AR_RAW / AIR_O2_RAW;
-pub(super) const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 
 // CNS clock
 

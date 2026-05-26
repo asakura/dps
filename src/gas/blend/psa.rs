@@ -1,6 +1,23 @@
+//! Pressure-swing adsorption (PSA) blend method.
+//!
+//! Provides [`Psa`], a [`BlendMethod`](crate::gas::BlendMethod) implementation for oxygen
+//! concentrators that use zeolite molecular sieves.
+//!
+//! PSA separates O₂ from air by adsorbing N₂ and CO₂ on the sieve while O₂, Ar, and
+//! noble traces pass through unretained. Because Ar co-concentrates with O₂ at a fixed
+//! ratio, a PSA mix carries more Ar than a partial-pressure mix at the same FO₂ and
+//! contains essentially no CO₂. The physical ceiling is FO₂ ≈ 95.7 %, the point at
+//! which N₂ → 0.
+
 use super::{BlendMethod, sealed};
 use crate::gas::components::GasComponents;
-use crate::gas::constants::{PSA_AR_PER_O2, PSA_OTHER_PER_O2};
+use crate::gas::constants::{AIR_AR_RAW, AIR_O2_RAW, AIR_OTHER_RAW};
+
+// Zeolite PSA cannot separate Ar from O₂; both concentrate at the same rate.
+// Noble traces (Ne, He, Kr, …) similarly pass through unretained.
+
+const PSA_AR_PER_O2: f64 = AIR_AR_RAW / AIR_O2_RAW;
+const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 
 /// Pressure-swing adsorption (PSA) blending.
 ///
@@ -12,7 +29,8 @@ use crate::gas::constants::{PSA_AR_PER_O2, PSA_OTHER_PER_O2};
 /// - N₂ is the remainder once O₂, Ar, and traces are accounted for.
 ///
 /// The practical ceiling is FO₂ ≈ 95.7 % (where N₂ → 0); [`EANxBlend::new`](crate::gas::EANxBlend::new)
-/// rejects values above this ceiling with [`InvalidEANx::BlendCeilingExceeded`](crate::gas::InvalidEANx::BlendCeilingExceeded).
+/// rejects values above this ceiling with
+/// [`InvalidEANxError::BlendCeilingExceeded`](crate::gas::InvalidEANxError::BlendCeilingExceeded).
 ///
 /// ```no_run
 /// use dps::gas::{EANxBlend, Psa};

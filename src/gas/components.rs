@@ -1,4 +1,22 @@
-use super::constants::{AR_NARCOTIC_POTENCY, MW_AR, MW_CO2, MW_N2, MW_O2, MW_OTHER};
+//! Full mole-fraction breakdown of a breathing gas.
+//!
+//! Provides [`GasComponents`], the five-component (O₂, N₂, Ar, CO₂, and lumped traces)
+//! output of [`BlendMethod::components`](crate::gas::BlendMethod::components).
+//!
+//! Instances are constructed exclusively inside the blend machinery and carry the
+//! invariant that all five fractions sum to 1.0. Physical properties — molar mass for
+//! gas-density calculations, and narcotic fraction for EAD/END/MND — are derived from
+//! the components.
+
+use super::constants::AR_NARCOTIC_POTENCY;
+
+// Molecular weights (g/mol)
+
+const MW_O2: f64 = 31.9988;
+const MW_N2: f64 = 28.0134;
+const MW_AR: f64 = 39.948;
+const MW_CO2: f64 = 44.0095;
+const MW_OTHER: f64 = 20.1797; // Neon — dominant trace noble gas by mole fraction
 
 /// Complete mole-fraction breakdown of a breathing gas.
 ///
@@ -32,6 +50,7 @@ impl GasComponents {
             "GasComponents must sum to 1.0, got {}",
             o2 + n2 + ar + co2 + other
         );
+
         Self {
             o2,
             n2,
@@ -120,7 +139,7 @@ impl GasComponents {
     /// assert_relative_eq!(c.sum(), 1.0, epsilon = 1e-12);
     /// ```
     #[must_use]
-    pub fn sum(self) -> f64 {
+    pub const fn sum(self) -> f64 {
         self.o2 + self.n2 + self.ar + self.co2 + self.other
     }
 
@@ -134,7 +153,7 @@ impl GasComponents {
     /// assert!((c.molar_mass() - 28.97).abs() < 0.01);
     /// ```
     #[must_use]
-    pub fn molar_mass(self) -> f64 {
+    pub const fn molar_mass(self) -> f64 {
         self.other.mul_add(
             MW_OTHER,
             self.co2.mul_add(
@@ -187,6 +206,49 @@ mod tests {
         )
     }
 
+    mod accessors {
+        use super::*;
+
+        #[test]
+        fn o2_returns_oxygen_fraction() -> Result<()> {
+            assert_relative_eq!(air()?.o2(), 0.20946, epsilon = 1e-9);
+            Ok(())
+        }
+
+        #[test]
+        fn n2_is_dominant_diluent_in_air() -> Result<()> {
+            let c = air()?;
+            assert!(c.n2() > 0.78 && c.n2() < 0.79);
+            Ok(())
+        }
+
+        #[test]
+        fn ar_matches_noaa_air_composition() -> Result<()> {
+            assert_relative_eq!(air()?.ar(), 0.00934, epsilon = 1e-4);
+            Ok(())
+        }
+
+        #[test]
+        fn co2_is_sub_ppt_trace() -> Result<()> {
+            let c = air()?;
+            assert!(c.co2() > 0.0 && c.co2() < 0.001);
+            Ok(())
+        }
+
+        #[test]
+        fn other_is_smaller_than_co2() -> Result<()> {
+            let c = air()?;
+            assert!(c.other() >= 0.0 && c.other() < c.co2());
+            Ok(())
+        }
+
+        #[test]
+        fn sum_equals_one_for_air() -> Result<()> {
+            assert_relative_eq!(air()?.sum(), 1.0, epsilon = 1e-12);
+            Ok(())
+        }
+    }
+
     #[test]
     fn molar_mass_of_air_is_approximately_28_97() -> Result<()> {
         assert_relative_eq!(air()?.molar_mass(), 28.97, epsilon = 0.01);
@@ -205,6 +267,7 @@ mod tests {
     #[test]
     fn narcotic_fraction_equals_n2_plus_1_5_ar() -> Result<()> {
         let air = air()?;
+
         assert_relative_eq!(
             air.narcotic(),
             1.5f64.mul_add(air.ar(), air.n2()),

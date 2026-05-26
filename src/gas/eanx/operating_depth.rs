@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::units::{Bar, Meters, Percent};
 
-use super::error::InvalidEANx;
+use super::error::InvalidEANxError;
 use super::gas_name;
 use crate::environment::DiveEnvironment;
 use crate::gas::constants::EAN_MIN_O2;
@@ -91,7 +91,7 @@ impl MOD {
         fo2: Percent,
         ppo2_max: Bar,
         env: DiveEnvironment,
-    ) -> Result<Self, InvalidEANx> {
+    ) -> Result<Self, InvalidEANxError> {
         Self::new_inner(fo2, ppo2_max, env)
     }
 
@@ -101,13 +101,21 @@ impl MOD {
         clippy::missing_errors_doc,
         reason = "test-only visibility widening"
     )]
-    pub fn new(fo2: Percent, ppo2_max: Bar, env: DiveEnvironment) -> Result<Self, InvalidEANx> {
+    pub fn new(
+        fo2: Percent,
+        ppo2_max: Bar,
+        env: DiveEnvironment,
+    ) -> Result<Self, InvalidEANxError> {
         Self::new_inner(fo2, ppo2_max, env)
     }
 
-    fn new_inner(fo2: Percent, ppo2_max: Bar, env: DiveEnvironment) -> Result<Self, InvalidEANx> {
+    fn new_inner(
+        fo2: Percent,
+        ppo2_max: Bar,
+        env: DiveEnvironment,
+    ) -> Result<Self, InvalidEANxError> {
         if fo2 < EAN_MIN_O2 {
-            return Err(InvalidEANx::O2TooLow(fo2));
+            return Err(InvalidEANxError::O2TooLow(fo2));
         }
 
         let depth = env.depth(ppo2_max / fo2);
@@ -121,7 +129,7 @@ impl MOD {
 }
 
 impl TryFrom<(Percent, Bar)> for MOD {
-    type Error = InvalidEANx;
+    type Error = InvalidEANxError;
 
     fn try_from((fo2, ppo2_max): (Percent, Bar)) -> Result<Self, Self::Error> {
         Self::new(fo2, ppo2_max, DiveEnvironment::standard())
@@ -201,7 +209,7 @@ impl fmt::Display for MODSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gas::InvalidEANx;
+    use crate::gas::InvalidEANxError;
     use crate::units::{Bar, Meters, Percent};
     use color_eyre::{Result, eyre::eyre};
 
@@ -237,7 +245,7 @@ mod tests {
 
             assert!(matches!(
                 MOD::try_from((fo2, Bar::new(1.4))),
-                Err(InvalidEANx::O2TooLow(_))
+                Err(InvalidEANxError::O2TooLow(_))
             ));
 
             Ok(())
