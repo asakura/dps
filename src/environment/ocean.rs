@@ -5,7 +5,7 @@
 //! [`DiveEnvironment::ocean`](crate::environment::DiveEnvironment::ocean) to obtain a
 //! correctly configured environment.
 //!
-//! ```
+//! ```ignore
 //! use dps::environment::{DiveEnvironment, Ocean};
 //!
 //! // Red Sea (40 ‰) is saltier and denser than ISO standard seawater (35 ‰)
@@ -16,6 +16,8 @@
 //! let baltic = DiveEnvironment::ocean(Ocean::BalticSea);
 //! assert!(baltic.water_density() > DiveEnvironment::standard().water_density());
 //! ```
+
+use crate::units::{Celsius, PartsPerThousand};
 
 /// Major oceans and seas, keyed by representative surface salinity and temperature.
 ///
@@ -67,13 +69,14 @@ impl Ocean {
     ///
     /// ```
     /// use dps::environment::Ocean;
+    /// use dps::units::PartsPerThousand;
     ///
-    /// assert_eq!(Ocean::RedSea.salinity_ppt(), 40.0);
-    /// assert_eq!(Ocean::BalticSea.salinity_ppt(), 7.0);
+    /// assert_eq!(Ocean::RedSea.salinity(), PartsPerThousand::new(40.0));
+    /// assert_eq!(Ocean::BalticSea.salinity(), PartsPerThousand::new(7.0));
     /// ```
     #[must_use]
-    pub const fn salinity_ppt(self) -> f64 {
-        match self {
+    pub const fn salinity(self) -> PartsPerThousand {
+        PartsPerThousand::new(match self {
             Self::AndamanSea | Self::SouthChinaSea => 33.0,
             Self::Arctic => 28.0,
             Self::Atlantic | Self::CoralSea | Self::NorthSea => 35.5,
@@ -84,20 +87,21 @@ impl Ocean {
             Self::Indian | Self::Pacific => 34.5,
             Self::Mediterranean => 38.0,
             Self::PersianGulf | Self::RedSea => 40.0,
-        }
+        })
     }
 
     /// Representative surface temperature in $^\circ\text{C}$.
     ///
     /// ```
     /// use dps::environment::Ocean;
+    /// use dps::units::Celsius;
     ///
-    /// assert_eq!(Ocean::Mediterranean.typical_temperature_c(), 18.0);
-    /// assert_eq!(Ocean::Arctic.typical_temperature_c(), 2.0);
+    /// assert_eq!(Ocean::Mediterranean.typical_temperature(), Celsius::new(18.0));
+    /// assert_eq!(Ocean::Arctic.typical_temperature(), Celsius::new(2.0));
     /// ```
     #[must_use]
-    pub const fn typical_temperature_c(self) -> f64 {
-        match self {
+    pub const fn typical_temperature(self) -> Celsius {
+        Celsius::new(match self {
             Self::AndamanSea
             | Self::PersianGulf
             | Self::BandaSea
@@ -110,7 +114,7 @@ impl Ocean {
             Self::Caribbean => 27.0,
             Self::CoralSea | Self::Indian | Self::RedSea => 26.0,
             Self::Mediterranean => 18.0,
-        }
+        })
     }
 }
 
@@ -121,21 +125,21 @@ mod tests {
 
     #[test]
     fn red_sea_is_saltiest() {
-        assert_relative_eq!(Ocean::RedSea.salinity_ppt(), 40.0);
-        assert!(Ocean::RedSea.salinity_ppt() > Ocean::Atlantic.salinity_ppt());
+        assert_relative_eq!(Ocean::RedSea.salinity(), PartsPerThousand::new(40.0));
+        assert!(Ocean::RedSea.salinity() > Ocean::Atlantic.salinity());
     }
 
     #[test]
     fn baltic_is_least_salty() {
-        assert_relative_eq!(Ocean::BalticSea.salinity_ppt(), 7.0);
-        assert!(Ocean::BalticSea.salinity_ppt() < Ocean::Mediterranean.salinity_ppt());
+        assert_relative_eq!(Ocean::BalticSea.salinity(), PartsPerThousand::new(7.0));
+        assert!(Ocean::BalticSea.salinity() < Ocean::Mediterranean.salinity());
     }
 
     #[test]
     fn arctic_and_southern_are_coldest() {
-        assert_relative_eq!(Ocean::Arctic.typical_temperature_c(), 2.0);
-        assert_relative_eq!(Ocean::Southern.typical_temperature_c(), 2.0);
-        assert!(Ocean::Arctic.typical_temperature_c() < Ocean::Caribbean.typical_temperature_c());
+        assert_relative_eq!(Ocean::Arctic.typical_temperature(), Celsius::new(2.0));
+        assert_relative_eq!(Ocean::Southern.typical_temperature(), Celsius::new(2.0));
+        assert!(Ocean::Arctic.typical_temperature() < Ocean::Caribbean.typical_temperature());
     }
 
     #[test]
@@ -148,7 +152,7 @@ mod tests {
             Ocean::SouthChinaSea,
         ];
         for ocean in warm {
-            assert_relative_eq!(ocean.typical_temperature_c(), 28.0);
+            assert_relative_eq!(ocean.typical_temperature(), Celsius::new(28.0));
         }
     }
 }

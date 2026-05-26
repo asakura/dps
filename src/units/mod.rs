@@ -1,19 +1,23 @@
 //! Newtype wrappers for physical units used in dive calculations.
 
 mod bar;
+mod celsius;
 mod cns_rate_per_minute;
 mod grams_per_litre;
 mod meters;
 mod meters_per_bar;
 mod otu_per_minute;
+mod parts_per_thousand;
 mod percent;
 
 pub use bar::Bar;
+pub use celsius::Celsius;
 pub use cns_rate_per_minute::CnsRatePerMinute;
 pub use grams_per_litre::GramsPerLitre;
 pub use meters::Meters;
 pub use meters_per_bar::MetersPerBar;
 pub use otu_per_minute::OTUPerMinute;
+pub use parts_per_thousand::PartsPerThousand;
 pub use percent::Percent;
 
 use std::ops::{Div, Mul};
@@ -43,6 +47,26 @@ macro_rules! unit_newtype {
             #[must_use]
             pub const fn mul_add(self, scalar: f64, addend: Self) -> Self {
                 Self(self.0.mul_add(scalar, addend.0))
+            }
+
+            /// Returns `true` if the underlying value is finite (not infinite or `NaN`).
+            #[must_use]
+            pub const fn is_finite(self) -> bool {
+                self.0.is_finite()
+            }
+
+            /// Returns `true` if the underlying value is strictly positive (`> 0`) and finite.
+            #[must_use]
+            pub fn is_positive_finite(self) -> bool {
+                self.0 > 0.0 && self.0.is_finite()
+            }
+
+            /// Returns `true` if this value falls within `range`.
+            ///
+            /// Accepts any standard range expression.
+            #[must_use]
+            pub fn contains(self, range: impl ::std::ops::RangeBounds<Self>) -> bool {
+                range.contains(&self)
             }
         }
 
@@ -191,6 +215,44 @@ macro_rules! unit_newtype {
             #[test]
             fn neg() {
                 ::approx::assert_relative_eq!(-$ty::new(5.0), $ty::new(-5.0));
+            }
+
+            #[test]
+            fn is_finite_true() {
+                assert!($ty::new(5.0).is_finite());
+            }
+
+            #[test]
+            fn is_finite_false() {
+                assert!(!$ty::new(f64::INFINITY).is_finite());
+                assert!(!$ty::new(f64::NAN).is_finite());
+            }
+
+            #[test]
+            fn is_positive_finite_true() {
+                assert!($ty::new(0.001).is_positive_finite());
+            }
+
+            #[test]
+            fn is_positive_finite_false() {
+                assert!(!$ty::new(0.0).is_positive_finite());
+                assert!(!$ty::new(-1.0).is_positive_finite());
+                assert!(!$ty::new(f64::INFINITY).is_positive_finite());
+            }
+
+            #[test]
+            fn contains_inclusive_range() {
+                let v = $ty::new(5.0);
+                assert!(v.contains($ty::new(0.0)..=$ty::new(10.0)));
+                assert!(v.contains($ty::new(5.0)..=$ty::new(5.0)));
+                assert!(!v.contains($ty::new(6.0)..=$ty::new(10.0)));
+            }
+
+            #[test]
+            fn contains_exclusive_range() {
+                let v = $ty::new(5.0);
+                assert!(v.contains($ty::new(0.0)..$ty::new(10.0)));
+                assert!(!v.contains($ty::new(0.0)..$ty::new(5.0)));
             }
         }
     };

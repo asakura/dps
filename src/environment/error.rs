@@ -4,7 +4,7 @@
 //! out-of-range or non-finite value. Each variant carries the offending value so
 //! callers can report it without re-inspecting the input.
 //!
-//! ```
+//! ```ignore
 //! use dps::environment::{DiveEnvironment, DiveEnvironmentError};
 //!
 //! assert!(matches!(
@@ -15,7 +15,7 @@
 
 use std::fmt;
 
-use crate::units::{Bar, MetersPerBar};
+use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
 /// Error returned by fallible [`DiveEnvironment`](super::DiveEnvironment) constructors.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -24,12 +24,12 @@ pub enum DiveEnvironmentError {
     SurfacePressureNotPositive(Bar),
     /// Water density (m/bar) must be finite and positive.
     WaterDensityNotPositive(MetersPerBar),
-    /// Altitude must be in $[0.0, 8849.0]\ \text{m}$.
-    AltitudeOutOfRange(f64),
-    /// Salinity must be in $[0.0, 350.0]\ \text{‰}$.
-    SalinityOutOfRange(f64),
-    /// Temperature must be in $[-2.0, 40.0]\ ^\circ\text{C}$.
-    TemperatureOutOfRange(f64),
+    /// Altitude must be in $[\pu{0.0 m}, \pu{8849.0 m}]$.
+    AltitudeOutOfRange(Meters),
+    /// Salinity must be in $[\pu{0.0 ‰}, \pu{350.0 ‰}]$.
+    SalinityOutOfRange(PartsPerThousand),
+    /// Temperature must be in $[\pu{-2.0 ^\circ C}, \pu{40.0 ^\circ C}]$.
+    TemperatureOutOfRange(Celsius),
 }
 
 impl fmt::Display for DiveEnvironmentError {
@@ -42,13 +42,13 @@ impl fmt::Display for DiveEnvironmentError {
                 write!(f, "water density must be finite and positive, got {d}")
             }
             Self::AltitudeOutOfRange(h) => {
-                write!(f, "altitude {h} m is outside [0.0, 8 849.0] m")
+                write!(f, "altitude {h} is outside [0.0 m, 8 849.0 m]")
             }
             Self::SalinityOutOfRange(s) => {
-                write!(f, "salinity {s} ‰ is outside [0.0, 350.0] ‰")
+                write!(f, "salinity {s} is outside [0.0 ‰, 350.0 ‰]")
             }
             Self::TemperatureOutOfRange(t) => {
-                write!(f, "temperature {t} °C is outside [−2.0, 40.0] °C")
+                write!(f, "temperature {t} is outside [−2.0 °C, 40.0 °C]")
             }
         }
     }

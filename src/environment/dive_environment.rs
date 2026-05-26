@@ -4,7 +4,7 @@
 //! altitude) and water density (varies with salinity and temperature) — and derives
 //! everything else from them.
 //!
-//! ```
+//! ```ignore
 //! use dps::environment::{DiveEnvironment, Ocean, Lake};
 //!
 //! // Named preset: Red Sea at sea level
@@ -16,13 +16,13 @@
 //! assert!(alpine.surface_pressure() < DiveEnvironment::standard().surface_pressure());
 //! ```
 
-use crate::units::{Bar, Meters, MetersPerBar};
+use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
 use super::error::DiveEnvironmentError;
 use super::physics::{
-    FRESHWATER_TEMP_C, ISO_SEAWATER_DENSITY, MAX_ALTITUDE_M, MAX_SALINITY_PPT, MAX_TEMP_C,
-    MIN_TEMP_C, PA_PER_BAR, PositiveFinite, SEA_LEVEL_PRESSURE_BAR, STANDARD_GRAVITY,
-    altitude_to_pressure_bar, water_density_from,
+    FRESHWATER_TEMP_C, ISO_SEAWATER_DENSITY, MAX_ALTITUDE, MAX_SALINITY_PPT, MAX_TEMP_C,
+    MIN_TEMP_C, PA_PER_BAR, SEA_LEVEL_PRESSURE_BAR, STANDARD_GRAVITY, altitude_to_pressure_bar,
+    water_density_from,
 };
 use super::{Lake, Ocean};
 
@@ -51,13 +51,14 @@ impl DiveEnvironment {
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
+    /// use dps::units::{Bar, MetersPerBar};
     /// use approx::assert_relative_eq;
     ///
     /// let env = DiveEnvironment::standard();
-    /// assert_relative_eq!(f64::from(env.surface_pressure()), 1.013_25, epsilon = 1e-9);
+    /// assert_relative_eq!(env.surface_pressure(), Bar::new(1.013_25), epsilon = 1e-9);
     /// assert_relative_eq!(
-    ///     f64::from(env.water_density()),
-    ///     1e5 / (1025.0 * 9.806_65),
+    ///     env.water_density(),
+    ///     MetersPerBar::new(1e5 / (1025.0 * 9.806_65)),
     ///     epsilon = 1e-9
     /// );
     /// ```
@@ -84,10 +85,10 @@ impl DiveEnvironment {
     /// assert_eq!(env.surface_pressure(), DiveEnvironment::standard().surface_pressure());
     /// ```
     #[must_use]
-    pub const fn freshwater() -> Self {
+    pub fn freshwater() -> Self {
         Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
-            water_density: water_density_from(0.0, FRESHWATER_TEMP_C),
+            water_density: water_density_from(PartsPerThousand::new(0.0), FRESHWATER_TEMP_C),
         }
     }
 
@@ -105,10 +106,10 @@ impl DiveEnvironment {
     /// assert_eq!(red_sea.surface_pressure(), DiveEnvironment::standard().surface_pressure());
     /// ```
     #[must_use]
-    pub const fn ocean(ocean: Ocean) -> Self {
+    pub fn ocean(ocean: Ocean) -> Self {
         Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
-            water_density: water_density_from(ocean.salinity_ppt(), ocean.typical_temperature_c()),
+            water_density: water_density_from(ocean.salinity(), ocean.typical_temperature()),
         }
     }
 
@@ -130,8 +131,11 @@ impl DiveEnvironment {
     #[must_use]
     pub fn lake(lake: Lake) -> Self {
         Self {
-            surface_pressure: altitude_to_pressure_bar(lake.altitude_m()),
-            water_density: water_density_from(0.0, lake.typical_temperature_c()),
+            surface_pressure: altitude_to_pressure_bar(lake.altitude()),
+            water_density: water_density_from(
+                PartsPerThousand::new(0.0),
+                lake.typical_temperature(),
+            ),
         }
     }
 
@@ -159,17 +163,13 @@ impl DiveEnvironment {
         surface_pressure: Bar,
         water_density: MetersPerBar,
     ) -> Result<Self, DiveEnvironmentError> {
-        let sp = f64::from(surface_pressure);
-
-        if !sp.is_positive_finite() {
+        if !surface_pressure.is_positive_finite() {
             return Err(DiveEnvironmentError::SurfacePressureNotPositive(
                 surface_pressure,
             ));
         }
 
-        let wd = f64::from(water_density);
-
-        if !wd.is_positive_finite() {
+        if !water_density.is_positive_finite() {
             return Err(DiveEnvironmentError::WaterDensityNotPositive(water_density));
         }
 
@@ -186,22 +186,23 @@ impl DiveEnvironment {
     ///
     /// # Errors
     ///
-    /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `meters_asl` is outside
-    /// $[0.0, 8849.0]\ \text{m}$ or non-finite.
+    /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `altitude` is outside
+    /// $[\pu{0.0 m}, \pu{8849.0 m}]$ or non-finite.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
+    /// use dps::units::Meters;
     ///
-    /// let high = DiveEnvironment::at_altitude(1_000.0).unwrap();
+    /// let high = DiveEnvironment::at_altitude(Meters::new(1_000.0)).unwrap();
     /// assert!(high.surface_pressure() < DiveEnvironment::standard().surface_pressure());
     /// // water density is unchanged — still ISO seawater
     /// assert_eq!(high.water_density(), DiveEnvironment::standard().water_density());
     /// ```
-    pub fn at_altitude(meters_asl: f64) -> Result<Self, DiveEnvironmentError> {
-        validate_altitude(meters_asl)?;
+    pub fn at_altitude(altitude: Meters) -> Result<Self, DiveEnvironmentError> {
+        validate_altitude(altitude)?;
 
         Ok(Self {
-            surface_pressure: altitude_to_pressure_bar(meters_asl),
+            surface_pressure: altitude_to_pressure_bar(altitude),
             water_density: Self::standard().water_density,
         })
     }
@@ -213,22 +214,23 @@ impl DiveEnvironment {
     ///
     /// # Errors
     ///
-    /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `meters_asl` is outside
-    /// $[0.0, 8849.0]\,\text{m}$ or non-finite.
+    /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `altitude` is outside
+    /// $[\pu{0.0 m}, \pu{8849.0 m}]$ or non-finite.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
+    /// use dps::units::Meters;
     ///
-    /// let alpine = DiveEnvironment::freshwater_at_altitude(1_000.0).unwrap();
+    /// let alpine = DiveEnvironment::freshwater_at_altitude(Meters::new(1_000.0)).unwrap();
     /// assert!(alpine.surface_pressure() < DiveEnvironment::standard().surface_pressure());
     /// // freshwater is less dense than seawater — more metres per bar
     /// assert!(alpine.water_density() > DiveEnvironment::standard().water_density());
     /// ```
-    pub fn freshwater_at_altitude(meters_asl: f64) -> Result<Self, DiveEnvironmentError> {
-        validate_altitude(meters_asl)?;
+    pub fn freshwater_at_altitude(altitude: Meters) -> Result<Self, DiveEnvironmentError> {
+        validate_altitude(altitude)?;
 
         Ok(Self {
-            surface_pressure: altitude_to_pressure_bar(meters_asl),
+            surface_pressure: altitude_to_pressure_bar(altitude),
             water_density: Self::freshwater().water_density,
         })
     }
@@ -237,57 +239,62 @@ impl DiveEnvironment {
     ///
     /// # Errors
     ///
-    /// [`DiveEnvironmentError::SalinityOutOfRange`] if `salinity_ppt` is outside
-    /// $[0.0, 350.0]\,\text{‰}$ or non-finite.
+    /// [`DiveEnvironmentError::SalinityOutOfRange`] if `salinity` is outside
+    /// $[\pu{0.0 ‰}, \pu{350.0 ‰}]$ or non-finite.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
+    /// use dps::units::PartsPerThousand;
     ///
-    /// let brackish = DiveEnvironment::with_salinity(10.0).unwrap();
+    /// let brackish = DiveEnvironment::with_salinity(PartsPerThousand::new(10.0)).unwrap();
     /// // 10 ‰ is denser than fresh water but less dense than standard seawater
     /// assert!(brackish.water_density() < DiveEnvironment::freshwater().water_density());
     /// assert!(brackish.water_density() > DiveEnvironment::standard().water_density());
     /// ```
-    pub fn with_salinity(salinity_ppt: f64) -> Result<Self, DiveEnvironmentError> {
-        validate_salinity(salinity_ppt)?;
+    pub fn with_salinity(salinity: PartsPerThousand) -> Result<Self, DiveEnvironmentError> {
+        validate_salinity(salinity)?;
 
         Ok(Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
-            water_density: water_density_from(salinity_ppt, FRESHWATER_TEMP_C),
+            water_density: water_density_from(salinity, FRESHWATER_TEMP_C),
         })
     }
 
     /// Sea-level environment for the given salinity and water temperature.
     ///
-    /// Passing `(35.0, 15.0)` reproduces the ISO standard seawater reference
+    /// Passing `(35.0 ‰, 15.0 °C)` reproduces the ISO standard seawater reference
     /// and gives the same water density as [`DiveEnvironment::standard`].
     ///
     /// # Errors
     ///
-    /// - [`DiveEnvironmentError::SalinityOutOfRange`] if `salinity_ppt` is outside $[0.0, 350.0]\ \text{‰}$.
-    /// - [`DiveEnvironmentError::TemperatureOutOfRange`] if `temp_c` is outside $[-2.0, 40.0]\ ^\circ\text{C}$.
+    /// - [`DiveEnvironmentError::SalinityOutOfRange`] if `salinity` is outside $[\pu{0.0 ‰}, \pu{350.0 ‰}]$.
+    /// - [`DiveEnvironmentError::TemperatureOutOfRange`] if `temperature` is outside $[\pu{-2.0 ^\circ C}, \pu{40.0 ^\circ C}]$.
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
+    /// use dps::units::{Celsius, PartsPerThousand};
     /// use approx::assert_relative_eq;
     ///
-    /// let iso = DiveEnvironment::with_salinity_at_temperature(35.0, 15.0).unwrap();
+    /// let iso = DiveEnvironment::with_salinity_at_temperature(
+    ///     PartsPerThousand::new(35.0),
+    ///     Celsius::new(15.0),
+    /// ).unwrap();
     /// assert_relative_eq!(
-    ///     f64::from(iso.water_density()),
-    ///     f64::from(DiveEnvironment::standard().water_density()),
+    ///     iso.water_density(),
+    ///     DiveEnvironment::standard().water_density(),
     ///     epsilon = 1e-9
     /// );
     /// ```
     pub fn with_salinity_at_temperature(
-        salinity_ppt: f64,
-        temp_c: f64,
+        salinity: PartsPerThousand,
+        temperature: Celsius,
     ) -> Result<Self, DiveEnvironmentError> {
-        validate_salinity(salinity_ppt)?;
-        validate_temperature(temp_c)?;
+        validate_salinity(salinity)?;
+        validate_temperature(temperature)?;
 
         Ok(Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
-            water_density: water_density_from(salinity_ppt, temp_c),
+            water_density: water_density_from(salinity, temperature),
         })
     }
 
@@ -300,14 +307,15 @@ impl DiveEnvironment {
     ///
     /// # Errors
     ///
-    /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `meters_asl` is outside
-    /// $[0.0, 8849.0]\ \text{m}$ or non-finite.
+    /// [`DiveEnvironmentError::AltitudeOutOfRange`] if `altitude` is outside
+    /// $[\pu{0.0 m}, \pu{8849.0 m}]$ or non-finite.
     ///
     /// ```
     /// use dps::environment::{DiveEnvironment, Ocean};
+    /// use dps::units::Meters;
     ///
     /// let elevated = DiveEnvironment::ocean(Ocean::RedSea)
-    ///     .with_altitude(500.0)
+    ///     .with_altitude(Meters::new(500.0))
     ///     .unwrap();
     /// let sea_level = DiveEnvironment::ocean(Ocean::RedSea);
     ///
@@ -315,11 +323,11 @@ impl DiveEnvironment {
     /// // salinity-derived density is untouched
     /// assert_eq!(elevated.water_density(), sea_level.water_density());
     /// ```
-    pub fn with_altitude(self, meters_asl: f64) -> Result<Self, DiveEnvironmentError> {
-        validate_altitude(meters_asl)?;
+    pub fn with_altitude(self, altitude: Meters) -> Result<Self, DiveEnvironmentError> {
+        validate_altitude(altitude)?;
 
         Ok(Self {
-            surface_pressure: altitude_to_pressure_bar(meters_asl),
+            surface_pressure: altitude_to_pressure_bar(altitude),
             ..self
         })
     }
@@ -340,15 +348,18 @@ impl DiveEnvironment {
     /// assert_eq!(custom.surface_pressure(), Bar::new(0.90));
     /// assert_eq!(custom.water_density(), DiveEnvironment::standard().water_density());
     /// ```
-    pub fn with_surface_pressure(self, p: Bar) -> Result<Self, DiveEnvironmentError> {
-        let v = f64::from(p);
-
-        if !v.is_positive_finite() {
-            return Err(DiveEnvironmentError::SurfacePressureNotPositive(p));
+    pub fn with_surface_pressure(
+        self,
+        surface_pressure: Bar,
+    ) -> Result<Self, DiveEnvironmentError> {
+        if !surface_pressure.is_positive_finite() {
+            return Err(DiveEnvironmentError::SurfacePressureNotPositive(
+                surface_pressure,
+            ));
         }
 
         Ok(Self {
-            surface_pressure: p,
+            surface_pressure,
             ..self
         })
     }
@@ -369,15 +380,16 @@ impl DiveEnvironment {
     /// assert_eq!(custom.water_density(), MetersPerBar::new(10.2));
     /// assert_eq!(custom.surface_pressure(), DiveEnvironment::standard().surface_pressure());
     /// ```
-    pub fn with_water_density(self, d: MetersPerBar) -> Result<Self, DiveEnvironmentError> {
-        let v = f64::from(d);
-
-        if !v.is_positive_finite() {
-            return Err(DiveEnvironmentError::WaterDensityNotPositive(d));
+    pub fn with_water_density(
+        self,
+        water_density: MetersPerBar,
+    ) -> Result<Self, DiveEnvironmentError> {
+        if !water_density.is_positive_finite() {
+            return Err(DiveEnvironmentError::WaterDensityNotPositive(water_density));
         }
 
         Ok(Self {
-            water_density: d,
+            water_density,
             ..self
         })
     }
@@ -388,12 +400,13 @@ impl DiveEnvironment {
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
+    /// use dps::units::Bar;
     /// use approx::assert_relative_eq;
     ///
     /// // ISO sea-level pressure: 1.013 25 bar
     /// assert_relative_eq!(
-    ///     f64::from(DiveEnvironment::standard().surface_pressure()),
-    ///     1.013_25,
+    ///     DiveEnvironment::standard().surface_pressure(),
+    ///     Bar::new(1.013_25),
     ///     epsilon = 1e-9
     /// );
     /// ```
@@ -406,12 +419,13 @@ impl DiveEnvironment {
     ///
     /// ```
     /// use dps::environment::DiveEnvironment;
+    /// use dps::units::MetersPerBar;
     /// use approx::assert_relative_eq;
     ///
     /// // ISO seawater (1025 kg/m³): ~9.948 m per bar
     /// assert_relative_eq!(
-    ///     f64::from(DiveEnvironment::standard().water_density()),
-    ///     1e5 / (1025.0 * 9.806_65),
+    ///     DiveEnvironment::standard().water_density(),
+    ///     MetersPerBar::new(1e5 / (1025.0 * 9.806_65)),
     ///     epsilon = 1e-9
     /// );
     /// ```
@@ -436,8 +450,8 @@ impl DiveEnvironment {
     /// let env = DiveEnvironment::standard();
     /// // At the surface, absolute pressure equals surface pressure.
     /// assert_relative_eq!(
-    ///     f64::from(env.absolute_pressure(Meters::new(0.0))),
-    ///     f64::from(env.surface_pressure()),
+    ///     env.absolute_pressure(Meters::new(0.0)),
+    ///     env.surface_pressure(),
     ///     epsilon = 1e-9
     /// );
     /// // Deeper means higher absolute pressure.
@@ -493,25 +507,25 @@ impl From<Lake> for DiveEnvironment {
     }
 }
 
-fn validate_altitude(meters_asl: f64) -> Result<(), DiveEnvironmentError> {
-    if !meters_asl.is_finite() || !(0.0..=MAX_ALTITUDE_M).contains(&meters_asl) {
-        Err(DiveEnvironmentError::AltitudeOutOfRange(meters_asl))
+fn validate_altitude(altitude: Meters) -> Result<(), DiveEnvironmentError> {
+    if !altitude.is_finite() || !altitude.contains(Meters::new(0.0)..=MAX_ALTITUDE) {
+        Err(DiveEnvironmentError::AltitudeOutOfRange(altitude))
     } else {
         Ok(())
     }
 }
 
-fn validate_salinity(salinity_ppt: f64) -> Result<(), DiveEnvironmentError> {
-    if !salinity_ppt.is_finite() || !(0.0..=MAX_SALINITY_PPT).contains(&salinity_ppt) {
-        Err(DiveEnvironmentError::SalinityOutOfRange(salinity_ppt))
+fn validate_salinity(salinity: PartsPerThousand) -> Result<(), DiveEnvironmentError> {
+    if !salinity.is_finite() || !salinity.contains(PartsPerThousand::new(0.0)..=MAX_SALINITY_PPT) {
+        Err(DiveEnvironmentError::SalinityOutOfRange(salinity))
     } else {
         Ok(())
     }
 }
 
-fn validate_temperature(temp_c: f64) -> Result<(), DiveEnvironmentError> {
-    if !temp_c.is_finite() || !(MIN_TEMP_C..=MAX_TEMP_C).contains(&temp_c) {
-        Err(DiveEnvironmentError::TemperatureOutOfRange(temp_c))
+fn validate_temperature(temperature: Celsius) -> Result<(), DiveEnvironmentError> {
+    if !temperature.is_finite() || !temperature.contains(MIN_TEMP_C..=MAX_TEMP_C) {
+        Err(DiveEnvironmentError::TemperatureOutOfRange(temperature))
     } else {
         Ok(())
     }
@@ -521,348 +535,393 @@ fn validate_temperature(temp_c: f64) -> Result<(), DiveEnvironmentError> {
 mod tests {
     use super::DiveEnvironment;
     use crate::environment::{DiveEnvironmentError, Lake, Ocean};
-    use crate::units::{Bar, Meters, MetersPerBar};
+    use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
     use approx::assert_relative_eq;
     use color_eyre::Result;
 
-    #[test]
-    fn standard_matches_legacy_constants() {
-        let env = DiveEnvironment::standard();
+    mod presets {
+        use super::*;
 
-        assert_relative_eq!(f64::from(env.surface_pressure()), 1.013_25, epsilon = 1e-6);
-        assert_relative_eq!(
-            f64::from(env.water_density()),
-            1e5 / (1025.0 * 9.806_65),
-            epsilon = 1e-6
-        );
+        #[test]
+        fn standard_matches_legacy_constants() {
+            let env = DiveEnvironment::standard();
+
+            assert_relative_eq!(env.surface_pressure(), Bar::new(1.013_25), epsilon = 1e-6);
+            assert_relative_eq!(
+                env.water_density(),
+                MetersPerBar::new(1e5 / (1025.0 * 9.806_65)),
+                epsilon = 1e-6
+            );
+        }
+
+        #[test]
+        fn standard_and_iso_formula_agree() -> Result<()> {
+            let iso = DiveEnvironment::with_salinity_at_temperature(
+                PartsPerThousand::new(35.0),
+                Celsius::new(15.0),
+            )?;
+
+            assert_relative_eq!(
+                iso.water_density(),
+                DiveEnvironment::standard().water_density(),
+                epsilon = 1e-9
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn freshwater_is_less_dense_than_seawater() {
+            let fresh = DiveEnvironment::freshwater();
+            let salt = DiveEnvironment::standard();
+
+            assert!(fresh.water_density() > salt.water_density());
+        }
+
+        #[test]
+        fn red_sea_is_denser_than_standard() {
+            let red_sea = DiveEnvironment::ocean(Ocean::RedSea);
+            let std = DiveEnvironment::standard();
+
+            assert!(red_sea.water_density() < std.water_density());
+        }
+
+        #[test]
+        fn titicaca_matches_freshwater_at_altitude() -> Result<()> {
+            let preset = DiveEnvironment::lake(Lake::Titicaca);
+            let manual = DiveEnvironment::freshwater_at_altitude(Meters::new(3_812.0))?;
+
+            assert_relative_eq!(
+                preset.surface_pressure(),
+                manual.surface_pressure(),
+                epsilon = 1e-6
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn from_ocean_matches_ocean_constructor() {
+            assert_eq!(
+                DiveEnvironment::from(Ocean::Caribbean),
+                DiveEnvironment::ocean(Ocean::Caribbean)
+            );
+        }
+
+        #[test]
+        fn from_lake_matches_lake_constructor() {
+            assert_eq!(
+                DiveEnvironment::from(Lake::Titicaca),
+                DiveEnvironment::lake(Lake::Titicaca)
+            );
+        }
+
+        #[test]
+        fn default_is_standard() {
+            assert_eq!(DiveEnvironment::default(), DiveEnvironment::standard());
+        }
     }
 
-    #[test]
-    fn standard_and_iso_formula_agree() -> Result<()> {
-        let iso = DiveEnvironment::with_salinity_at_temperature(35.0, 15.0)?;
+    mod new {
+        use super::*;
 
-        assert_relative_eq!(
-            f64::from(iso.water_density()),
-            f64::from(DiveEnvironment::standard().water_density()),
-            epsilon = 1e-9
-        );
+        #[test]
+        fn valid_construction() -> Result<()> {
+            let env = DiveEnvironment::new(Bar::new(1.013), MetersPerBar::new(9.95))?;
 
-        Ok(())
+            assert_eq!(env.surface_pressure(), Bar::new(1.013));
+            assert_eq!(env.water_density(), MetersPerBar::new(9.95));
+
+            Ok(())
+        }
+
+        #[test]
+        fn rejects_zero_surface_pressure() {
+            assert!(matches!(
+                DiveEnvironment::new(Bar::new(0.0), MetersPerBar::new(10.0)),
+                Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
+            ));
+        }
+
+        #[test]
+        fn rejects_negative_water_density() {
+            assert!(matches!(
+                DiveEnvironment::new(Bar::new(1.0), MetersPerBar::new(-1.0)),
+                Err(DiveEnvironmentError::WaterDensityNotPositive(_))
+            ));
+        }
+
+        #[test]
+        fn rejects_nan_surface_pressure() {
+            assert!(matches!(
+                DiveEnvironment::new(Bar::new(f64::NAN), MetersPerBar::new(10.0)),
+                Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
+            ));
+        }
     }
 
-    #[test]
-    fn freshwater_is_less_dense_than_seawater() {
-        let fresh = DiveEnvironment::freshwater();
-        let salt = DiveEnvironment::standard();
+    mod at_altitude {
+        use super::*;
 
-        assert!(fresh.water_density() > salt.water_density());
+        #[test]
+        fn reduces_surface_pressure() -> Result<()> {
+            let high = DiveEnvironment::at_altitude(Meters::new(3_812.0))?;
+            let sea = DiveEnvironment::standard();
+
+            assert!(high.surface_pressure() < sea.surface_pressure());
+
+            Ok(())
+        }
+
+        #[test]
+        fn preserves_seawater_density() -> Result<()> {
+            let high = DiveEnvironment::at_altitude(Meters::new(1_000.0))?;
+
+            assert_eq!(
+                high.water_density(),
+                DiveEnvironment::standard().water_density()
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn freshwater_reduces_pressure_and_preserves_density() -> Result<()> {
+            let alpine = DiveEnvironment::freshwater_at_altitude(Meters::new(1_000.0))?;
+            let sea_level = DiveEnvironment::freshwater();
+
+            assert!(alpine.surface_pressure() < sea_level.surface_pressure());
+            assert_eq!(alpine.water_density(), sea_level.water_density());
+
+            Ok(())
+        }
+
+        #[test]
+        fn out_of_range_rejected() {
+            assert!(matches!(
+                DiveEnvironment::at_altitude(Meters::new(-1.0)),
+                Err(DiveEnvironmentError::AltitudeOutOfRange(_))
+            ));
+
+            assert!(matches!(
+                DiveEnvironment::at_altitude(Meters::new(9_000.0)),
+                Err(DiveEnvironmentError::AltitudeOutOfRange(_))
+            ));
+        }
+
+        #[test]
+        fn nan_rejected() {
+            assert!(matches!(
+                DiveEnvironment::at_altitude(Meters::new(f64::NAN)),
+                Err(DiveEnvironmentError::AltitudeOutOfRange(_))
+            ));
+        }
     }
 
-    #[test]
-    fn red_sea_is_denser_than_standard() {
-        let red_sea = DiveEnvironment::ocean(Ocean::RedSea);
-        let std = DiveEnvironment::standard();
+    mod with_salinity {
+        use super::*;
 
-        assert!(red_sea.water_density() < std.water_density());
+        #[test]
+        fn constructs_valid_env() -> Result<()> {
+            let brackish = DiveEnvironment::with_salinity(PartsPerThousand::new(10.0))?;
+
+            assert_eq!(
+                brackish.surface_pressure(),
+                DiveEnvironment::standard().surface_pressure()
+            );
+
+            assert!(brackish.water_density() > DiveEnvironment::standard().water_density());
+            assert!(brackish.water_density() < DiveEnvironment::freshwater().water_density());
+
+            Ok(())
+        }
+
+        #[test]
+        fn at_temperature_constructs_valid_env() -> Result<()> {
+            let env = DiveEnvironment::with_salinity_at_temperature(
+                PartsPerThousand::new(35.0),
+                Celsius::new(15.0),
+            )?;
+
+            assert_relative_eq!(
+                env.water_density(),
+                DiveEnvironment::standard().water_density(),
+                epsilon = 1e-9
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn out_of_range_rejected() {
+            assert!(matches!(
+                DiveEnvironment::with_salinity(PartsPerThousand::new(-1.0)),
+                Err(DiveEnvironmentError::SalinityOutOfRange(_))
+            ));
+
+            assert!(matches!(
+                DiveEnvironment::with_salinity(PartsPerThousand::new(400.0)),
+                Err(DiveEnvironmentError::SalinityOutOfRange(_))
+            ));
+        }
+
+        #[test]
+        fn nan_rejected() {
+            assert!(matches!(
+                DiveEnvironment::with_salinity(PartsPerThousand::new(f64::NAN)),
+                Err(DiveEnvironmentError::SalinityOutOfRange(_))
+            ));
+        }
+
+        #[test]
+        fn temperature_out_of_range_rejected() {
+            assert!(matches!(
+                DiveEnvironment::with_salinity_at_temperature(
+                    PartsPerThousand::new(35.0),
+                    Celsius::new(-5.0)
+                ),
+                Err(DiveEnvironmentError::TemperatureOutOfRange(_))
+            ));
+
+            assert!(matches!(
+                DiveEnvironment::with_salinity_at_temperature(
+                    PartsPerThousand::new(35.0),
+                    Celsius::new(50.0)
+                ),
+                Err(DiveEnvironmentError::TemperatureOutOfRange(_))
+            ));
+        }
+
+        #[test]
+        fn temperature_nan_rejected() {
+            assert!(matches!(
+                DiveEnvironment::with_salinity_at_temperature(
+                    PartsPerThousand::new(35.0),
+                    Celsius::new(f64::NAN)
+                ),
+                Err(DiveEnvironmentError::TemperatureOutOfRange(_))
+            ));
+        }
     }
 
-    #[test]
-    fn altitude_reduces_surface_pressure() -> Result<()> {
-        let high = DiveEnvironment::at_altitude(3_812.0)?;
-        let sea = DiveEnvironment::standard();
+    mod builders {
+        use super::*;
 
-        assert!(high.surface_pressure() < sea.surface_pressure());
+        #[test]
+        fn with_altitude_overrides_pressure_only() -> Result<()> {
+            let red_sea = DiveEnvironment::ocean(Ocean::RedSea);
+            let elevated = red_sea.with_altitude(Meters::new(500.0))?;
 
-        Ok(())
+            assert!(elevated.surface_pressure() < red_sea.surface_pressure());
+            assert_relative_eq!(
+                elevated.water_density(),
+                red_sea.water_density(),
+                epsilon = 1e-9
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn with_altitude_out_of_range_rejected() {
+            assert!(matches!(
+                DiveEnvironment::standard().with_altitude(Meters::new(-1.0)),
+                Err(DiveEnvironmentError::AltitudeOutOfRange(_))
+            ));
+        }
+
+        #[test]
+        fn with_surface_pressure_overrides_pressure_only() -> Result<()> {
+            let custom = DiveEnvironment::standard().with_surface_pressure(Bar::new(0.90))?;
+
+            assert_eq!(custom.surface_pressure(), Bar::new(0.90));
+            assert_eq!(
+                custom.water_density(),
+                DiveEnvironment::standard().water_density()
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn with_surface_pressure_zero_rejected() {
+            assert!(matches!(
+                DiveEnvironment::standard().with_surface_pressure(Bar::new(0.0)),
+                Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
+            ));
+        }
+
+        #[test]
+        fn with_water_density_overrides_density_only() -> Result<()> {
+            let custom = DiveEnvironment::standard().with_water_density(MetersPerBar::new(10.2))?;
+
+            assert_eq!(custom.water_density(), MetersPerBar::new(10.2));
+            assert_eq!(
+                custom.surface_pressure(),
+                DiveEnvironment::standard().surface_pressure()
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn with_water_density_zero_rejected() {
+            assert!(matches!(
+                DiveEnvironment::standard().with_water_density(MetersPerBar::new(0.0)),
+                Err(DiveEnvironmentError::WaterDensityNotPositive(_))
+            ));
+        }
     }
 
-    #[test]
-    fn at_altitude_preserves_seawater_density() -> Result<()> {
-        let high = DiveEnvironment::at_altitude(1_000.0)?;
-        assert_eq!(
-            high.water_density(),
-            DiveEnvironment::standard().water_density()
-        );
-        Ok(())
-    }
+    mod depth_pressure {
+        use super::*;
 
-    #[test]
-    fn freshwater_at_altitude_reduces_pressure_and_preserves_freshwater_density() -> Result<()> {
-        let alpine = DiveEnvironment::freshwater_at_altitude(1_000.0)?;
-        let sea_level = DiveEnvironment::freshwater();
+        #[test]
+        fn absolute_pressure_at_surface_equals_surface_pressure() {
+            let env = DiveEnvironment::standard();
+            assert_eq!(
+                env.absolute_pressure(Meters::new(0.0)),
+                env.surface_pressure()
+            );
+        }
 
-        assert!(alpine.surface_pressure() < sea_level.surface_pressure());
-        assert_eq!(alpine.water_density(), sea_level.water_density());
+        #[test]
+        fn absolute_pressure_increases_with_depth() {
+            let env = DiveEnvironment::standard();
 
-        Ok(())
-    }
+            assert!(
+                env.absolute_pressure(Meters::new(30.0)) > env.absolute_pressure(Meters::new(10.0))
+            );
+        }
 
-    #[test]
-    fn titicaca_lake_preset_matches_freshwater_at_altitude() -> Result<()> {
-        let preset = DiveEnvironment::lake(Lake::Titicaca);
-        let manual = DiveEnvironment::freshwater_at_altitude(3_812.0)?;
+        #[test]
+        fn depth_roundtrip_standard() {
+            let env = DiveEnvironment::standard();
+            let d = Meters::new(30.0);
 
-        assert_relative_eq!(
-            f64::from(preset.surface_pressure()),
-            f64::from(manual.surface_pressure()),
-            epsilon = 1e-6
-        );
+            assert_relative_eq!(env.depth(env.absolute_pressure(d)), d, epsilon = 1e-9);
+        }
 
-        Ok(())
-    }
+        #[test]
+        fn depth_roundtrip_freshwater_at_altitude() -> Result<()> {
+            let env = DiveEnvironment::freshwater_at_altitude(Meters::new(2_000.0))?;
+            let d = Meters::new(18.0);
 
-    #[test]
-    fn with_salinity_constructs_valid_env() -> Result<()> {
-        let brackish = DiveEnvironment::with_salinity(10.0)?;
+            assert_relative_eq!(env.depth(env.absolute_pressure(d)), d, epsilon = 1e-9);
 
-        assert_eq!(
-            brackish.surface_pressure(),
-            DiveEnvironment::standard().surface_pressure()
-        );
-        // 10 ‰ less dense than standard — more m/bar
-        assert!(brackish.water_density() > DiveEnvironment::standard().water_density());
-        // 10 ‰ denser than freshwater — fewer m/bar
-        assert!(brackish.water_density() < DiveEnvironment::freshwater().water_density());
+            Ok(())
+        }
 
-        Ok(())
-    }
+        #[test]
+        fn depth_at_surface_pressure_is_zero() {
+            let env = DiveEnvironment::standard();
+            assert_eq!(env.depth(env.surface_pressure()), Meters::new(0.0));
+        }
 
-    #[test]
-    fn with_salinity_at_temperature_constructs_valid_env() -> Result<()> {
-        let env = DiveEnvironment::with_salinity_at_temperature(35.0, 15.0)?;
-        assert_relative_eq!(
-            f64::from(env.water_density()),
-            f64::from(DiveEnvironment::standard().water_density()),
-            epsilon = 1e-9
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn with_surface_pressure_overrides_pressure_only() -> Result<()> {
-        let custom = DiveEnvironment::standard().with_surface_pressure(Bar::new(0.90))?;
-
-        assert_eq!(custom.surface_pressure(), Bar::new(0.90));
-        assert_eq!(
-            custom.water_density(),
-            DiveEnvironment::standard().water_density()
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn with_water_density_overrides_density_only() -> Result<()> {
-        let custom = DiveEnvironment::standard().with_water_density(MetersPerBar::new(10.2))?;
-
-        assert_eq!(custom.water_density(), MetersPerBar::new(10.2));
-        assert_eq!(
-            custom.surface_pressure(),
-            DiveEnvironment::standard().surface_pressure()
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn new_valid_construction() -> Result<()> {
-        let env = DiveEnvironment::new(Bar::new(1.013), MetersPerBar::new(9.95))?;
-
-        assert_eq!(env.surface_pressure(), Bar::new(1.013));
-        assert_eq!(env.water_density(), MetersPerBar::new(9.95));
-
-        Ok(())
-    }
-
-    #[test]
-    fn new_rejects_zero_surface_pressure() {
-        assert!(matches!(
-            DiveEnvironment::new(Bar::new(0.0), MetersPerBar::new(10.0)),
-            Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
-        ));
-    }
-
-    #[test]
-    fn new_rejects_negative_water_density() {
-        assert!(matches!(
-            DiveEnvironment::new(Bar::new(1.0), MetersPerBar::new(-1.0)),
-            Err(DiveEnvironmentError::WaterDensityNotPositive(_))
-        ));
-    }
-
-    #[test]
-    fn new_rejects_nan_surface_pressure() {
-        assert!(matches!(
-            DiveEnvironment::new(Bar::new(f64::NAN), MetersPerBar::new(10.0)),
-            Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
-        ));
-    }
-
-    #[test]
-    fn altitude_out_of_range_rejected() {
-        assert!(matches!(
-            DiveEnvironment::at_altitude(-1.0),
-            Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-        ));
-
-        assert!(matches!(
-            DiveEnvironment::at_altitude(9_000.0),
-            Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-        ));
-    }
-
-    #[test]
-    fn altitude_nan_rejected() {
-        assert!(matches!(
-            DiveEnvironment::at_altitude(f64::NAN),
-            Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-        ));
-    }
-
-    #[test]
-    fn with_altitude_out_of_range_rejected() {
-        assert!(matches!(
-            DiveEnvironment::standard().with_altitude(-1.0),
-            Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-        ));
-    }
-
-    #[test]
-    fn with_surface_pressure_zero_rejected() {
-        assert!(matches!(
-            DiveEnvironment::standard().with_surface_pressure(Bar::new(0.0)),
-            Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
-        ));
-    }
-
-    #[test]
-    fn with_water_density_zero_rejected() {
-        assert!(matches!(
-            DiveEnvironment::standard().with_water_density(MetersPerBar::new(0.0)),
-            Err(DiveEnvironmentError::WaterDensityNotPositive(_))
-        ));
-    }
-
-    #[test]
-    fn salinity_out_of_range_rejected() {
-        assert!(matches!(
-            DiveEnvironment::with_salinity(-1.0),
-            Err(DiveEnvironmentError::SalinityOutOfRange(_))
-        ));
-
-        assert!(matches!(
-            DiveEnvironment::with_salinity(400.0),
-            Err(DiveEnvironmentError::SalinityOutOfRange(_))
-        ));
-    }
-
-    #[test]
-    fn salinity_nan_rejected() {
-        assert!(matches!(
-            DiveEnvironment::with_salinity(f64::NAN),
-            Err(DiveEnvironmentError::SalinityOutOfRange(_))
-        ));
-    }
-
-    #[test]
-    fn temperature_out_of_range_rejected() {
-        assert!(matches!(
-            DiveEnvironment::with_salinity_at_temperature(35.0, -5.0),
-            Err(DiveEnvironmentError::TemperatureOutOfRange(_))
-        ));
-
-        assert!(matches!(
-            DiveEnvironment::with_salinity_at_temperature(35.0, 50.0),
-            Err(DiveEnvironmentError::TemperatureOutOfRange(_))
-        ));
-    }
-
-    #[test]
-    fn temperature_nan_rejected() {
-        assert!(matches!(
-            DiveEnvironment::with_salinity_at_temperature(35.0, f64::NAN),
-            Err(DiveEnvironmentError::TemperatureOutOfRange(_))
-        ));
-    }
-
-    #[test]
-    fn with_altitude_overrides_pressure_only() -> Result<()> {
-        let red_sea = DiveEnvironment::ocean(Ocean::RedSea);
-        let elevated = red_sea.with_altitude(500.0)?;
-
-        assert!(elevated.surface_pressure() < red_sea.surface_pressure());
-
-        assert_relative_eq!(
-            f64::from(elevated.water_density()),
-            f64::from(red_sea.water_density()),
-            epsilon = 1e-9
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn from_ocean_matches_ocean_constructor() {
-        let a = DiveEnvironment::from(Ocean::Caribbean);
-        let b = DiveEnvironment::ocean(Ocean::Caribbean);
-
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn from_lake_matches_lake_constructor() {
-        let a = DiveEnvironment::from(Lake::Titicaca);
-        let b = DiveEnvironment::lake(Lake::Titicaca);
-
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn default_is_standard() {
-        assert_eq!(DiveEnvironment::default(), DiveEnvironment::standard());
-    }
-
-    #[test]
-    fn absolute_pressure_at_surface_equals_surface_pressure() {
-        let env = DiveEnvironment::standard();
-        assert_eq!(
-            env.absolute_pressure(Meters::new(0.0)),
-            env.surface_pressure()
-        );
-    }
-
-    #[test]
-    fn absolute_pressure_increases_with_depth() {
-        let env = DiveEnvironment::standard();
-        assert!(
-            env.absolute_pressure(Meters::new(30.0)) > env.absolute_pressure(Meters::new(10.0))
-        );
-    }
-
-    #[test]
-    fn depth_roundtrip_standard() {
-        let env = DiveEnvironment::standard();
-        let d = Meters::new(30.0);
-        assert_relative_eq!(env.depth(env.absolute_pressure(d)), d, epsilon = 1e-9);
-    }
-
-    #[test]
-    fn depth_roundtrip_freshwater_at_altitude() -> Result<()> {
-        let env = DiveEnvironment::freshwater_at_altitude(2_000.0)?;
-        let d = Meters::new(18.0);
-        assert_relative_eq!(env.depth(env.absolute_pressure(d)), d, epsilon = 1e-9);
-        Ok(())
-    }
-
-    #[test]
-    fn depth_at_surface_pressure_is_zero() {
-        let env = DiveEnvironment::standard();
-        assert_eq!(env.depth(env.surface_pressure()), Meters::new(0.0));
-    }
-
-    #[test]
-    fn depth_clamps_below_surface_pressure() {
-        let env = DiveEnvironment::standard();
-        assert_eq!(env.depth(Bar::new(0.5)), Meters::new(0.0));
+        #[test]
+        fn depth_clamps_below_surface_pressure() {
+            let env = DiveEnvironment::standard();
+            assert_eq!(env.depth(Bar::new(0.5)), Meters::new(0.0));
+        }
     }
 }

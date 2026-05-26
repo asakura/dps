@@ -39,7 +39,7 @@
 //! $$
 //!
 //! At ($\pu{35 ‰}$, $\pu{15 ^\circ C}$) this yields exactly $\pu{1025 kg/m^3}$. Across all practical
-//! dive conditions ($S \in [0, 45]\ \text{‰}$, $T \in [0, 35]\ ^\circ\text{C}$) the error stays within
+//! dive conditions ($S \in [\pu{0 ‰}, \pu{45 ‰}]$, $T \in [\pu{0 ^\circ C}, \pu{35 ^\circ C}]$) the error stays within
 //! $\pm\pu{2 kg/m^3}$ — smaller than the uncertainty budget of any real deco model.
 //!
 //! # Surface pressure and altitude
@@ -85,7 +85,7 @@
 //!
 //! ```
 //! use dps::environment::{DiveEnvironment, Ocean, Lake};
-//! use dps::units::{Bar, MetersPerBar};
+//! use dps::units::{Bar, Meters, MetersPerBar};
 //!
 //! // Named ocean preset at sea level
 //! let red_sea = DiveEnvironment::ocean(Ocean::RedSea);
@@ -95,7 +95,7 @@
 //!
 //! // Red Sea salinity at 500 m altitude — adjust a preset with a builder
 //! let elevated = DiveEnvironment::ocean(Ocean::RedSea)
-//!     .with_altitude(500.0)
+//!     .with_altitude(Meters::new(500.0))
 //!     .unwrap();
 //!
 //! // Fully custom via validated constructor

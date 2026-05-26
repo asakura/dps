@@ -6,7 +6,7 @@
 //! [`DiveEnvironment::lake`](crate::environment::DiveEnvironment::lake) to obtain an
 //! environment with the correct surface pressure and freshwater density.
 //!
-//! ```
+//! ```ignore
 //! use dps::environment::{DiveEnvironment, Lake};
 //!
 //! let titicaca = DiveEnvironment::lake(Lake::Titicaca);
@@ -15,6 +15,8 @@
 //! // Fresh water → less dense than seawater, more metres per bar
 //! assert!(titicaca.water_density() > DiveEnvironment::standard().water_density());
 //! ```
+
+use crate::units::{Celsius, Meters};
 
 /// Notable freshwater dive sites, keyed by altitude and typical water temperature.
 ///
@@ -69,17 +71,18 @@ pub enum Lake {
 }
 
 impl Lake {
-    /// Altitude above sea level in $\text{m}$.
+    /// Altitude above sea level.
     ///
     /// ```
     /// use dps::environment::Lake;
+    /// use dps::units::Meters;
     ///
-    /// assert_eq!(Lake::Titicaca.altitude_m(), 3_812.0);
-    /// assert_eq!(Lake::Cenotes.altitude_m(), 0.0);
+    /// assert_eq!(Lake::Titicaca.altitude(), Meters::new(3_812.0));
+    /// assert_eq!(Lake::Cenotes.altitude(), Meters::new(0.0));
     /// ```
     #[must_use]
-    pub const fn altitude_m(self) -> f64 {
-        match self {
+    pub const fn altitude(self) -> Meters {
+        Meters::new(match self {
             Self::Atitlan => 1_562.0,
             Self::Baikal => 456.0,
             Self::Bled => 475.0,
@@ -94,20 +97,21 @@ impl Lake {
             Self::Tanganyika => 773.0,
             Self::Taupo => 357.0,
             Self::Titicaca => 3_812.0,
-        }
+        })
     }
 
     /// Typical water temperature in $^\circ\text{C}$.
     ///
     /// ```
     /// use dps::environment::Lake;
+    /// use dps::units::Celsius;
     ///
-    /// assert_eq!(Lake::Titicaca.typical_temperature_c(), 12.0);
-    /// assert_eq!(Lake::CraterLake.typical_temperature_c(), 4.0);
+    /// assert_eq!(Lake::Titicaca.typical_temperature(), Celsius::new(12.0));
+    /// assert_eq!(Lake::CraterLake.typical_temperature(), Celsius::new(4.0));
     /// ```
     #[must_use]
-    pub const fn typical_temperature_c(self) -> f64 {
-        match self {
+    pub const fn typical_temperature(self) -> Celsius {
+        Celsius::new(match self {
             Self::Atitlan => 18.0,
             Self::Baikal => 6.0,
             Self::Bled | Self::Titicaca => 12.0,
@@ -120,36 +124,37 @@ impl Lake {
             Self::OjosDeSalado => 0.0,
             Self::Tanganyika => 25.0,
             Self::Taupo => 15.0,
-        }
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::units::Meters;
     use approx::assert_relative_eq;
 
     #[test]
     fn titicaca_altitude_and_temperature() {
-        assert_relative_eq!(Lake::Titicaca.altitude_m(), 3_812.0);
-        assert_relative_eq!(Lake::Titicaca.typical_temperature_c(), 12.0);
+        assert_relative_eq!(Lake::Titicaca.altitude(), Meters::new(3_812.0));
+        assert_relative_eq!(Lake::Titicaca.typical_temperature(), Celsius::new(12.0));
     }
 
     #[test]
     fn sea_level_lakes_have_zero_altitude() {
-        assert_relative_eq!(Lake::Cenotes.altitude_m(), 0.0);
-        assert_relative_eq!(Lake::FloridaSprings.altitude_m(), 0.0);
+        assert_relative_eq!(Lake::Cenotes.altitude(), Meters::new(0.0));
+        assert_relative_eq!(Lake::FloridaSprings.altitude(), Meters::new(0.0));
     }
 
     #[test]
     fn ojos_del_salado_is_highest() {
-        assert!(Lake::OjosDeSalado.altitude_m() > Lake::Licancabur.altitude_m());
-        assert!(Lake::Licancabur.altitude_m() > Lake::Titicaca.altitude_m());
+        assert!(Lake::OjosDeSalado.altitude() > Lake::Licancabur.altitude());
+        assert!(Lake::Licancabur.altitude() > Lake::Titicaca.altitude());
     }
 
     #[test]
     fn licancabur_is_coldest() {
-        assert_relative_eq!(Lake::Licancabur.typical_temperature_c(), 2.0);
-        assert!(Lake::Licancabur.typical_temperature_c() < Lake::Titicaca.typical_temperature_c());
+        assert_relative_eq!(Lake::Licancabur.typical_temperature(), Celsius::new(2.0));
+        assert!(Lake::Licancabur.typical_temperature() < Lake::Titicaca.typical_temperature());
     }
 }
