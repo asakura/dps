@@ -1,3 +1,22 @@
+//! Named ocean and sea presets for [`DiveEnvironment`](crate::environment::DiveEnvironment).
+//!
+//! Each [`Ocean`] variant encodes the representative surface salinity and temperature
+//! of a major diving body of water. Pass a variant to
+//! [`DiveEnvironment::ocean`](crate::environment::DiveEnvironment::ocean) to obtain a
+//! correctly configured environment.
+//!
+//! ```
+//! use dps::environment::{DiveEnvironment, Ocean};
+//!
+//! // Red Sea (40 ‰) is saltier and denser than ISO standard seawater (35 ‰)
+//! let env = DiveEnvironment::ocean(Ocean::RedSea);
+//! assert!(env.water_density() < DiveEnvironment::standard().water_density());
+//!
+//! // Baltic Sea (7 ‰) is less salty than standard — closer to fresh water
+//! let baltic = DiveEnvironment::ocean(Ocean::BalticSea);
+//! assert!(baltic.water_density() > DiveEnvironment::standard().water_density());
+//! ```
+
 /// Major oceans and seas, keyed by representative surface salinity and temperature.
 ///
 /// Use [`crate::environment::DiveEnvironment::ocean`] to obtain a [`crate::environment::DiveEnvironment`]

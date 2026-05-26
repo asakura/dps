@@ -1,3 +1,21 @@
+//! Named freshwater lake presets for [`DiveEnvironment`](crate::environment::DiveEnvironment).
+//!
+//! Each [`Lake`] variant encodes the altitude and typical water temperature of a
+//! notable freshwater dive site. All variants are treated as fresh water (salinity
+//! $\approx \pu{0 ‰}$). Pass a variant to
+//! [`DiveEnvironment::lake`](crate::environment::DiveEnvironment::lake) to obtain an
+//! environment with the correct surface pressure and freshwater density.
+//!
+//! ```
+//! use dps::environment::{DiveEnvironment, Lake};
+//!
+//! let titicaca = DiveEnvironment::lake(Lake::Titicaca);
+//! // High altitude → lower surface pressure than sea level
+//! assert!(titicaca.surface_pressure() < DiveEnvironment::standard().surface_pressure());
+//! // Fresh water → less dense than seawater, more metres per bar
+//! assert!(titicaca.water_density() > DiveEnvironment::standard().water_density());
+//! ```
+
 /// Notable freshwater dive sites, keyed by altitude and typical water temperature.
 ///
 /// All variants are freshwater (salinity $\approx \pu{0 ‰}$). Use
