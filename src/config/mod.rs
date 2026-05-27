@@ -14,14 +14,14 @@ use std::{
 };
 
 use color_eyre::Result;
-use crossterm::event::KeyEvent;
 use directories::ProjectDirs;
 use serde::{Deserialize, de::Deserializer};
 use tracing::error;
 
-use crate::{action::Action, mode::Mode, theme::Theme};
-
-use keys::parse_key_sequence;
+use crate::{
+    keymap::{KeyBindings, KeyBindingsBuilder},
+    theme::Theme,
+};
 
 const CONFIG: &str = include_str!("../../.config/config.json5");
 
@@ -46,7 +46,7 @@ struct RawConfig {
     #[serde(default, flatten)]
     config: AppConfig,
     #[serde(default)]
-    keybindings: KeyBindings,
+    keybindings: KeyBindingsBuilder,
     #[serde(default)]
     styles: Styles,
     #[serde(default, rename = "defaultTheme")]
@@ -92,13 +92,6 @@ impl Default for Config {
         }
     }
 }
-
-/// A two-level map from [`Mode`] → key sequence → [`Action`].
-///
-/// Deserialised from the `keybindings` table in the config file, where each
-/// key sequence is a Vim-style string (see [`keys::parse_key_sequence`]).
-#[derive(Clone, Debug, Default)]
-pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);
 
 /// Placeholder for future style configuration.
 #[derive(Clone, Copy, Debug, Default)]
@@ -219,14 +212,7 @@ impl Config {
 
         let mut raw: RawConfig = builder.build()?.try_deserialize()?;
 
-        for (mode, default_bindings) in &default_raw.keybindings.0 {
-            let user_bindings = raw.keybindings.0.entry(*mode).or_default();
-            for (key, cmd) in default_bindings {
-                user_bindings
-                    .entry(key.clone())
-                    .or_insert_with(|| cmd.clone());
-            }
-        }
+        raw.keybindings.merge_defaults(&default_raw.keybindings);
 
         if raw.default_theme.is_empty() {
             raw.default_theme.clone_from(&default_raw.default_theme);
@@ -250,7 +236,7 @@ impl Config {
 
         Ok(Self {
             config: raw.config,
-            keybindings: raw.keybindings,
+            keybindings: raw.keybindings.build(),
             styles: raw.styles,
             themes,
             default_theme: raw.default_theme,
@@ -348,32 +334,6 @@ pub fn get_data_dir() -> PathBuf {
     )
 }
 
-impl<'de> Deserialize<'de> for KeyBindings {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let parsed_map = HashMap::<Mode, HashMap<String, Action>>::deserialize(deserializer)?;
-
-        let keybindings = parsed_map
-            .into_iter()
-            .map(|(mode, inner_map)| {
-                let converted_inner_map = inner_map
-                    .into_iter()
-                    .map(|(key_str, cmd)| {
-                        let seq = parse_key_sequence(&key_str).map_err(serde::de::Error::custom)?;
-                        Ok((seq, cmd))
-                    })
-                    .collect::<Result<HashMap<Vec<KeyEvent>, Action>, D::Error>>()?;
-
-                Ok((mode, converted_inner_map))
-            })
-            .collect::<Result<HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>, D::Error>>()?;
-
-        Ok(Self(keybindings))
-    }
-}
-
 impl<'de> Deserialize<'de> for Styles {
     fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
     where
@@ -425,7 +385,8 @@ mod tests {
 
     mod keybindings {
         use super::*;
-        use crate::action::Movement;
+        use crate::action::{Action, Movement};
+        use crate::keymap::{Mode, keys::parse_key_sequence};
         use color_eyre::eyre::eyre;
 
         #[test]
@@ -434,9 +395,8 @@ mod tests {
                 let c = Config::new()?;
                 let home = c
                     .keybindings
-                    .0
-                    .get(&Mode::Home)
-                    .ok_or_else(|| eyre!("no Home bindings in config"))?;
+                    .get(&Mode::Normal)
+                    .ok_or_else(|| eyre!("no Normal bindings in config"))?;
 
                 assert_eq!(
                     home.get(&parse_key_sequence("j")?)
@@ -459,16 +419,15 @@ mod tests {
 
             std::fs::write(
                 dir.path().join("config.json5"),
-                r#"{ keybindings: { Home: { x: "Move(ScrollUp)" } } }"#,
+                r#"{ keybindings: { Normal: { x: "Move(ScrollUp)" } } }"#,
             )?;
 
             temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
                 let c = Config::new()?;
                 let home = c
                     .keybindings
-                    .0
-                    .get(&Mode::Home)
-                    .ok_or_else(|| eyre!("no Home bindings in config"))?;
+                    .get(&Mode::Normal)
+                    .ok_or_else(|| eyre!("no Normal bindings in config"))?;
 
                 assert_eq!(
                     home.get(&parse_key_sequence("x")?)
@@ -492,16 +451,15 @@ mod tests {
 
             std::fs::write(
                 dir.path().join("config.json5"),
-                r#"{ keybindings: { Home: { j: "Move(Up)" } } }"#,
+                r#"{ keybindings: { Normal: { j: "Move(Up)" } } }"#,
             )?;
 
             temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
                 let c = Config::new()?;
                 let home = c
                     .keybindings
-                    .0
-                    .get(&Mode::Home)
-                    .ok_or_else(|| eyre!("no Home bindings in config"))?;
+                    .get(&Mode::Normal)
+                    .ok_or_else(|| eyre!("no Normal bindings in config"))?;
 
                 assert_eq!(
                     home.get(&parse_key_sequence("j")?)
@@ -519,15 +477,14 @@ mod tests {
 
             std::fs::write(
                 dir.path().join("config.json5"),
-                r#"{ keybindings: { Home: { x: "Move(ScrollUp)" } } }"#,
+                r#"{ keybindings: { Normal: { x: "Move(ScrollUp)" } } }"#,
             )?;
 
             let c = Config::from_dirs(Some(dir.path()), None)?;
             let home = c
                 .keybindings
-                .0
-                .get(&Mode::Home)
-                .ok_or_else(|| eyre!("no Home bindings in config"))?;
+                .get(&Mode::Normal)
+                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
 
             assert_eq!(
                 home.get(&parse_key_sequence("x")?)
