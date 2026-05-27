@@ -1,7 +1,6 @@
 //! Platform-aware configuration and data directory resolution.
 
 pub mod error;
-pub mod keys;
 mod theme;
 
 pub use error::Error as ConfigError;

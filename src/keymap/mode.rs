@@ -25,7 +25,9 @@ use serde::{Deserialize, Serialize};
 /// `Mode` is `Copy`, `Ord`, and serializable so it can be used as a
 /// [`HashMap`](std::collections::HashMap) key and deserialized from
 /// configuration files.
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Default, Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 pub enum Mode {
     /// The default mode: top-level navigation between tabs.
     ///

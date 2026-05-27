@@ -225,8 +225,7 @@ impl App {
     /// - **Prefix match** — returns [`Action::None`] and keeps accumulating.
     /// - **No match** — delegates to the hardcoded global fallback.
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
-        static EMPTY: std::sync::LazyLock<ModeMap> =
-            std::sync::LazyLock::new(ModeMap::default);
+        static EMPTY: std::sync::LazyLock<ModeMap> = std::sync::LazyLock::new(ModeMap::default);
         let bindings = self.keybindings.get(&self.mode).unwrap_or(&EMPTY);
 
         match self.chord.advance(key, bindings) {
@@ -725,9 +724,8 @@ mod tests {
         use std::collections::HashMap;
 
         use crate::action::Movement;
-        use crate::config::keys::parse_key_sequence;
         use crate::config::{AppConfig, Config, Styles};
-        use crate::keymap::{KeyBindingsBuilder, KeySeq};
+        use crate::keymap::{KeyBindingsBuilder, KeySeq, parse_key_sequence};
 
         fn with_config(config: Config) -> App {
             App::from_config(4.0, 60.0, config)
@@ -736,7 +734,11 @@ mod tests {
         fn config_with_keybindings(bindings: &[(&str, Action)]) -> Result<Config> {
             let mut builder = KeyBindingsBuilder::new();
             for (seq_str, action) in bindings {
-                builder.bind(Mode::Normal, KeySeq::from(parse_key_sequence(seq_str)?), action.clone());
+                builder.bind(
+                    Mode::Normal,
+                    KeySeq::from(parse_key_sequence(seq_str)?),
+                    action.clone(),
+                );
             }
 
             Ok(Config {
