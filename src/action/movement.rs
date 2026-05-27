@@ -1,44 +1,65 @@
 use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use strum::VariantNames;
+use strum::{Display, EnumString, VariantNames};
 
 /// Directional and positional navigation commands.
-#[derive(
-    Default,
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    strum::Display,
-    strum::EnumString,
-    strum::VariantNames,
-)]
+///
+/// `Movement` is the payload of [`Action::Move`](crate::action::Action::Move). Key bindings
+/// produce a `Move(movement)` action; `App::dispatch` unwraps it and forwards the `Movement`
+/// to the active component's
+/// [`Component::handle_action`](crate::components::Component::handle_action), which maps it
+/// to a cursor offset, scroll position, or absolute row index.
+///
+/// ## Serialisation
+///
+/// [`Display`](std::fmt::Display) and [`FromStr`] encode each variant as its name — the same
+/// format used in key-binding configuration files and inside the `Move(…)` payload of
+/// [`Action`](crate::action::Action):
+///
+/// ```text
+/// Up           →  "Up"
+/// GotoBottom   →  "GotoBottom"
+/// ```
+///
+/// # Examples
+///
+/// ```
+/// use std::str::FromStr;
+/// use dps::action::Movement;
+///
+/// assert_eq!(Movement::Down.to_string(), "Down");
+/// assert_eq!(Movement::from_str("GotoTop").unwrap(), Movement::GotoTop);
+/// ```
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Display, EnumString, VariantNames)]
 pub enum Movement {
-    #[default]
-    /// No movement; a no-op sentinel used as the enum default.
-    None,
     /// Move the cursor or selection up by one row.
     Up,
     /// Move the cursor or selection down by one row.
     Down,
-    /// Move the cursor or selection left.
+    /// Move the cursor or selection left by one column.
     Left,
-    /// Move the cursor or selection right.
+    /// Move the cursor or selection right by one column.
     Right,
-    /// Scroll up by [`crate::components::SCROLL_DELTA`] rows.
+
+    /// Scroll up by [`crate::components::SCROLL_DELTA`] rows without moving the selection.
     ScrollUp,
-    /// Scroll down by [`crate::components::SCROLL_DELTA`] rows.
+    /// Scroll down by [`crate::components::SCROLL_DELTA`] rows without moving the selection.
     ScrollDown,
-    /// Jump up by [`crate::components::PAGE_DELTA`] rows.
+
+    /// Jump the selection up by [`crate::components::PAGE_DELTA`] rows.
     PageUp,
-    /// Jump down by [`crate::components::PAGE_DELTA`] rows.
+    /// Jump the selection down by [`crate::components::PAGE_DELTA`] rows.
     PageDown,
+
     /// Jump to the first row.
     GotoTop,
     /// Jump to the last row.
     GotoBottom,
+
+    /// No movement; a no-op sentinel used as the default when no direction has been set.
+    #[default]
+    None,
 }
 
 impl Serialize for Movement {
@@ -66,7 +87,6 @@ mod tests {
         use super::*;
 
         #[rstest]
-        #[case(Movement::None, "None")]
         #[case(Movement::Up, "Up")]
         #[case(Movement::Down, "Down")]
         #[case(Movement::Left, "Left")]
@@ -77,6 +97,7 @@ mod tests {
         #[case(Movement::PageDown, "PageDown")]
         #[case(Movement::GotoTop, "GotoTop")]
         #[case(Movement::GotoBottom, "GotoBottom")]
+        #[case(Movement::None, "None")]
         fn variant_displays_as_name(#[case] mv: Movement, #[case] expected: &str) {
             assert_eq!(mv.to_string(), expected);
         }
@@ -86,7 +107,6 @@ mod tests {
         use super::*;
 
         #[rstest]
-        #[case("None", Movement::None)]
         #[case("Up", Movement::Up)]
         #[case("Down", Movement::Down)]
         #[case("Left", Movement::Left)]
@@ -97,6 +117,7 @@ mod tests {
         #[case("PageDown", Movement::PageDown)]
         #[case("GotoTop", Movement::GotoTop)]
         #[case("GotoBottom", Movement::GotoBottom)]
+        #[case("None", Movement::None)]
         fn known_variants_parse(#[case] input: &str, #[case] expected: Movement) -> Result<()> {
             assert_eq!(Movement::from_str(input)?, expected);
 
@@ -121,7 +142,6 @@ mod tests {
         }
 
         #[rstest]
-        #[case(Movement::None)]
         #[case(Movement::Up)]
         #[case(Movement::Down)]
         #[case(Movement::Left)]
@@ -132,6 +152,7 @@ mod tests {
         #[case(Movement::PageDown)]
         #[case(Movement::GotoTop)]
         #[case(Movement::GotoBottom)]
+        #[case(Movement::None)]
         fn all_variants_roundtrip(#[case] mv: Movement) -> Result<()> {
             assert_eq!(roundtrip(mv)?, mv);
 
