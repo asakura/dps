@@ -567,6 +567,8 @@ fn validate_temperature(temperature: Celsius) -> Result<(), DiveEnvironmentError
 /// # Examples
 ///
 /// ```ignore
+/// use dps::units::{Celsius, PartsPerThousand};
+///
 /// // ISO reference point: 35 ‰ salinity, 15 °C → exactly 1025 kg/m³
 /// assert_eq!(
 ///     density_kg_m3(PartsPerThousand::new(35.0), Celsius::new(15.0)),
@@ -596,7 +598,8 @@ fn density_kg_m3(salinity: PartsPerThousand, temperature: Celsius) -> f64 {
 /// # Examples
 ///
 /// ```ignore
-/// # use approx::assert_relative_eq;
+/// use approx::assert_relative_eq;
+/// use dps::units::{MetersPerBar, PartsPerThousand, Celsius};
 ///
 /// // ISO standard seawater (35 ‰, 15 °C) → ≈ 9.948 m/bar
 /// let seawater = water_density_from(PartsPerThousand::new(35.0), Celsius::new(15.0));
@@ -624,6 +627,7 @@ fn water_density_from(salinity: PartsPerThousand, temperature: Celsius) -> Meter
 ///
 /// ```ignore
 /// # use approx::assert_relative_eq;
+/// use dps::units::{Bar, Meters};
 ///
 /// // Sea level → exactly 1.01325 bar
 /// assert_relative_eq!(
