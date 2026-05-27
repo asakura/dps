@@ -134,13 +134,16 @@ impl App {
     /// Runs the event loop until the user quits.
     ///
     /// Enters the terminal (raw mode + alternate screen), then drives
-    /// tick/render intervals and key input until [`Action::Quit`] is received
-    /// or the event stream closes. Terminal state is restored on return.
+    /// tick/render intervals and key input until [`Action::Quit`] is received,
+    /// the event stream closes, or a termination signal (`SIGTERM`/`SIGINT`) arrives.
+    /// On Unix, `Ctrl+Z` (mapped to [`Action::Suspend`]) saves the terminal state,
+    /// suspends the process, and restores it on resume (`SIGCONT`).
+    /// Terminal state is restored on return.
     ///
     /// # Errors
     ///
     /// Propagates I/O errors from terminal setup ([`Tui::new`], [`Tui::enter`]),
-    /// frame rendering, and terminal teardown.
+    /// frame rendering, signal-handler registration, and terminal teardown.
     ///
     /// # Examples
     ///
@@ -159,10 +162,25 @@ impl App {
             .frame_rate(self.frame_rate);
         tui.enter()?;
 
+        #[cfg(unix)]
+        let mut sigterm =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+        #[cfg(unix)]
+        let mut sigint = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
+
         let mut needs_render = true;
 
         loop {
-            match tui.next_event().await {
+            #[cfg(unix)]
+            let event = tokio::select! {
+                event = tui.next_event() => event,
+                _ = sigterm.recv() => Some(Event::Quit),
+                _ = sigint.recv() => Some(Event::Quit),
+            };
+            #[cfg(not(unix))]
+            let event = tui.next_event().await;
+
+            match event {
                 Some(Event::Render) => {
                     if needs_render {
                         tui.draw(|f| self.render(f))?;
@@ -173,8 +191,17 @@ impl App {
                     needs_render = true;
                 }
                 Some(Event::Key(key)) => {
-                    if matches!(self.handle_key(key), Action::Quit) {
-                        break;
+                    match self.handle_key(key) {
+                        Action::Quit => break,
+                        #[cfg(unix)]
+                        Action::Suspend => {
+                            tui.exit()?;
+                            signal_hook::low_level::emulate_default_handler(
+                                signal_hook::consts::SIGTSTP,
+                            )?;
+                            tui.resume()?;
+                        }
+                        _ => {}
                     }
                     needs_render = true;
                 }
@@ -265,10 +292,12 @@ impl App {
     fn dispatch(&mut self, action: Action) -> Action {
         match action {
             Action::Quit => Action::Quit,
+            Action::Suspend => Action::Suspend,
             other @ (Action::Move(_) | Action::Select | Action::None) => {
                 self.tabs[self.active].handle_action(other);
                 Action::None
             }
+            _ => Action::None,
         }
     }
 
