@@ -1,13 +1,41 @@
 //! Component trait and per-screen implementations.
 
+use crossterm::event::{KeyEvent, MouseEvent};
+use ratatui::{
+    Frame,
+    layout::{Rect, Size},
+};
+use ratatui::{buffer::Buffer, widgets::TableState};
+use tokio::sync::mpsc::UnboundedSender;
+
+use crate::{action::Action, config::Config, tui::Event};
+
+use crate::theme::Theme;
+
+pub mod hint_bar;
 pub mod mod_tab;
 pub mod ppo2_tab;
 pub mod which_key;
 
-use ratatui::{buffer::Buffer, layout::Rect, widgets::TableState};
+/// Error produced by [`ComponentNew`] implementors.
+///
+/// # Examples
+///
+/// ```
+/// use dps::components::ComponentError;
+///
+/// let e = ComponentError::InvalidState("no row selected");
+/// assert_eq!(e.to_string(), "invalid component state: no row selected");
+/// ```
+#[derive(Debug, Clone, Copy, thiserror::Error)]
+pub enum ComponentError {
+    /// The component received an action while in an invalid state (e.g. no row selected).
+    #[error("invalid component state: {0}")]
+    InvalidState(&'static str),
+}
 
-use crate::action::Action;
-use crate::theme::Theme;
+/// Convenience alias so trait method signatures stay concise.
+pub type Result<T> = std::result::Result<T, ComponentError>;
 
 /// A single key→action entry for the which-key popup and help line.
 #[derive(Debug, Clone, Copy)]
@@ -52,6 +80,301 @@ pub trait Component {
     fn key_bindings(&self) -> &'static [KeyBinding] {
         [].as_slice()
     }
+}
+
+/// Interface for visual and interactive UI elements in the application event loop.
+///
+/// Implementors receive events, maintain state, and render themselves into the
+/// terminal each tick. Only [`draw`] is required; all other methods have no-op
+/// defaults that can be overridden selectively.
+///
+/// [`draw`]: ComponentNew::draw
+///
+/// # Examples
+///
+/// Minimal component that renders a static label:
+///
+/// ```no_run
+/// use dps::components::{ComponentNew, Result};
+/// use ratatui::{Frame, layout::Rect, widgets::Paragraph};
+///
+/// struct Label(&'static str);
+///
+/// impl ComponentNew for Label {
+///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> {
+///         frame.render_widget(Paragraph::new(self.0), area);
+///         Ok(())
+///     }
+/// }
+/// ```
+pub trait ComponentNew {
+    /// Provides the component with a sender for dispatching [`Action`]s.
+    ///
+    /// The default is a no-op; override to store `tx` so the component can push
+    /// actions from its own event handlers.
+    ///
+    /// # Errors
+    ///
+    /// The default returns `Ok(())` unconditionally; overrides may return `Err`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use tokio::sync::mpsc::UnboundedSender;
+    /// use dps::action::Action;
+    /// use dps::components::{ComponentNew, Result};
+    /// use ratatui::{Frame, layout::Rect};
+    ///
+    /// struct MyComponent {
+    ///     tx: Option<UnboundedSender<Action>>,
+    /// }
+    ///
+    /// impl ComponentNew for MyComponent {
+    ///     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
+    ///         self.tx = Some(tx);
+    ///         Ok(())
+    ///     }
+    ///
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
+    /// }
+    /// ```
+    fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
+        let _ = tx; // to appease clippy
+        Ok(())
+    }
+
+    /// Provides the component with the application [`Config`].
+    ///
+    /// The default is a no-op; override to cache theme colours, keybinding
+    /// overrides, or any other config fields the component needs.
+    ///
+    /// # Errors
+    ///
+    /// The default returns `Ok(())` unconditionally; overrides may return `Err`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use dps::config::Config;
+    /// use dps::components::{ComponentNew, Result};
+    /// use dps::theme::Theme;
+    /// use ratatui::{Frame, layout::Rect};
+    ///
+    /// struct Styled {
+    ///     theme: Option<Theme>,
+    /// }
+    ///
+    /// impl ComponentNew for Styled {
+    ///     fn register_config_handler(&mut self, config: Config) -> Result<()> {
+    ///         self.theme = Some(*config.active_theme());
+    ///         Ok(())
+    ///     }
+    ///
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
+    /// }
+    /// ```
+    fn register_config_handler(&mut self, config: Config) -> Result<()> {
+        let _ = config; // to appease clippy
+
+        Ok(())
+    }
+
+    /// Called once before the first [`draw`] with the terminal area size.
+    ///
+    /// Override to pre-allocate layout buffers or clamp scroll state to the
+    /// visible height.
+    ///
+    /// [`draw`]: ComponentNew::draw
+    ///
+    /// # Errors
+    ///
+    /// The default returns `Ok(())` unconditionally; overrides may return `Err`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use dps::components::{ComponentNew, Result};
+    /// use ratatui::{Frame, layout::{Rect, Size}};
+    ///
+    /// struct Scrollable {
+    ///     visible_rows: usize,
+    /// }
+    ///
+    /// impl ComponentNew for Scrollable {
+    ///     fn init(&mut self, area: Size) -> Result<()> {
+    ///         self.visible_rows = area.height as usize;
+    ///         Ok(())
+    ///     }
+    ///
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
+    /// }
+    /// ```
+    fn init(&mut self, area: Size) -> Result<()> {
+        let _ = area; // to appease clippy
+
+        Ok(())
+    }
+
+    /// Dispatches an incoming TUI event to the appropriate handler.
+    ///
+    /// The default routes [`Event::Key`] → [`handle_key_event`] and
+    /// [`Event::Mouse`] → [`handle_mouse_event`]; all other variants produce
+    /// `None`. Override only when the dispatch logic itself must change.
+    ///
+    /// [`handle_key_event`]: ComponentNew::handle_key_event
+    /// [`handle_mouse_event`]: ComponentNew::handle_mouse_event
+    ///
+    /// # Errors
+    ///
+    /// Propagates any `Err` returned by [`handle_key_event`] or [`handle_mouse_event`].
+    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
+        let action = match event {
+            Some(Event::Key(key_event)) => self.handle_key_event(key_event)?,
+            Some(Event::Mouse(mouse_event)) => self.handle_mouse_event(mouse_event)?,
+            _ => None,
+        };
+
+        Ok(action)
+    }
+
+    /// Maps a raw key press to an [`Action`].
+    ///
+    /// Returns `None` by default. Override to intercept keys before they reach
+    /// the global keybinding layer.
+    ///
+    /// # Errors
+    ///
+    /// The default returns `Ok(None)` unconditionally; overrides may return
+    /// [`ComponentError::InvalidState`] if the key is received in an unexpected state.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use crossterm::event::{KeyCode, KeyEvent};
+    /// use dps::action::{Action, Movement};
+    /// use dps::components::{ComponentNew, Result};
+    /// use ratatui::{Frame, layout::Rect};
+    ///
+    /// struct Nav;
+    ///
+    /// impl ComponentNew for Nav {
+    ///     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+    ///         let action = match key.code {
+    ///             KeyCode::Char('j') => Some(Action::Move(Movement::Down)),
+    ///             KeyCode::Char('k') => Some(Action::Move(Movement::Up)),
+    ///             _ => None,
+    ///         };
+    ///         Ok(action)
+    ///     }
+    ///
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
+    /// }
+    /// ```
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        let _ = key; // to appease clippy
+        Ok(None)
+    }
+
+    /// Maps a raw mouse event to an [`Action`].
+    ///
+    /// Returns `None` by default. Override to respond to scroll or click events.
+    ///
+    /// # Errors
+    ///
+    /// The default returns `Ok(None)` unconditionally; overrides may return
+    /// [`ComponentError::InvalidState`] if the event is received in an unexpected state.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use crossterm::event::{MouseEvent, MouseEventKind};
+    /// use dps::action::{Action, Movement};
+    /// use dps::components::{ComponentNew, Result};
+    /// use ratatui::{Frame, layout::Rect};
+    ///
+    /// struct Scrollable;
+    ///
+    /// impl ComponentNew for Scrollable {
+    ///     fn handle_mouse_event(&mut self, mouse: MouseEvent) -> Result<Option<Action>> {
+    ///         let action = match mouse.kind {
+    ///             MouseEventKind::ScrollDown => Some(Action::Move(Movement::ScrollDown)),
+    ///             MouseEventKind::ScrollUp => Some(Action::Move(Movement::ScrollUp)),
+    ///             _ => None,
+    ///         };
+    ///         Ok(action)
+    ///     }
+    ///
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
+    /// }
+    /// ```
+    fn handle_mouse_event(&mut self, mouse: MouseEvent) -> Result<Option<Action>> {
+        let _ = mouse; // to appease clippy
+        Ok(None)
+    }
+
+    /// Applies a semantic [`Action`] to the component's state.
+    ///
+    /// Returns `None` by default. Override to respond to actions dispatched by
+    /// the event loop, or return another action to chain effects.
+    ///
+    /// # Errors
+    ///
+    /// The default returns `Ok(None)` unconditionally; overrides may return
+    /// [`ComponentError::InvalidState`] if the action is received in an unexpected state.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use dps::action::Action;
+    /// use dps::components::{ComponentNew, Result};
+    /// use ratatui::{Frame, layout::Rect};
+    ///
+    /// struct Counter {
+    ///     count: u32,
+    /// }
+    ///
+    /// impl ComponentNew for Counter {
+    ///     fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    ///         if matches!(action, Action::Select) {
+    ///             self.count += 1;
+    ///         }
+    ///         Ok(None)
+    ///     }
+    ///
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
+    /// }
+    /// ```
+    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+        let _ = action; // to appease clippy
+        Ok(None)
+    }
+
+    /// Renders the component into `area` on the current `frame`.
+    ///
+    /// This is the only required method. Called on every render tick; must
+    /// complete quickly to keep the TUI responsive.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ComponentError`] if rendering cannot complete; the concrete
+    /// condition is determined by the implementation.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use dps::components::{ComponentNew, Result};
+    /// use ratatui::{Frame, layout::Rect, widgets::Paragraph};
+    ///
+    /// struct StatusLine(String);
+    ///
+    /// impl ComponentNew for StatusLine {
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> {
+    ///         frame.render_widget(Paragraph::new(self.0.as_str()), area);
+    ///         Ok(())
+    ///     }
+    /// }
+    /// ```
+    fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()>;
 }
 
 #[cfg(test)]

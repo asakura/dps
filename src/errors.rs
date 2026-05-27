@@ -18,6 +18,9 @@ pub enum Error {
     /// Configuration error (key parsing, file loading, …).
     #[error(transparent)]
     Config(#[from] crate::config::ConfigError),
+    /// Component error (invalid state, …).
+    #[error(transparent)]
+    Component(#[from] crate::components::ComponentError),
 }
 
 /// Installs the `color_eyre` panic and error hooks.
