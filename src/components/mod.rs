@@ -12,10 +12,15 @@ use crate::{action::Action, config::Config, tui::Event};
 
 use crate::theme::Theme;
 
+pub mod fps;
 pub mod hint_bar;
+pub mod home;
 pub mod mod_tab;
 pub mod ppo2_tab;
 pub mod which_key;
+
+pub use fps::FpsCounter;
+pub use home::Home;
 
 /// Error produced by [`ComponentNew`] implementors.
 ///
@@ -82,17 +87,66 @@ pub trait Component {
     }
 }
 
-/// Interface for visual and interactive UI elements in the application event loop.
+/// Interface for visual and interactive UI elements in the [`AppNew`] event loop.
 ///
 /// Implementors receive events, maintain state, and render themselves into the
-/// terminal each tick. Only [`draw`] is required; all other methods have no-op
-/// defaults that can be overridden selectively.
+/// terminal each frame.  Only [`draw`] is required; all other methods have
+/// no-op defaults that can be overridden selectively.
 ///
-/// [`draw`]: ComponentNew::draw
+/// # Lifecycle
+///
+/// [`AppNew`] calls trait methods in a fixed sequence:
+///
+/// **Startup (once per run):**
+///
+/// 1. [`register_action_handler`] — hands the component a
+///    [`mpsc::UnboundedSender<Action>`] it can use to push actions at any
+///    time, including from async tasks spawned later.
+/// 2. [`register_config_handler`] — hands the component a clone of the
+///    loaded [`Config`] so it can cache the active theme, key overrides, or
+///    any other config fields it needs.
+/// 3. [`init`] — called with the current terminal [`Size`] so the component
+///    can pre-compute layout-dependent state before the first render.
+///
+/// **Per-iteration (repeated until quit):**
+///
+/// 4. [`handle_events`] — receives the raw [`Event`] from the TUI stream.
+///    The default routes [`Key`] → [`handle_key_event`] and
+///    [`Mouse`] → [`handle_mouse_event`].  Any returned [`Action`] is
+///    forwarded to [`AppNew`]'s action channel.
+/// 5. [`update`] — called once per queued [`Action`], for every action
+///    dequeued by [`AppNew`] regardless of which component or system
+///    produced it.  May return an [`Action`] to chain effects.
+/// 6. [`draw`] — renders the component's current state into `area`.
+///    Called only when a [`Render`] action fires; errors are caught by
+///    [`AppNew`] and converted to [`Action::Error`] rather than propagating.
+///
+/// # Action channel
+///
+/// The sender received via [`register_action_handler`] can be stored and used
+/// anywhere — from within [`update`], or from a background task spawned
+/// during [`init`].  Every action pushed on it is processed by [`AppNew`] on
+/// the next drain pass, and every component's [`update`] will see it.
+///
+/// # Event dispatch
+///
+/// [`handle_events`] is the single entry point for raw [`Event`]s.  Override
+/// it only when you need to react to event variants beyond [`Key`] and
+/// [`Mouse`] (e.g. [`FocusGained`]).  For ordinary key or mouse handling,
+/// override [`handle_key_event`] or [`handle_mouse_event`] instead — the
+/// default routing calls them automatically.
+///
+/// # Errors
+///
+/// All fallible methods return [`Result<T>`], an alias for
+/// <code>std::result::Result<T, [ComponentError]></code>.  The only variant is
+/// [`ComponentError::InvalidState`]; return it when an action or event arrives
+/// in a state where it cannot be meaningfully handled (e.g. a scroll event
+/// while no row is selected).
 ///
 /// # Examples
 ///
-/// Minimal component that renders a static label:
+/// Minimal component — only `draw` is required:
 ///
 /// ```no_run
 /// use dps::components::{ComponentNew, Result};
@@ -107,6 +161,64 @@ pub trait Component {
 ///     }
 /// }
 /// ```
+///
+/// Component that stores the action sender, responds to keys, reacts to
+/// actions, and renders stateful content:
+///
+/// ```no_run
+/// use crossterm::event::{KeyCode, KeyEvent};
+/// use tokio::sync::mpsc::UnboundedSender;
+/// use dps::action::{Action, Movement};
+/// use dps::components::{ComponentNew, Result};
+/// use ratatui::{Frame, layout::Rect, widgets::Paragraph};
+///
+/// struct Counter {
+///     count: u32,
+///     tx: Option<UnboundedSender<Action>>,
+/// }
+///
+/// impl ComponentNew for Counter {
+///     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
+///         self.tx = Some(tx);
+///         Ok(())
+///     }
+///
+///     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+///         Ok(match key.code {
+///             KeyCode::Char('+') => Some(Action::Select),
+///             _ => None,
+///         })
+///     }
+///
+///     fn update(&mut self, action: Action) -> Result<Option<Action>> {
+///         if matches!(action, Action::Select) {
+///             self.count += 1;
+///         }
+///         Ok(None)
+///     }
+///
+///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> {
+///         frame.render_widget(Paragraph::new(self.count.to_string()), area);
+///         Ok(())
+///     }
+/// }
+/// ```
+///
+/// [`AppNew`]: crate::app::AppNew
+/// [`draw`]: ComponentNew::draw
+/// [`register_action_handler`]: ComponentNew::register_action_handler
+/// [`register_config_handler`]: ComponentNew::register_config_handler
+/// [`init`]: ComponentNew::init
+/// [`handle_events`]: ComponentNew::handle_events
+/// [`handle_key_event`]: ComponentNew::handle_key_event
+/// [`handle_mouse_event`]: ComponentNew::handle_mouse_event
+/// [`update`]: ComponentNew::update
+/// [`Key`]: crate::tui::Event::Key
+/// [`Mouse`]: crate::tui::Event::Mouse
+/// [`FocusGained`]: crate::tui::Event::FocusGained
+/// [`Render`]: crate::action::Action::Render
+/// [`mpsc::UnboundedSender<Action>`]: tokio::sync::mpsc::UnboundedSender
+/// [`Size`]: ratatui::layout::Size
 pub trait ComponentNew {
     /// Provides the component with a sender for dispatching [`Action`]s.
     ///
@@ -219,7 +331,10 @@ pub trait ComponentNew {
     ///
     /// The default routes [`Event::Key`] → [`handle_key_event`] and
     /// [`Event::Mouse`] → [`handle_mouse_event`]; all other variants produce
-    /// `None`. Override only when the dispatch logic itself must change.
+    /// `None`.  Override only when the dispatch logic itself must change —
+    /// for example, to react to [`Event::FocusGained`] or [`Event::FocusLost`].
+    /// For ordinary key or mouse handling, override [`handle_key_event`] or
+    /// [`handle_mouse_event`] instead.
     ///
     /// [`handle_key_event`]: ComponentNew::handle_key_event
     /// [`handle_mouse_event`]: ComponentNew::handle_mouse_event
@@ -227,6 +342,37 @@ pub trait ComponentNew {
     /// # Errors
     ///
     /// Propagates any `Err` returned by [`handle_key_event`] or [`handle_mouse_event`].
+    ///
+    /// # Examples
+    ///
+    /// Override to handle focus events in addition to the default key/mouse routing:
+    ///
+    /// ```no_run
+    /// use dps::components::{ComponentNew, Result};
+    /// use dps::tui::Event;
+    /// use dps::action::Action;
+    /// use ratatui::{Frame, layout::Rect};
+    ///
+    /// struct FocusAware { focused: bool }
+    ///
+    /// impl ComponentNew for FocusAware {
+    ///     fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
+    ///         match &event {
+    ///             Some(Event::FocusGained) => { self.focused = true; return Ok(None); }
+    ///             Some(Event::FocusLost)   => { self.focused = false; return Ok(None); }
+    ///             _ => {}
+    ///         }
+    ///         // fall through to the standard key/mouse routing
+    ///         Ok(match event {
+    ///             Some(Event::Key(key))     => self.handle_key_event(key)?,
+    ///             Some(Event::Mouse(mouse)) => self.handle_mouse_event(mouse)?,
+    ///             _ => None,
+    ///         })
+    ///     }
+    ///
+    ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
+    /// }
+    /// ```
     fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
         let action = match event {
             Some(Event::Key(key_event)) => self.handle_key_event(key_event)?,
@@ -314,8 +460,18 @@ pub trait ComponentNew {
 
     /// Applies a semantic [`Action`] to the component's state.
     ///
-    /// Returns `None` by default. Override to respond to actions dispatched by
-    /// the event loop, or return another action to chain effects.
+    /// Called by [`AppNew`] for every action dequeued from the channel,
+    /// regardless of which component or system produced it — infrastructure
+    /// actions (`Tick`, `Render`, `Resize`, …) pass through here too.
+    ///
+    /// Returning `Some(action)` re-enqueues that action on the global channel,
+    /// so effects can be chained: the returned action is processed by [`AppNew`]
+    /// and fanned back out to every component's `update`.  Avoid returning an
+    /// action unconditionally — it will cycle forever.
+    ///
+    /// Returns `None` by default.
+    ///
+    /// [`AppNew`]: crate::app::AppNew
     ///
     /// # Errors
     ///
@@ -351,8 +507,17 @@ pub trait ComponentNew {
 
     /// Renders the component into `area` on the current `frame`.
     ///
-    /// This is the only required method. Called on every render tick; must
-    /// complete quickly to keep the TUI responsive.
+    /// This is the only required method.  Called each time [`AppNew`] processes
+    /// an [`Action::Render`] (driven by the configured frame rate);
+    /// implementations must complete quickly to keep the TUI responsive.
+    ///
+    /// Errors returned here are **not** propagated to the caller.  [`AppNew`]
+    /// catches them and converts each one to an [`Action::Error`], keeping a
+    /// single misbehaving component from aborting the whole render pass.
+    ///
+    /// [`AppNew`]: crate::app::AppNew
+    /// [`Action::Render`]: crate::action::Action::Render
+    /// [`Action::Error`]: crate::action::Action::Error
     ///
     /// # Errors
     ///
