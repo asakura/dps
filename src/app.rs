@@ -443,8 +443,11 @@ impl AppNew {
     ///    components can pre-compute layout-dependent state.
     ///
     /// **Event loop** (each iteration):
-    /// - `handle_events` awaits the next [`Tui`] event, converts it to an
-    ///   [`Action`], and fans it out to all components.
+    /// - The loop acquires the next [`Tui`] event.  On Unix, it races
+    ///   `SIGTERM` and `SIGINT` alongside `tui.next_event()`; either signal
+    ///   produces [`Event::Quit`] immediately.
+    /// - `handle_events` converts the event to an [`Action`] and fans it out
+    ///   to all components.
     /// - `handle_actions` drains the action channel, applies infrastructure
     ///   actions, and forwards every action to each component's
     ///   [`ComponentNew::update`].
@@ -463,8 +466,8 @@ impl AppNew {
     /// # Errors
     ///
     /// Propagates errors from [`Tui::new`], [`Tui::enter`], [`Tui::exit`],
-    /// [`Tui::stop`], terminal size queries, component initialisation, event
-    /// handling, and rendering.
+    /// [`Tui::stop`], terminal size queries, component initialisation,
+    /// signal-handler registration (Unix), event handling, and rendering.
     ///
     /// # Examples
     ///
@@ -501,10 +504,25 @@ impl AppNew {
             component.init(tui.size()?)?;
         }
 
+        #[cfg(unix)]
+        let mut sigterm =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+        #[cfg(unix)]
+        let mut sigint = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
+
         let action_tx = self.action_tx.clone();
 
         loop {
-            self.handle_events(&mut tui).await?;
+            #[cfg(unix)]
+            let event = tokio::select! {
+                event = tui.next_event() => event,
+                _ = sigterm.recv() => Some(Event::Quit),
+                _ = sigint.recv() => Some(Event::Quit),
+            };
+            #[cfg(not(unix))]
+            let event = tui.next_event().await;
+
+            self.handle_events(event)?;
             self.handle_actions(&mut tui)?;
 
             if self.should_suspend {
@@ -523,8 +541,7 @@ impl AppNew {
         Ok(())
     }
 
-    /// Awaits the next [`Event`] from `tui`, converts it to an [`Action`], and
-    /// fans the raw event out to every component.
+    /// Converts a raw [`Event`] to an [`Action`] and fans it out to every component.
     ///
     /// Infrastructure events (`Quit`, `Tick`, `Render`, `Resize`) are converted
     /// to their matching [`Action`] variants and sent on the channel.  [`Key`]
@@ -533,17 +550,13 @@ impl AppNew {
     /// component [`handle_events`] handlers so components may react to them
     /// directly.
     ///
-    /// Returns `Ok(())` immediately if the event stream is exhausted.
+    /// Returns `Ok(())` immediately if `event` is `None`.
     ///
     /// [`Key`]: Event::Key
     /// [`handle_key_event`]: AppNew::handle_key_event
     /// [`handle_events`]: ComponentNew::handle_events
-    #[expect(
-        clippy::future_not_send,
-        reason = "dyn ComponentNew is not Send by design"
-    )]
-    async fn handle_events(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
-        let Some(event) = tui.next_event().await else {
+    fn handle_events(&mut self, event: Option<Event>) -> color_eyre::Result<()> {
+        let Some(event) = event else {
             return Ok(());
         };
 
