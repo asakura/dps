@@ -200,7 +200,7 @@
   },
 
   keybindings: {
-    Home: {
+    Normal: {
       // select
       "<CR>": "Select",
 
@@ -229,6 +229,17 @@
       "<S-g>": "Move(GotoBottom)",
       "<Home>": "Move(GotoTop)",
       "<End>": "Move(GotoBottom)",
+    },
+
+    Confirm: {
+      // confirm
+      y: "Confirm",
+      "<CR>": "Confirm",
+
+      // cancel
+      n: "Cancel",
+      "<Esc>": "Cancel",
+      q: "Cancel",
     },
   },
 }
