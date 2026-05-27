@@ -5,7 +5,7 @@
 //! [`DiveEnvironment::ocean`](crate::environment::DiveEnvironment::ocean) to obtain a
 //! correctly configured environment.
 //!
-//! ```ignore
+//! ```no_run
 //! use dps::environment::{DiveEnvironment, Ocean};
 //!
 //! // Red Sea (40 ‰) is saltier and denser than ISO standard seawater (35 ‰)

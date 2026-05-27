@@ -4,11 +4,12 @@
 //! out-of-range or non-finite value. Each variant carries the offending value so
 //! callers can report it without re-inspecting the input.
 //!
-//! ```ignore
+//! ```no_run
 //! use dps::environment::{DiveEnvironment, DiveEnvironmentError};
+//! use dps::units::Meters;
 //!
 //! assert!(matches!(
-//!     DiveEnvironment::at_altitude(-1.0),
+//!     DiveEnvironment::at_altitude(Meters::new(-1.0)),
 //!     Err(DiveEnvironmentError::AltitudeOutOfRange(_))
 //! ));
 //! ```

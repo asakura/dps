@@ -6,7 +6,7 @@
 //! [`DiveEnvironment::lake`](crate::environment::DiveEnvironment::lake) to obtain an
 //! environment with the correct surface pressure and freshwater density.
 //!
-//! ```ignore
+//! ```no_run
 //! use dps::environment::{DiveEnvironment, Lake};
 //!
 //! let titicaca = DiveEnvironment::lake(Lake::Titicaca);
