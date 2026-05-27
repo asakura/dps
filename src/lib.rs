@@ -14,7 +14,6 @@
 
 pub mod action;
 pub mod app;
-pub mod chord;
 pub mod cli;
 pub mod components;
 pub mod config;
@@ -22,9 +21,9 @@ pub mod environment;
 pub mod errors;
 pub use errors::Error;
 pub mod gas;
+/// Key-handling primitives: modes, sequences, maps, and chord accumulation.
+pub mod keymap;
 pub mod logging;
-/// Application interaction modes.
-pub mod mode;
 pub mod theme;
 /// Terminal setup, event loop, and input event types.
 pub mod tui;
