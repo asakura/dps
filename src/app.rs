@@ -453,10 +453,12 @@ impl AppNew {
     ///   [`ComponentNew::update`].
     ///
     /// **Suspension** (`Action::Suspend`):
-    /// The TUI is torn down, then `Resume` and `ClearScreen` are enqueued, and
-    /// the TUI is immediately re-entered.  This lets the terminal process the
-    /// suspend signal while ensuring the next render clears any output that
-    /// appeared while the TUI was down.
+    /// On Unix, the TUI is torn down, `SIGTSTP` is emitted so the OS actually
+    /// suspends the process, and `Resume` + `ClearScreen` are enqueued so
+    /// components react when the process wakes.  [`Tui::resume`] is called (not
+    /// `enter`) to restore the terminal after `SIGCONT`.  On non-Unix platforms
+    /// the suspend path exits and immediately re-enters the TUI without raising a
+    /// signal.
     ///
     /// **Quit** (`Action::Quit`):
     /// The TUI is stopped and the loop breaks.  [`Tui::exit`] is called once
@@ -527,9 +529,11 @@ impl AppNew {
 
             if self.should_suspend {
                 tui.exit()?;
+                #[cfg(unix)]
+                signal_hook::low_level::emulate_default_handler(signal_hook::consts::SIGTSTP)?;
                 action_tx.send(Action::Resume)?;
                 action_tx.send(Action::ClearScreen)?;
-                tui.enter()?;
+                tui.resume()?;
             } else if self.should_quit {
                 tui.stop()?;
                 break;
