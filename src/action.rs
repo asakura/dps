@@ -1,14 +1,39 @@
-//! Actions produced by components and consumed by the event loop.
+//! UI action types dispatched through the event loop.
+//!
+//! Two enums are provided:
+//!
+//! - [`Movement`] — directional navigation commands (Up, Down, scroll, page, go-to-top/bottom).
+//!   Implements [`Display`](std::fmt::Display), [`FromStr`],
+//!   [`Serialize`], and [`Deserialize`] so that
+//!   key-binding configuration can reference movements by name (`"Down"`, `"GotoBottom"`, …).
+//!
+//! - [`Action`] — the outcome returned by component event handlers. Wraps [`Movement`] as
+//!   `Action::Move(mv)` and adds `Quit`, `None`, and `Select`. Serialises as a flat string:
+//!   `"Quit"`, `"None"`, `"Select"`, or `"Move(Down)"` for movement variants.
 
-use std::{fmt, str::FromStr};
+use std::fmt;
+use std::str::FromStr;
 
 use color_eyre::Result;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use strum::{Display, EnumString};
+use strum::{ParseError, VariantNames};
 
 /// Directional and positional navigation commands.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, EnumString)]
+#[derive(
+    Default,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    strum::Display,
+    strum::EnumString,
+    strum::VariantNames,
+)]
 pub enum Movement {
+    #[default]
+    /// No movement; a no-op sentinel used as the enum default.
+    None,
     /// Move the cursor or selection up by one row.
     Up,
     /// Move the cursor or selection down by one row.
@@ -31,16 +56,29 @@ pub enum Movement {
     GotoBottom,
 }
 
+impl Serialize for Movement {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for Movement {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+
+        Self::from_str(&s).map_err(|_| de::Error::unknown_variant(&s, Self::VARIANTS))
+    }
+}
+
 /// Outcome returned by [`crate::components::Component::handle_action`] and [`crate::app::App::handle_key`].
 ///
-/// `Display` is implemented manually so that `Move(Down)` renders as `"Down"` rather than `"Move"`,
-/// keeping the display output consistent with the flat config format.
 /// TODO: wire `Display` output up once the `WhichKey` widget and status bar exist.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, strum::VariantNames)]
 pub enum Action {
     /// Exit the application.
     Quit,
     /// Key was handled internally; no further action required.
+    #[default]
     None,
     /// A directional or positional navigation command.
     Move(Movement),
@@ -51,10 +89,27 @@ pub enum Action {
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Quit => write!(f, "Quit"),
-            Self::None => write!(f, "None"),
-            Self::Select => write!(f, "Select"),
-            Self::Move(mv) => write!(f, "{mv}"),
+            Self::Quit => f.write_str("Quit"),
+            Self::None => f.write_str("None"),
+            Self::Select => f.write_str("Select"),
+            Self::Move(mv) => write!(f, "Move({mv})"),
+        }
+    }
+}
+
+impl FromStr for Action {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        if let Some(inner) = s.strip_prefix("Move(").and_then(|s| s.strip_suffix(")")) {
+            return Movement::from_str(inner).map(Self::Move);
+        }
+
+        match s {
+            "Quit" => Ok(Self::Quit),
+            "None" => Ok(Self::None),
+            "Select" => Ok(Self::Select),
+            _ => Err(ParseError::VariantNotFound),
         }
     }
 }
@@ -68,31 +123,8 @@ impl Serialize for Action {
 impl<'de> Deserialize<'de> for Action {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "Quit" => Ok(Self::Quit),
-            "None" => Ok(Self::None),
-            "Select" => Ok(Self::Select),
-            s => Movement::from_str(s).map(Self::Move).map_err(|_| {
-                de::Error::unknown_variant(
-                    s,
-                    &[
-                        "Quit",
-                        "None",
-                        "Select",
-                        "Up",
-                        "Down",
-                        "Left",
-                        "Right",
-                        "ScrollUp",
-                        "ScrollDown",
-                        "PageUp",
-                        "PageDown",
-                        "GotoTop",
-                        "GotoBottom",
-                    ],
-                )
-            }),
-        }
+
+        Self::from_str(&s).map_err(|_| de::Error::unknown_variant(&s, Self::VARIANTS))
     }
 }
 
@@ -120,11 +152,102 @@ mod tests {
         }
 
         #[rstest]
-        #[case(Movement::Down, "Down")]
-        #[case(Movement::GotoTop, "GotoTop")]
-        #[case(Movement::ScrollUp, "ScrollUp")]
-        fn move_shows_movement_name_not_variant_name(#[case] mv: Movement, #[case] expected: &str) {
+        #[case(Movement::Down, "Move(Down)")]
+        #[case(Movement::GotoTop, "Move(GotoTop)")]
+        #[case(Movement::ScrollUp, "Move(ScrollUp)")]
+        fn move_wraps_movement_in_parens(#[case] mv: Movement, #[case] expected: &str) {
             assert_eq!(Action::Move(mv).to_string(), expected);
+        }
+    }
+
+    mod from_str {
+        use super::*;
+        use rstest::rstest;
+        use std::str::FromStr;
+
+        #[rstest]
+        #[case("Up", Movement::Up)]
+        #[case("Down", Movement::Down)]
+        #[case("Left", Movement::Left)]
+        #[case("Right", Movement::Right)]
+        #[case("ScrollUp", Movement::ScrollUp)]
+        #[case("ScrollDown", Movement::ScrollDown)]
+        #[case("PageUp", Movement::PageUp)]
+        #[case("PageDown", Movement::PageDown)]
+        #[case("GotoTop", Movement::GotoTop)]
+        #[case("GotoBottom", Movement::GotoBottom)]
+        fn all_variants_parse(#[case] input: &str, #[case] expected: Movement) -> Result<()> {
+            assert_eq!(Movement::from_str(input)?, expected);
+            Ok(())
+        }
+
+        #[test]
+        fn unknown_string_returns_err() {
+            assert!(Movement::from_str("Unknown").is_err());
+        }
+
+        #[test]
+        fn empty_string_returns_err() {
+            assert!(Movement::from_str("").is_err());
+        }
+
+        #[test]
+        fn display_roundtrips_through_from_str() -> Result<()> {
+            for mv in [
+                Movement::Up,
+                Movement::Down,
+                Movement::Left,
+                Movement::Right,
+                Movement::ScrollUp,
+                Movement::ScrollDown,
+                Movement::PageUp,
+                Movement::PageDown,
+                Movement::GotoTop,
+                Movement::GotoBottom,
+            ] {
+                assert_eq!(Movement::from_str(&mv.to_string())?, mv);
+            }
+            Ok(())
+        }
+
+        mod action {
+            use super::*;
+
+            #[rstest]
+            #[case("Quit", Action::Quit)]
+            #[case("None", Action::None)]
+            #[case("Select", Action::Select)]
+            #[case("Move(Up)", Action::Move(Movement::Up))]
+            #[case("Move(Down)", Action::Move(Movement::Down))]
+            #[case("Move(GotoBottom)", Action::Move(Movement::GotoBottom))]
+            fn known_variants_parse(#[case] input: &str, #[case] expected: Action) -> Result<()> {
+                assert_eq!(Action::from_str(input)?, expected);
+                Ok(())
+            }
+
+            #[test]
+            fn bare_movement_name_returns_err() {
+                assert!(Action::from_str("Down").is_err());
+            }
+
+            #[test]
+            fn unknown_string_returns_err() {
+                assert!(Action::from_str("Unknown").is_err());
+            }
+
+            #[test]
+            fn display_roundtrips_through_from_str() -> Result<()> {
+                for action in [
+                    Action::Quit,
+                    Action::None,
+                    Action::Select,
+                    Action::Move(Movement::Up),
+                    Action::Move(Movement::GotoBottom),
+                ] {
+                    assert_eq!(Action::from_str(&action.to_string())?, action);
+                }
+                Ok(())
+            }
         }
     }
 
@@ -164,10 +287,10 @@ mod tests {
         }
 
         #[test]
-        fn movement_serializes_as_flat_string_not_nested_object() -> Result<()> {
+        fn movement_serializes_as_move_parens_string() -> Result<()> {
             assert_eq!(
                 serde_json::to_string(&Action::Move(Movement::Down))?,
-                "\"Down\""
+                "\"Move(Down)\""
             );
 
             Ok(())

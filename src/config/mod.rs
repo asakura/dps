@@ -457,7 +457,7 @@ mod tests {
 
             std::fs::write(
                 dir.path().join("config.json5"),
-                r#"{ keybindings: { Home: { x: "ScrollUp" } } }"#,
+                r#"{ keybindings: { Home: { x: "Move(ScrollUp)" } } }"#,
             )?;
 
             temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
@@ -490,7 +490,7 @@ mod tests {
 
             std::fs::write(
                 dir.path().join("config.json5"),
-                r#"{ keybindings: { Home: { j: "Up" } } }"#,
+                r#"{ keybindings: { Home: { j: "Move(Up)" } } }"#,
             )?;
 
             temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
@@ -517,7 +517,7 @@ mod tests {
 
             std::fs::write(
                 dir.path().join("config.json5"),
-                r#"{ keybindings: { Home: { x: "ScrollUp" } } }"#,
+                r#"{ keybindings: { Home: { x: "Move(ScrollUp)" } } }"#,
             )?;
 
             let c = Config::from_dirs(Some(dir.path()), None)?;

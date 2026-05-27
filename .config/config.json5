@@ -205,30 +205,30 @@
       "<CR>": "Select",
 
       // movement
-      j: "Down",
-      k: "Up",
-      h: "Left",
-      l: "Right",
-      "<Down>": "Down",
-      "<Up>": "Up",
-      "<Left>": "Left",
-      "<Right>": "Right",
+      j: "Move(Down)",
+      k: "Move(Up)",
+      h: "Move(Left)",
+      l: "Move(Right)",
+      "<Down>": "Move(Down)",
+      "<Up>": "Move(Up)",
+      "<Left>": "Move(Left)",
+      "<Right>": "Move(Right)",
 
       // half-page scroll
-      "<C-d>": "ScrollDown",
-      "<C-u>": "ScrollUp",
+      "<C-d>": "Move(ScrollDown)",
+      "<C-u>": "Move(ScrollUp)",
 
       // full-page scroll
-      "<C-f>": "PageDown",
-      "<C-b>": "PageUp",
-      "<PageDown>": "PageDown",
-      "<PageUp>": "PageUp",
+      "<C-f>": "Move(PageDown)",
+      "<C-b>": "Move(PageUp)",
+      "<PageDown>": "Move(PageDown)",
+      "<PageUp>": "Move(PageUp)",
 
       // jump to start / end
-      gg: "GotoTop",
-      "<S-g>": "GotoBottom",
-      "<Home>": "GotoTop",
-      "<End>": "GotoBottom",
+      gg: "Move(GotoTop)",
+      "<S-g>": "Move(GotoBottom)",
+      "<Home>": "Move(GotoTop)",
+      "<End>": "Move(GotoBottom)",
     },
   },
 }
