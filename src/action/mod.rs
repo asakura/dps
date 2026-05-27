@@ -138,6 +138,18 @@ pub enum Action {
     /// component, which records the selection and may produce a follow-up
     /// action.
     Select,
+    /// Affirmative answer to a confirmation prompt.
+    ///
+    /// Produced in [`Mode::Confirm`](crate::keymap::Mode) when the user
+    /// presses `y` or Enter. The active component decides what to do next
+    /// (e.g. proceed with a destructive operation).
+    Confirm,
+    /// Negative answer to a confirmation prompt — dismiss without acting.
+    ///
+    /// Produced in [`Mode::Confirm`](crate::keymap::Mode) when the user
+    /// presses `n`, Esc, or `q`. Returns control to the caller without
+    /// performing the guarded operation.
+    Cancel,
     /// Toggle the which-key / help overlay.
     ///
     /// Wired to `?` by default. Handled by `App` before the active
@@ -186,6 +198,8 @@ impl fmt::Display for Action {
             Self::Move(mv) => write!(f, "Move({mv})"),
             Self::Select => f.write_str("Select"),
             Self::Help => f.write_str("Help"),
+            Self::Confirm => f.write_str("Confirm"),
+            Self::Cancel => f.write_str("Cancel"),
             Self::None => f.write_str("None"),
             Self::Error(msg) => write!(f, "Error({msg})"),
         }
@@ -264,6 +278,8 @@ impl FromStr for Action {
             "ClearScreen" => Ok(Self::ClearScreen),
             "Select" => Ok(Self::Select),
             "Help" => Ok(Self::Help),
+            "Confirm" => Ok(Self::Confirm),
+            "Cancel" => Ok(Self::Cancel),
             "None" => Ok(Self::None),
             _ => Err(ParseError::VariantNotFound),
         }
@@ -302,6 +318,8 @@ mod tests {
         #[case(Action::Quit, "Quit")]
         #[case(Action::ClearScreen, "ClearScreen")]
         #[case(Action::Help, "Help")]
+        #[case(Action::Confirm, "Confirm")]
+        #[case(Action::Cancel, "Cancel")]
         #[case(Action::None, "None")]
         #[case(Action::Select, "Select")]
         fn simple_variants_display(#[case] action: Action, #[case] expected: &str) {
@@ -349,6 +367,8 @@ mod tests {
         #[case("Quit", Action::Quit)]
         #[case("ClearScreen", Action::ClearScreen)]
         #[case("Help", Action::Help)]
+        #[case("Confirm", Action::Confirm)]
+        #[case("Cancel", Action::Cancel)]
         #[case("None", Action::None)]
         #[case("Select", Action::Select)]
         #[case("Move(Up)", Action::Move(Movement::Up))]
@@ -417,6 +437,8 @@ mod tests {
         #[case(Action::Quit)]
         #[case(Action::ClearScreen)]
         #[case(Action::Help)]
+        #[case(Action::Confirm)]
+        #[case(Action::Cancel)]
         #[case(Action::None)]
         #[case(Action::Select)]
         fn simple_actions_roundtrip(#[case] action: Action) -> Result<()> {
