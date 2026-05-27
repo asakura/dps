@@ -1,6 +1,6 @@
 //! Application state and tab routing.
 
-use std::{fmt, path::Path};
+use std::{collections::HashMap, fmt, path::Path};
 
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -8,12 +8,16 @@ use ratatui::{
     Frame,
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    widgets::{Paragraph, Tabs, Widget},
+    widgets::{Tabs, Widget},
 };
 
 use crate::{
     action::Action,
-    components::{Component, KeyBinding, mod_tab::ModTab, ppo2_tab::PpO2Tab, which_key::WhichKey},
+    chord::{ChordEngine, ChordResult, SequenceEngine},
+    components::{
+        Component, KeyBinding, hint_bar::HintBar, mod_tab::ModTab, ppo2_tab::PpO2Tab,
+        which_key::WhichKey,
+    },
     config::{Config, KeyBindings},
     mode::Mode,
     theme::Theme,
@@ -43,7 +47,7 @@ pub struct App {
     active: usize,
     show_which_key: bool,
     keybindings: KeyBindings,
-    key_buffer: Vec<KeyEvent>,
+    chord: SequenceEngine,
     mode: Mode,
     tick_rate: f64,
     frame_rate: f64,
@@ -60,13 +64,6 @@ impl fmt::Debug for App {
             .field("frame_rate", &self.frame_rate)
             .finish_non_exhaustive()
     }
-}
-
-enum MatchResult {
-    Exact(Action),
-    /// Buffer is a prefix of at least one binding; keep accumulating.
-    Prefix,
-    NoMatch,
 }
 
 impl Default for App {
@@ -123,7 +120,7 @@ impl App {
             active: 0,
             show_which_key: false,
             keybindings: config.keybindings,
-            key_buffer: Vec::new(),
+            chord: SequenceEngine::default(),
             mode: Mode::Home,
             tick_rate,
             frame_rate,
@@ -220,67 +217,20 @@ impl App {
         Ok(())
     }
 
-    /// Checks `key_buffer` against the current mode's bindings.
-    fn match_sequence(&self) -> MatchResult {
-        let Some(bindings) = self.keybindings.0.get(&self.mode) else {
-            return MatchResult::NoMatch;
-        };
-
-        let mut exact: Option<Action> = None;
-        let mut has_prefix = false;
-
-        for (seq, action) in bindings {
-            if seq.as_slice() == self.key_buffer.as_slice() {
-                exact = Some(*action);
-            } else if seq.starts_with(&self.key_buffer) {
-                has_prefix = true;
-            }
-        }
-
-        match (exact, has_prefix) {
-            (Some(action), _) => MatchResult::Exact(action),
-            (None, true) => MatchResult::Prefix,
-            (None, false) => MatchResult::NoMatch,
-        }
-    }
-
-    /// Appends `key` to the pending buffer and attempts to match a configured
-    /// binding.
+    /// Advances the chord engine with `key` and routes the result.
     ///
-    /// - **Exact match** — clears the buffer and returns the bound [`Action`].
+    /// - **Exact match** — dispatches the bound [`Action`] and returns its result.
     /// - **Prefix match** — returns [`Action::None`] and keeps accumulating.
-    /// - **No match** — clears the buffer and falls back: if the failed
-    ///   sequence was a chord, the latest key is retried alone (it may start a
-    ///   new sequence); otherwise the hardcoded global bindings are consulted.
+    /// - **No match** — delegates to the hardcoded global fallback.
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
-        self.key_buffer.push(key);
+        static EMPTY: std::sync::LazyLock<HashMap<Vec<KeyEvent>, Action>> =
+            std::sync::LazyLock::new(HashMap::new);
+        let bindings = self.keybindings.0.get(&self.mode).unwrap_or(&EMPTY);
 
-        match self.match_sequence() {
-            MatchResult::Exact(action) => {
-                self.key_buffer.clear();
-                self.dispatch(action)
-            }
-            MatchResult::Prefix => Action::None,
-            MatchResult::NoMatch => {
-                let was_chord = self.key_buffer.len() > 1;
-                self.key_buffer.clear();
-
-                if was_chord {
-                    // Retry the key that broke the chord as the start of a new sequence.
-                    self.key_buffer.push(key);
-
-                    match self.match_sequence() {
-                        MatchResult::Exact(action) => {
-                            self.key_buffer.clear();
-                            return self.dispatch(action);
-                        }
-                        MatchResult::Prefix => return Action::None,
-                        MatchResult::NoMatch => self.key_buffer.clear(),
-                    }
-                }
-
-                self.handle_key_fallback(key)
-            }
+        match self.chord.advance(key, bindings) {
+            ChordResult::Exact(action) => self.dispatch(action),
+            ChordResult::Prefix => Action::None,
+            ChordResult::NoMatch => self.handle_key_fallback(key),
         }
     }
 
@@ -324,28 +274,6 @@ impl App {
     }
 }
 
-/// One-line hint bar showing component bindings followed by global bindings.
-struct HintBar<'a> {
-    component: &'a [KeyBinding],
-    global: &'a [KeyBinding],
-    theme: Theme,
-}
-
-impl Widget for HintBar<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let hint = self
-            .component
-            .iter()
-            .chain(self.global.iter())
-            .map(|b| format!("{} {}", b.key, b.desc))
-            .collect::<Vec<_>>()
-            .join("   ");
-        Paragraph::new(format!(" {hint}"))
-            .style(self.theme.hint())
-            .render(area, buf);
-    }
-}
-
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let chunks = Layout::vertical([
@@ -367,11 +295,11 @@ impl Widget for &mut App {
         self.tabs[self.active].render(chunks[1], buf, &self.theme);
         self.tabs[self.active].render_status(chunks[2], buf, &self.theme);
 
-        HintBar {
-            component: self.tabs[self.active].key_bindings(),
-            global: GLOBAL_BINDINGS,
-            theme: self.theme,
-        }
+        HintBar::new(
+            self.tabs[self.active].key_bindings(),
+            GLOBAL_BINDINGS,
+            self.theme,
+        )
         .render(chunks[3], buf);
 
         if self.show_which_key {
@@ -388,7 +316,6 @@ impl Widget for &mut App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::test_utils::widget_text;
     use approx::assert_relative_eq;
     use crossterm::event::KeyModifiers;
 
@@ -447,7 +374,7 @@ mod tests {
             let mut home_map = HashMap::new();
 
             for (seq_str, action) in bindings {
-                home_map.insert(parse_key_sequence(seq_str)?, *action);
+                home_map.insert(parse_key_sequence(seq_str)?, action.clone());
             }
 
             let mut mode_map = HashMap::new();
@@ -514,59 +441,6 @@ mod tests {
         }
 
         #[test]
-        fn chord_first_key_is_prefix() -> Result<()> {
-            let mut app = with_config(config_with_keybindings(
-                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
-            )?);
-
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('g'))),
-                Action::None
-            ));
-
-            Ok(())
-        }
-
-        #[test]
-        fn chord_completes_on_second_key() -> Result<()> {
-            // Action is dispatched to the component; caller sees None.
-            let mut app = with_config(config_with_keybindings(
-                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
-            )?);
-
-            app.handle_key(press(KeyCode::Char('g')));
-
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('g'))),
-                Action::None
-            ));
-
-            Ok(())
-        }
-
-        #[test]
-        fn chord_broken_key_retried_as_new_binding() -> Result<()> {
-            // "g" is a prefix of "gg"; when "j" breaks the chord it is retried
-            // as a standalone key, matched as Down, dispatched, and None returned.
-            let mut app = with_config(config_with_keybindings(
-                [
-                    ("gg", Action::Move(Movement::GotoTop)),
-                    ("j", Action::Move(Movement::Down)),
-                ]
-                .as_slice(),
-            )?);
-
-            app.handle_key(press(KeyCode::Char('g')));
-
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('j'))),
-                Action::None
-            ));
-
-            Ok(())
-        }
-
-        #[test]
         fn chord_broken_unbound_key_falls_to_global_fallback() -> Result<()> {
             // "g" is a prefix of "gg"; "q" breaks the chord and has no
             // configured binding, so the hardcoded fallback fires: q → Quit.
@@ -579,75 +453,6 @@ mod tests {
             assert!(matches!(
                 app.handle_key(press(KeyCode::Char('q'))),
                 Action::Quit
-            ));
-
-            Ok(())
-        }
-
-        #[test]
-        fn exact_match_clears_buffer_for_next_chord() -> Result<()> {
-            // After a chord fires the buffer is cleared; the next key starts fresh.
-            let mut app = with_config(config_with_keybindings(
-                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
-            )?);
-
-            app.handle_key(press(KeyCode::Char('g')));
-            app.handle_key(press(KeyCode::Char('g'))); // exact → GotoTop, buffer cleared
-
-            // 'g' is a prefix again — should return None, not misfire.
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('g'))),
-                Action::None
-            ));
-
-            Ok(())
-        }
-
-        #[test]
-        fn three_key_chord_accumulates_and_fires() -> Result<()> {
-            let mut app = with_config(config_with_keybindings(
-                [("abc", Action::Move(Movement::GotoTop))].as_slice(),
-            )?);
-
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('a'))),
-                Action::None
-            ));
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('b'))),
-                Action::None
-            ));
-            // Action dispatched to component; caller sees None.
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('c'))),
-                Action::None
-            ));
-
-            Ok(())
-        }
-
-        #[test]
-        fn broken_chord_retry_starts_new_prefix() -> Result<()> {
-            // "gg" and "jk" are bound. Pressing g (prefix) then j breaks gg;
-            // j is retried alone and is a prefix of jk, so None is returned and
-            // the buffer still holds j. Pressing k then completes jk.
-            let mut app = with_config(config_with_keybindings(
-                [
-                    ("gg", Action::Move(Movement::GotoTop)),
-                    ("jk", Action::Move(Movement::ScrollUp)),
-                ]
-                .as_slice(),
-            )?);
-
-            app.handle_key(press(KeyCode::Char('g'))); // prefix
-
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('j'))), // breaks gg, j → prefix of jk
-                Action::None
-            ));
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('k'))), // completes jk → dispatched, returns None
-                Action::None
             ));
 
             Ok(())
@@ -703,70 +508,6 @@ mod tests {
             assert_eq!(app.active, 0);
 
             Ok(())
-        }
-    }
-
-    mod hint_bar {
-        use super::*;
-        use color_eyre::eyre::eyre;
-
-        static COMP: &[KeyBinding] = [KeyBinding {
-            key: "j/k",
-            desc: "move",
-        }]
-        .as_slice();
-        static GLOB: &[KeyBinding] = [KeyBinding {
-            key: "q",
-            desc: "quit",
-        }]
-        .as_slice();
-
-        #[test]
-        fn renders_component_bindings_first() -> Result<()> {
-            let text = widget_text(
-                HintBar {
-                    component: COMP,
-                    global: GLOB,
-                    theme: Theme::default(),
-                },
-                60,
-            );
-            let j_pos = text
-                .find("j/k")
-                .ok_or_else(|| eyre!("'j/k' not found in hint bar text"))?;
-            let q_pos = text
-                .find("q quit")
-                .ok_or_else(|| eyre!("'q quit' not found in hint bar text"))?;
-
-            assert!(j_pos < q_pos);
-
-            Ok(())
-        }
-
-        #[test]
-        fn renders_all_bindings() {
-            let text = widget_text(
-                HintBar {
-                    component: COMP,
-                    global: GLOB,
-                    theme: Theme::default(),
-                },
-                60,
-            );
-            assert!(text.contains("j/k move"));
-            assert!(text.contains("q quit"));
-        }
-
-        #[test]
-        fn empty_bindings_renders_without_panic() {
-            widget_text(
-                HintBar {
-                    component: [].as_slice(),
-                    global: [].as_slice(),
-                    theme: Theme::default(),
-                },
-                40,
-            );
         }
     }
 }

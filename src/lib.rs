@@ -14,6 +14,7 @@
 
 pub mod action;
 pub mod app;
+pub mod chord;
 pub mod cli;
 pub mod components;
 pub mod config;

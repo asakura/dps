@@ -222,7 +222,9 @@ impl Config {
         for (mode, default_bindings) in &default_raw.keybindings.0 {
             let user_bindings = raw.keybindings.0.entry(*mode).or_default();
             for (key, cmd) in default_bindings {
-                user_bindings.entry(key.clone()).or_insert(*cmd);
+                user_bindings
+                    .entry(key.clone())
+                    .or_insert_with(|| cmd.clone());
             }
         }
 
