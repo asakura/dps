@@ -5,6 +5,10 @@
         reason = "Tests legitimately combine Result return types with panic-inducing assertions"
     )
 )]
+#![allow(
+    rustdoc::private_doc_tests,
+    reason = "Module-level doc examples reference crate paths that are private to rustdoc"
+)]
 
 //! DPS — interactive terminal MOD and ppO₂ tables for nitrox dive planning.
 

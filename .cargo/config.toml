@@ -8,3 +8,6 @@ rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 [build]
 rustc-wrapper = "sccache"
 rustdocflags = ["--html-after-content", "rustdoc-katex.html"]
+
+[alias]
+docs = ["doc", "--no-deps"]
