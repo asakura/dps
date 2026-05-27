@@ -10,13 +10,16 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     widgets::{Tabs, Widget},
 };
+use tokio::sync::mpsc;
+
+use tracing::{debug, info};
 
 use crate::{
     action::Action,
     chord::{ChordEngine, ChordResult, SequenceEngine},
     components::{
-        Component, KeyBinding, hint_bar::HintBar, mod_tab::ModTab, ppo2_tab::PpO2Tab,
-        which_key::WhichKey,
+        Component, ComponentNew, FpsCounter, Home, KeyBinding, hint_bar::HintBar, mod_tab::ModTab,
+        ppo2_tab::PpO2Tab, which_key::WhichKey,
     },
     config::{Config, KeyBindings},
     mode::Mode,
@@ -310,6 +313,365 @@ impl Widget for &mut App {
             )
             .render(area, buf);
         }
+    }
+}
+
+/// Event-loop coordinator that owns a set of [`ComponentNew`] instances.
+///
+/// `AppNew` drives the TUI using the channel-based action pipeline introduced
+/// by the [`ComponentNew`] trait family.  Every component receives a clone of
+/// the [`mpsc::UnboundedSender<Action>`] during initialisation so it can push
+/// actions at any time; `AppNew` owns the matching receiver and drains it on
+/// every loop iteration.
+///
+/// # Architecture
+///
+/// The event loop is split into two phases per iteration:
+///
+/// 1. **Event phase** (`handle_events`) — waits for the next [`Event`] from
+///    the [`Tui`] stream, converts it to an [`Action`], and fans it out to all
+///    components.
+/// 2. **Action phase** (`handle_actions`) — drains the action channel,
+///    applies infrastructure actions (`Quit`, `Suspend`, `Resume`,
+///    `ClearScreen`, `Resize`, `Render`) directly, then forwards every action
+///    to each component's [`ComponentNew::update`] so components can react and
+///    optionally enqueue follow-up actions.
+///
+/// # Keybindings
+///
+/// Key events are looked up against the mode-specific keymap from [`Config`].
+/// Single-key matches are dispatched immediately; unmatched keys accumulate in
+/// `last_tick_key_events` for multi-key chord detection.  The buffer is cleared
+/// on every [`Action::Tick`].
+///
+/// # Default components
+///
+/// A fresh instance always starts with two components:
+/// - [`Home`] — main application screen.
+/// - [`FpsCounter`] — tick/frame-rate overlay.
+///
+/// # Suspension
+///
+/// When [`Action::Suspend`] arrives the TUI is torn down, a `Resume` +
+/// `ClearScreen` pair is enqueued, and the TUI is immediately re-entered so the
+/// next render paints over any shell output that appeared while suspended.
+pub struct AppNew {
+    config: Config,
+    tick_rate: f64,
+    frame_rate: f64,
+    components: Vec<Box<dyn ComponentNew>>,
+    should_quit: bool,
+    should_suspend: bool,
+    mode: Mode,
+    last_tick_key_events: Vec<KeyEvent>,
+    action_tx: mpsc::UnboundedSender<Action>,
+    action_rx: mpsc::UnboundedReceiver<Action>,
+}
+
+impl fmt::Debug for AppNew {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AppNew")
+            .field("tick_rate", &self.tick_rate)
+            .field("frame_rate", &self.frame_rate)
+            .field("mode", &self.mode)
+            .finish_non_exhaustive()
+    }
+}
+
+impl AppNew {
+    /// Creates an `AppNew` with the given tick and frame rates, loading config from disk.
+    ///
+    /// `tick_rate` controls how many [`Action::Tick`] events fire per second.
+    /// `frame_rate` caps the render rate in Hz.  Both are forwarded to [`Tui`]
+    /// when [`run`] is called.
+    ///
+    /// The action channel is created here so components can be handed a sender
+    /// before [`run`] enters the event loop.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if [`Config::new`] fails to load or parse the
+    /// configuration from disk.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # fn main() -> color_eyre::Result<()> {
+    /// use dps::app::AppNew;
+    /// let _app = AppNew::new(4.0, 60.0)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`run`]: AppNew::run
+    pub fn new(tick_rate: f64, frame_rate: f64) -> color_eyre::Result<Self> {
+        let (action_tx, action_rx) = mpsc::unbounded_channel();
+
+        Ok(Self {
+            tick_rate,
+            frame_rate,
+            components: vec![Box::new(Home::new()), Box::new(FpsCounter::new())],
+            should_quit: false,
+            should_suspend: false,
+            config: Config::new()?,
+            mode: Mode::Home,
+            last_tick_key_events: Vec::new(),
+            action_tx,
+            action_rx,
+        })
+    }
+
+    /// Runs the event loop until the application quits.
+    ///
+    /// **Initialisation** (before the loop):
+    /// 1. Constructs and enters the [`Tui`] with mouse support enabled and the
+    ///    configured tick/frame rates.
+    /// 2. Calls [`ComponentNew::register_action_handler`] on every component so
+    ///    each receives a sender it can use to push actions asynchronously.
+    /// 3. Calls [`ComponentNew::register_config_handler`] to distribute a clone
+    ///    of the loaded [`Config`] to every component.
+    /// 4. Calls [`ComponentNew::init`] with the current terminal size so
+    ///    components can pre-compute layout-dependent state.
+    ///
+    /// **Event loop** (each iteration):
+    /// - `handle_events` awaits the next [`Tui`] event, converts it to an
+    ///   [`Action`], and fans it out to all components.
+    /// - `handle_actions` drains the action channel, applies infrastructure
+    ///   actions, and forwards every action to each component's
+    ///   [`ComponentNew::update`].
+    ///
+    /// **Suspension** (`Action::Suspend`):
+    /// The TUI is torn down, then `Resume` and `ClearScreen` are enqueued, and
+    /// the TUI is immediately re-entered.  This lets the terminal process the
+    /// suspend signal while ensuring the next render clears any output that
+    /// appeared while the TUI was down.
+    ///
+    /// **Quit** (`Action::Quit`):
+    /// The TUI is stopped and the loop breaks.  [`Tui::exit`] is called once
+    /// more after the loop to guarantee terminal state is restored regardless of
+    /// how the loop ended.
+    ///
+    /// # Errors
+    ///
+    /// Propagates errors from [`Tui::new`], [`Tui::enter`], [`Tui::exit`],
+    /// [`Tui::stop`], terminal size queries, component initialisation, event
+    /// handling, and rendering.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[tokio::main]
+    /// # async fn main() -> color_eyre::Result<()> {
+    /// use dps::app::AppNew;
+    /// let mut app = AppNew::new(4.0, 60.0)?;
+    /// app.run().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[expect(
+        clippy::future_not_send,
+        reason = "dyn ComponentNew is not Send by design"
+    )]
+    pub async fn run(&mut self) -> color_eyre::Result<()> {
+        let mut tui = Tui::new()?
+            .mouse(true)
+            .tick_rate(self.tick_rate)
+            .frame_rate(self.frame_rate);
+
+        tui.enter()?;
+
+        for component in &mut self.components {
+            component.register_action_handler(self.action_tx.clone())?;
+        }
+
+        for component in &mut self.components {
+            component.register_config_handler(self.config.clone())?;
+        }
+
+        for component in &mut self.components {
+            component.init(tui.size()?)?;
+        }
+
+        let action_tx = self.action_tx.clone();
+
+        loop {
+            self.handle_events(&mut tui).await?;
+            self.handle_actions(&mut tui)?;
+
+            if self.should_suspend {
+                tui.exit()?;
+                action_tx.send(Action::Resume)?;
+                action_tx.send(Action::ClearScreen)?;
+                tui.enter()?;
+            } else if self.should_quit {
+                tui.stop()?;
+                break;
+            }
+        }
+
+        tui.exit()?;
+
+        Ok(())
+    }
+
+    /// Awaits the next [`Event`] from `tui`, converts it to an [`Action`], and
+    /// fans the raw event out to every component.
+    ///
+    /// Infrastructure events (`Quit`, `Tick`, `Render`, `Resize`) are converted
+    /// to their matching [`Action`] variants and sent on the channel.  [`Key`]
+    /// events are forwarded to [`handle_key_event`] for keymap lookup.  All
+    /// other events are silently ignored at this layer but still passed to
+    /// component [`handle_events`] handlers so components may react to them
+    /// directly.
+    ///
+    /// Returns `Ok(())` immediately if the event stream is exhausted.
+    ///
+    /// [`Key`]: Event::Key
+    /// [`handle_key_event`]: AppNew::handle_key_event
+    /// [`handle_events`]: ComponentNew::handle_events
+    #[expect(
+        clippy::future_not_send,
+        reason = "dyn ComponentNew is not Send by design"
+    )]
+    async fn handle_events(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
+        let Some(event) = tui.next_event().await else {
+            return Ok(());
+        };
+
+        let action_tx = self.action_tx.clone();
+
+        match event {
+            Event::Quit => action_tx.send(Action::Quit)?,
+            Event::Tick => action_tx.send(Action::Tick)?,
+            Event::Render => action_tx.send(Action::Render)?,
+            Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
+            Event::Key(key) => self.handle_key_event(key)?,
+            _ => {}
+        }
+
+        for component in &mut self.components {
+            if let Some(action) = component.handle_events(Some(event.clone()))? {
+                action_tx.send(action)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Resolves a raw [`KeyEvent`] against the active mode's keymap.
+    ///
+    /// **Single-key match**: the bound [`Action`] is sent on the channel
+    /// immediately and the accumulated key buffer is left unchanged.
+    ///
+    /// **No match**: `key` is appended to `last_tick_key_events` and the full
+    /// accumulated sequence is checked for a multi-key chord.  If that matches,
+    /// the action is sent; otherwise the key is kept in the buffer until the
+    /// next [`Action::Tick`] clears it.
+    ///
+    /// Does nothing if the current [`Mode`] has no entry in the keymap.
+    fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<()> {
+        let action_tx = self.action_tx.clone();
+
+        let Some(keymap) = self.config.keybindings.0.get(&self.mode) else {
+            return Ok(());
+        };
+
+        if let Some(action) = keymap.get(&vec![key]) {
+            info!("Got action: {action:?}");
+            action_tx.send(action.clone())?;
+        } else {
+            // If the key was not handled as a single key action,
+            // then consider it for multi-key combinations.
+            self.last_tick_key_events.push(key);
+
+            // Check for multi-key combinations
+            if let Some(action) = keymap.get(&self.last_tick_key_events) {
+                info!("Got action: {action:?}");
+                action_tx.send(action.clone())?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Drains the action channel and processes every queued [`Action`].
+    ///
+    /// **Infrastructure actions** are handled directly:
+    ///
+    /// | Action | Effect |
+    /// |--------|--------|
+    /// | `Tick` | Clears `last_tick_key_events` so partial chords don't persist across ticks. |
+    /// | `Quit` | Sets `should_quit`; the caller checks this flag after returning. |
+    /// | `Suspend` / `Resume` | Toggles `should_suspend`. |
+    /// | `ClearScreen` | Calls [`Tui::clear`]. |
+    /// | `Resize(w, h)` | Delegates to [`handle_resize`]. |
+    /// | `Render` | Delegates to [`render`]. |
+    ///
+    /// After each infrastructure action, the same action is forwarded to every
+    /// component's [`ComponentNew::update`].  Any [`Action`] returned by
+    /// `update` is re-enqueued so components can chain effects.
+    ///
+    /// [`handle_resize`]: AppNew::handle_resize
+    /// [`render`]: AppNew::render
+    fn handle_actions(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
+        while let Ok(action) = self.action_rx.try_recv() {
+            if action != Action::Tick && action != Action::Render {
+                debug!("{action:?}");
+            }
+
+            match action {
+                Action::Tick => {
+                    self.last_tick_key_events.drain(..);
+                }
+                Action::Quit => self.should_quit = true,
+                Action::Suspend => self.should_suspend = true,
+                Action::Resume => self.should_suspend = false,
+                Action::ClearScreen => tui.clear()?,
+                Action::Resize(w, h) => self.handle_resize(tui, w, h)?,
+                Action::Render => self.render(tui)?,
+                _ => {}
+            }
+
+            for component in &mut self.components {
+                if let Some(action) = component.update(action.clone())? {
+                    self.action_tx.send(action)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Updates the [`Tui`] viewport to `(w, h)` and triggers an immediate render.
+    ///
+    /// Called in response to [`Action::Resize`]; the immediate render prevents
+    /// a blank frame between the terminal resize and the next scheduled render tick.
+    fn handle_resize(&mut self, tui: &mut Tui, w: u16, h: u16) -> color_eyre::Result<()> {
+        tui.resize(Rect::new(0, 0, w, h))?;
+
+        self.render(tui)?;
+
+        Ok(())
+    }
+
+    /// Draws all components onto the terminal frame.
+    ///
+    /// Calls [`ComponentNew::draw`] on each component in registration order.
+    /// If a component returns an error it is converted to [`Action::Error`] and
+    /// sent on the channel rather than propagating — this keeps a single
+    /// misbehaving component from aborting the entire render pass.
+    fn render(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
+        tui.draw(|frame| {
+            for component in &mut self.components {
+                if let Err(err) = component.draw(frame, frame.area()) {
+                    let _ = self
+                        .action_tx
+                        .send(Action::Error(format!("Failed to draw: {err:?}")));
+                }
+            }
+        })?;
+
+        Ok(())
     }
 }
 
