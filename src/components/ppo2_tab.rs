@@ -256,7 +256,7 @@ impl Component for PpO2Tab {
                     self.selection = Some((Meters::new(depth_m as f64), self.selected_mix()));
                 }
             }
-            Action::Quit | Action::None => {}
+            _ => {}
         }
     }
 

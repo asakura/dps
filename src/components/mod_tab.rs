@@ -234,7 +234,7 @@ impl Component for ModTab {
                     self.selection = Some(self.mixes[row].mod_at(self.ppo2()));
                 }
             }
-            Action::Quit | Action::None => {}
+            _ => {}
         }
     }
 
