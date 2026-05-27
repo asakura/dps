@@ -1,6 +1,6 @@
 //! Application state and tab routing.
 
-use std::{collections::HashMap, fmt, path::Path};
+use std::{fmt, path::Path};
 
 use color_eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -16,13 +16,12 @@ use tracing::{debug, info};
 
 use crate::{
     action::Action,
-    chord::{ChordEngine, ChordResult, SequenceEngine},
     components::{
         Component, ComponentNew, FpsCounter, Home, KeyBinding, hint_bar::HintBar, mod_tab::ModTab,
         ppo2_tab::PpO2Tab, which_key::WhichKey,
     },
-    config::{Config, KeyBindings},
-    mode::Mode,
+    config::Config,
+    keymap::{ChordEngine, ChordResult, KeyBindings, Mode, ModeMap, SequenceEngine},
     theme::Theme,
     tui::{Event, Tui},
 };
@@ -124,7 +123,7 @@ impl App {
             show_which_key: false,
             keybindings: config.keybindings,
             chord: SequenceEngine::default(),
-            mode: Mode::Home,
+            mode: Mode::Normal,
             tick_rate,
             frame_rate,
             theme,
@@ -226,9 +225,9 @@ impl App {
     /// - **Prefix match** — returns [`Action::None`] and keeps accumulating.
     /// - **No match** — delegates to the hardcoded global fallback.
     pub fn handle_key(&mut self, key: KeyEvent) -> Action {
-        static EMPTY: std::sync::LazyLock<HashMap<Vec<KeyEvent>, Action>> =
-            std::sync::LazyLock::new(HashMap::new);
-        let bindings = self.keybindings.0.get(&self.mode).unwrap_or(&EMPTY);
+        static EMPTY: std::sync::LazyLock<ModeMap> =
+            std::sync::LazyLock::new(ModeMap::default);
+        let bindings = self.keybindings.get(&self.mode).unwrap_or(&EMPTY);
 
         match self.chord.advance(key, bindings) {
             ChordResult::Exact(action) => self.dispatch(action),
@@ -414,7 +413,7 @@ impl AppNew {
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
-            mode: Mode::Home,
+            mode: Mode::Normal,
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,
@@ -572,11 +571,11 @@ impl AppNew {
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<()> {
         let action_tx = self.action_tx.clone();
 
-        let Some(keymap) = self.config.keybindings.0.get(&self.mode) else {
+        let Some(keymap) = self.config.keybindings.get(&self.mode) else {
             return Ok(());
         };
 
-        if let Some(action) = keymap.get(&vec![key]) {
+        if let Some(action) = keymap.get(&[key]) {
             info!("Got action: {action:?}");
             action_tx.send(action.clone())?;
         } else {
@@ -723,29 +722,26 @@ mod tests {
 
     mod handle_key {
         use super::*;
+        use std::collections::HashMap;
+
         use crate::action::Movement;
         use crate::config::keys::parse_key_sequence;
-        use crate::config::{AppConfig, Config, KeyBindings, Styles};
-        use std::collections::HashMap;
+        use crate::config::{AppConfig, Config, Styles};
+        use crate::keymap::{KeyBindingsBuilder, KeySeq};
 
         fn with_config(config: Config) -> App {
             App::from_config(4.0, 60.0, config)
         }
 
         fn config_with_keybindings(bindings: &[(&str, Action)]) -> Result<Config> {
-            let mut home_map = HashMap::new();
-
+            let mut builder = KeyBindingsBuilder::new();
             for (seq_str, action) in bindings {
-                home_map.insert(parse_key_sequence(seq_str)?, action.clone());
+                builder.bind(Mode::Normal, KeySeq::from(parse_key_sequence(seq_str)?), action.clone());
             }
-
-            let mut mode_map = HashMap::new();
-
-            mode_map.insert(Mode::Home, home_map);
 
             Ok(Config {
                 config: AppConfig::default(),
-                keybindings: KeyBindings(mode_map),
+                keybindings: builder.build(),
                 styles: Styles(),
                 themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
                 default_theme: "catpuccineFrappe".to_string(),
