@@ -4,7 +4,7 @@ use std::path::Path;
 
 use clap::Parser;
 use color_eyre::Result;
-use dps::app::App;
+use dps::app::AppNew;
 use dps::cli::Cli;
 use dps::config::get_data_dir;
 use dps::errors;
@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
 
     logging::init(&effective_data_dir)?;
 
-    let mut app = App::new(
+    let mut app = AppNew::new(
         args.tick_rate,
         args.frame_rate,
         args.config_dir.as_deref(),

@@ -337,10 +337,9 @@ impl Widget for &mut App {
 ///
 /// # Keybindings
 ///
-/// Key events are looked up against the mode-specific keymap from [`Config`].
-/// Single-key matches are dispatched immediately; unmatched keys accumulate in
-/// `last_tick_key_events` for multi-key chord detection.  The buffer is cleared
-/// on every [`Action::Tick`].
+/// Key events are resolved via a [`SequenceEngine`] chord engine: prefix
+/// sequences accumulate until either an exact binding fires or the sequence
+/// breaks.
 ///
 /// # Default components
 ///
@@ -361,7 +360,7 @@ pub struct AppNew {
     should_quit: bool,
     should_suspend: bool,
     mode: Mode,
-    last_tick_key_events: Vec<KeyEvent>,
+    chord: SequenceEngine,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
 }
@@ -396,13 +395,25 @@ impl AppNew {
     /// ```no_run
     /// # fn main() -> color_eyre::Result<()> {
     /// use dps::app::AppNew;
-    /// let _app = AppNew::new(4.0, 60.0)?;
+    /// let _app = AppNew::new(4.0, 60.0, None, None)?;
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// [`run`]: AppNew::run
-    pub fn new(tick_rate: f64, frame_rate: f64) -> color_eyre::Result<Self> {
+    pub fn new(
+        tick_rate: f64,
+        frame_rate: f64,
+        config_dir: Option<&Path>,
+        data_dir: Option<&Path>,
+    ) -> Result<Self, crate::Error> {
+        let config = Config::from_dirs(config_dir, data_dir)?;
+        tracing::debug!(
+            data_dir = %config.config.data_dir.display(),
+            config_dir = %config.config.config_dir.display(),
+            "effective directories"
+        );
+
         let (action_tx, action_rx) = mpsc::unbounded_channel();
 
         Ok(Self {
@@ -411,9 +422,9 @@ impl AppNew {
             components: vec![Box::new(Home::new()), Box::new(FpsCounter::new())],
             should_quit: false,
             should_suspend: false,
-            config: Config::new()?,
+            config,
             mode: Mode::Normal,
-            last_tick_key_events: Vec::new(),
+            chord: SequenceEngine::default(),
             action_tx,
             action_rx,
         })
@@ -461,7 +472,7 @@ impl AppNew {
     /// # #[tokio::main]
     /// # async fn main() -> color_eyre::Result<()> {
     /// use dps::app::AppNew;
-    /// let mut app = AppNew::new(4.0, 60.0)?;
+    /// let mut app = AppNew::new(4.0, 60.0, None, None)?;
     /// app.run().await?;
     /// # Ok(())
     /// # }
@@ -556,37 +567,19 @@ impl AppNew {
         Ok(())
     }
 
-    /// Resolves a raw [`KeyEvent`] against the active mode's keymap.
+    /// Resolves a raw [`KeyEvent`] against the active mode's keymap via the
+    /// [`SequenceEngine`] chord engine.
     ///
-    /// **Single-key match**: the bound [`Action`] is sent on the channel
-    /// immediately and the accumulated key buffer is left unchanged.
-    ///
-    /// **No match**: `key` is appended to `last_tick_key_events` and the full
-    /// accumulated sequence is checked for a multi-key chord.  If that matches,
-    /// the action is sent; otherwise the key is kept in the buffer until the
-    /// next [`Action::Tick`] clears it.
-    ///
-    /// Does nothing if the current [`Mode`] has no entry in the keymap.
+    /// - **Exact match** — the bound [`Action`] is sent on the channel.
+    /// - **Prefix match** — the engine keeps accumulating; nothing is sent.
+    /// - **No match** — the key is silently dropped; no hardcoded fallback.
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<()> {
-        let action_tx = self.action_tx.clone();
+        static EMPTY: std::sync::LazyLock<ModeMap> = std::sync::LazyLock::new(ModeMap::default);
+        let bindings = self.config.keybindings.get(&self.mode).unwrap_or(&EMPTY);
 
-        let Some(keymap) = self.config.keybindings.get(&self.mode) else {
-            return Ok(());
-        };
-
-        if let Some(action) = keymap.get(&[key]) {
+        if let ChordResult::Exact(action) = self.chord.advance(key, bindings) {
             info!("Got action: {action:?}");
-            action_tx.send(action.clone())?;
-        } else {
-            // If the key was not handled as a single key action,
-            // then consider it for multi-key combinations.
-            self.last_tick_key_events.push(key);
-
-            // Check for multi-key combinations
-            if let Some(action) = keymap.get(&self.last_tick_key_events) {
-                info!("Got action: {action:?}");
-                action_tx.send(action.clone())?;
-            }
+            self.action_tx.send(action)?;
         }
 
         Ok(())
@@ -598,7 +591,7 @@ impl AppNew {
     ///
     /// | Action | Effect |
     /// |--------|--------|
-    /// | `Tick` | Clears `last_tick_key_events` so partial chords don't persist across ticks. |
+    /// | `Tick` | No infrastructure effect; forwarded to components. |
     /// | `Quit` | Sets `should_quit`; the caller checks this flag after returning. |
     /// | `Suspend` / `Resume` | Toggles `should_suspend`. |
     /// | `ClearScreen` | Calls [`Tui::clear`]. |
@@ -618,9 +611,7 @@ impl AppNew {
             }
 
             match action {
-                Action::Tick => {
-                    self.last_tick_key_events.drain(..);
-                }
+                Action::Tick => {}
                 Action::Quit => self.should_quit = true,
                 Action::Suspend => self.should_suspend = true,
                 Action::Resume => self.should_suspend = false,
