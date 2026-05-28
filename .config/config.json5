@@ -287,7 +287,6 @@
       // o:  "AddBelow",
       // O:  "AddAbove",
       // a:  "Append",        // add at end of list (distinct from o which adds below cursor)
-      // dd: "Delete",
       // cc: "ChangeRow",     // change whole row; complement to dd
       // x:  "DeleteItem",
 
@@ -305,9 +304,11 @@
       // V:  "EnterVisualLine",
 
       // yank / paste
-      // yy: "YankRow",
-      // p:  "Paste",
-      // P:  "PasteAbove",
+      yy: "Edit(YankRow)",
+      dd: "Edit(Delete)",
+      p:  "Edit(Paste)",
+      "<S-p>": "Edit(PasteAbove)",
+      // cc: "Edit(Change)",  // blocked on Mode::Insert (not yet implemented)
 
       // search / filter
       // "/": "EnterSearch",
