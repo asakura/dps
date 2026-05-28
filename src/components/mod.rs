@@ -79,7 +79,7 @@ pub trait Component {
     /// Called when a configured key sequence resolves to an [`Action`] before
     /// the raw-key fallback path is reached.  The default implementation is a
     /// no-op; components override it for the actions they support.
-    fn handle_action(&mut self, _action: Action) {}
+    fn handle_action(&mut self, _action: Action, _registers: &mut RegisterStore) {}
 
     /// Structured key bindings for the which-key popup and hint line.
     fn key_bindings(&self) -> &'static [KeyBinding] {

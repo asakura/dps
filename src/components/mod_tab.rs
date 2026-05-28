@@ -8,8 +8,9 @@ use ratatui::{
 };
 
 use crate::{
-    action::{Action, Movement},
+    action::{Action, EditOp, Movement},
     gas::{EANx, MOD},
+    registers::{RegisterStore, RegisterValue},
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::{Bar, Meters, Percent},
@@ -227,12 +228,17 @@ impl Component for ModTab {
         "MOD Table"
     }
 
-    fn handle_action(&mut self, action: Action) {
+    fn handle_action(&mut self, action: Action, registers: &mut RegisterStore) {
         match action {
             Action::Move(mv) => self.handle_movement(mv),
             Action::Select => {
                 if let Some(row) = self.table_state.selected() {
                     self.selection = Some(self.mixes[row].mod_at(self.ppo2()));
+                }
+            }
+            Action::Edit(EditOp::YankRow(reg)) => {
+                if let Some(row) = self.table_state.selected() {
+                    registers.push_yank(reg, RegisterValue::EANx(self.mixes[row]));
                 }
             }
             _ => {}
@@ -359,7 +365,7 @@ mod tests {
             let mut tab = ModTab::new();
 
             for _ in 0..PPO2_MAX_IDX {
-                tab.handle_action(Action::Move(Movement::Right));
+                tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
             }
 
             // = 8
@@ -426,7 +432,7 @@ mod tests {
             let expected_fo2 = tab.mixes[row].fo2();
             let expected_ppo2 = tab.ppo2();
 
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let m = tab
                 .selection
@@ -441,15 +447,15 @@ mod tests {
         #[test]
         fn selection_updates_after_moving_row() -> Result<()> {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let first_fo2 = tab
                 .selection
                 .ok_or_else(|| eyre!("no selection after first Select"))?
                 .fo2();
 
-            tab.handle_action(Action::Move(Movement::Down));
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let second_fo2 = tab
                 .selection
@@ -458,6 +464,46 @@ mod tests {
 
             assert_ne!(first_fo2, second_fo2);
 
+            Ok(())
+        }
+    }
+
+    mod yank_row {
+        use rstest::rstest;
+        use super::*;
+        use crate::action::EditOp;
+
+        #[rstest]
+        fn unnamed_reg_writes_mix_to_unnamed_and_yank_register() -> Result<()> {
+            let mut tab = ModTab::new();
+            let row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let expected = RegisterValue::EANx(tab.mixes[row]);
+            let mut regs = RegisterStore::default();
+
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+
+            assert_eq!(regs.read('"'), Some(expected));
+            assert_eq!(regs.read('0'), Some(expected));
+            Ok(())
+        }
+
+        #[rstest]
+        fn named_reg_writes_mix_to_named_and_yank_register() -> Result<()> {
+            let mut tab = ModTab::new();
+            let row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let expected = RegisterValue::EANx(tab.mixes[row]);
+            let mut regs = RegisterStore::default();
+
+            tab.handle_action(Action::Edit(EditOp::YankRow(Some('a'))), &mut regs);
+
+            assert_eq!(regs.read('a'), Some(expected));
+            assert_eq!(regs.read('0'), Some(expected));
             Ok(())
         }
     }
@@ -531,7 +577,7 @@ mod tests {
         fn selection_shows_mix_percent_and_mod() {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let text = widget_text(
                 ModTabStatus {
@@ -559,7 +605,7 @@ mod tests {
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::Move(Movement::Down));
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -575,8 +621,8 @@ mod tests {
         fn down_clamped_at_last_mix() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
-            tab.handle_action(Action::Move(Movement::Down));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -591,13 +637,13 @@ mod tests {
         #[test]
         fn up_retreats_row() -> Result<()> {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::Move(Movement::Down));
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             let after = tab
                 .table_state
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
-            tab.handle_action(Action::Move(Movement::Up));
+            tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -613,8 +659,8 @@ mod tests {
         fn up_clamped_at_zero() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoTop));
-            tab.handle_action(Action::Move(Movement::Up));
+            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
+            tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -631,10 +677,10 @@ mod tests {
             let mut tab = ModTab::new();
 
             for _ in 0..10 {
-                tab.handle_action(Action::Move(Movement::Down));
+                tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
             }
 
-            tab.handle_action(Action::Move(Movement::GotoTop));
+            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -650,7 +696,7 @@ mod tests {
         fn goto_bottom_selects_last_row() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -666,7 +712,7 @@ mod tests {
         fn scroll_down_moves_by_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::ScrollDown));
+            tab.handle_action(Action::Move(Movement::ScrollDown), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -686,8 +732,8 @@ mod tests {
         fn scroll_up_moves_by_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
-            tab.handle_action(Action::Move(Movement::ScrollUp));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(Action::Move(Movement::ScrollUp), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -707,7 +753,7 @@ mod tests {
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::Move(Movement::PageDown));
+            tab.handle_action(Action::Move(Movement::PageDown), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -723,8 +769,8 @@ mod tests {
         fn page_up_moves_by_page_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
-            tab.handle_action(Action::Move(Movement::PageUp));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(Action::Move(Movement::PageUp), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -741,7 +787,7 @@ mod tests {
             let mut tab = ModTab::new();
             let before = tab.ppo2_idx;
 
-            tab.handle_action(Action::Move(Movement::Right));
+            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
 
             assert_eq!(tab.ppo2_idx, before + 1);
         }
@@ -751,7 +797,7 @@ mod tests {
             let mut tab = ModTab::new();
 
             for _ in 0..=PPO2_MAX_IDX {
-                tab.handle_action(Action::Move(Movement::Right));
+                tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
             }
 
             assert_eq!(tab.ppo2_idx, PPO2_MAX_IDX);
@@ -760,10 +806,10 @@ mod tests {
         #[test]
         fn left_decrements_ppo2() {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::Move(Movement::Right));
+            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
 
             let before = tab.ppo2_idx;
-            tab.handle_action(Action::Move(Movement::Left));
+            tab.handle_action(Action::Move(Movement::Left), &mut RegisterStore::default());
 
             assert_eq!(tab.ppo2_idx, before - 1);
         }
@@ -773,7 +819,7 @@ mod tests {
             let mut tab = ModTab::new();
 
             for _ in 0..=PPO2_DEFAULT_IDX {
-                tab.handle_action(Action::Move(Movement::Left));
+                tab.handle_action(Action::Move(Movement::Left), &mut RegisterStore::default());
             }
 
             assert_eq!(tab.ppo2_idx, 0);
@@ -787,7 +833,7 @@ mod tests {
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::None);
+            tab.handle_action(Action::None, &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -807,7 +853,7 @@ mod tests {
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::Quit);
+            tab.handle_action(Action::Quit, &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state

@@ -10,6 +10,7 @@ use ratatui::{
 use crate::{
     action::{Action, Movement},
     gas::EANx,
+    registers::RegisterStore,
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::{Bar, Meters, Percent},
@@ -249,7 +250,7 @@ impl Component for PpO2Tab {
         clippy::cast_precision_loss,
         reason = "depth_m is bounded by PPO2_TABLE_DEPTH_MAX = 80"
     )]
-    fn handle_action(&mut self, action: Action) {
+    fn handle_action(&mut self, action: Action, _registers: &mut RegisterStore) {
         match action {
             Action::Move(mv) => self.handle_movement(mv),
             Action::Select => {
@@ -358,7 +359,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             // mix_idx: 5 → 6
-            tab.handle_action(Action::Move(Movement::Right));
+            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
 
             // window_start(6, 14, 3) = 5; percents at indices [5],[6],[7]
             let cols = tab.visible_cols(3);
@@ -388,7 +389,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..PPO2_TABLE_MIX_COUNT {
-                tab.handle_action(Action::Move(Movement::Right));
+                tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
             }
 
             // = 13
@@ -454,7 +455,7 @@ mod tests {
         fn stores_current_depth_and_mix() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let (depth, mix) = tab.selection.ok_or_else(|| eyre!("no selection"))?;
 
@@ -471,12 +472,12 @@ mod tests {
         fn selection_updates_after_moving_row() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let first_depth = tab.selection.ok_or_else(|| eyre!("no selection"))?.0;
 
-            tab.handle_action(Action::Move(Movement::Down));
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let second_depth = tab.selection.ok_or_else(|| eyre!("no selection"))?.0;
             assert_ne!(first_depth, second_depth);
@@ -568,10 +569,10 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..10 {
-                tab.handle_action(Action::Move(Movement::Down));
+                tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
             }
 
-            tab.handle_action(Action::Select);
+            tab.handle_action(Action::Select, &mut RegisterStore::default());
 
             let text = widget_text(
                 PpO2TabStatus {
@@ -593,7 +594,7 @@ mod tests {
         fn down_advances_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Down));
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -609,8 +610,8 @@ mod tests {
         fn down_clamped_at_max_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
-            tab.handle_action(Action::Move(Movement::Down));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -626,14 +627,14 @@ mod tests {
         fn up_retreats_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Down));
+            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             let after = tab
                 .table_state
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::Move(Movement::Up));
+            tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -649,7 +650,7 @@ mod tests {
         fn up_at_zero_stays_at_zero() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Up));
+            tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -666,10 +667,10 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..10 {
-                tab.handle_action(Action::Move(Movement::Down));
+                tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
             }
 
-            tab.handle_action(Action::Move(Movement::GotoTop));
+            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -685,7 +686,7 @@ mod tests {
         fn goto_bottom_selects_max_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -701,7 +702,7 @@ mod tests {
         fn scroll_down_moves_by_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::ScrollDown));
+            tab.handle_action(Action::Move(Movement::ScrollDown), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -717,8 +718,8 @@ mod tests {
         fn scroll_up_moves_by_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
-            tab.handle_action(Action::Move(Movement::ScrollUp));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(Action::Move(Movement::ScrollUp), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -734,7 +735,7 @@ mod tests {
         fn page_down_moves_by_page_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::PageDown));
+            tab.handle_action(Action::Move(Movement::PageDown), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -750,8 +751,8 @@ mod tests {
         fn page_up_moves_by_page_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom));
-            tab.handle_action(Action::Move(Movement::PageUp));
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(Action::Move(Movement::PageUp), &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -768,7 +769,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
             let before = tab.mix_idx;
 
-            tab.handle_action(Action::Move(Movement::Right));
+            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
 
             assert_eq!(tab.mix_idx, before + 1);
         }
@@ -778,7 +779,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..=PPO2_TABLE_MIX_COUNT {
-                tab.handle_action(Action::Move(Movement::Right));
+                tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
             }
 
             assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
@@ -788,11 +789,11 @@ mod tests {
         fn left_decrements_mix() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Right));
+            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
 
             let before = tab.mix_idx;
 
-            tab.handle_action(Action::Move(Movement::Left));
+            tab.handle_action(Action::Move(Movement::Left), &mut RegisterStore::default());
 
             assert_eq!(tab.mix_idx, before - 1);
         }
@@ -802,7 +803,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..=PPO2_MIX_DEFAULT_IDX {
-                tab.handle_action(Action::Move(Movement::Left));
+                tab.handle_action(Action::Move(Movement::Left), &mut RegisterStore::default());
             }
 
             assert_eq!(tab.mix_idx, 0);
@@ -816,7 +817,7 @@ mod tests {
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::None);
+            tab.handle_action(Action::None, &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
@@ -836,7 +837,7 @@ mod tests {
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::Quit);
+            tab.handle_action(Action::Quit, &mut RegisterStore::default());
 
             assert_eq!(
                 tab.table_state
