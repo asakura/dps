@@ -36,8 +36,10 @@
 //! ```
 
 mod clipboard;
+pub mod error;
 mod store;
 mod value;
 
+pub use error::ParseError;
 pub use store::RegisterStore;
 pub use value::RegisterValue;

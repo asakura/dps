@@ -1,10 +1,19 @@
 //! [`RegisterValue`]: the set of domain values that can live in a named register.
+//!
+//! ```
+//! use dps::registers::RegisterValue;
+//! use dps::environment::DiveEnvironment;
+//!
+//! let env: RegisterValue = "standard".parse().unwrap();
+//! assert_eq!(env, RegisterValue::DiveEnvironment(DiveEnvironment::standard()));
+//! ```
 
 use std::fmt;
 use std::str::FromStr;
 
 use crate::environment::DiveEnvironment;
 use crate::gas::EANx;
+use crate::registers::error::ParseError;
 
 /// A value that can be stored in a named register.
 ///
@@ -47,7 +56,7 @@ impl fmt::Display for RegisterValue {
 
 /// Tries [`EANx`] first, then [`DiveEnvironment`].
 ///
-/// Returns `Err(())` when neither parse succeeds.
+/// Returns [`ParseError::UnknownValue`] when neither parse succeeds.
 ///
 /// # Examples
 ///
@@ -68,16 +77,16 @@ impl fmt::Display for RegisterValue {
 /// assert!("nonsense".parse::<RegisterValue>().is_err());
 /// ```
 impl FromStr for RegisterValue {
-    type Err = ();
+    type Err = ParseError;
 
-    fn from_str(s: &str) -> Result<Self, ()> {
+    fn from_str(s: &str) -> Result<Self, ParseError> {
         if let Ok(b) = s.parse::<EANx>() {
             return Ok(Self::EANx(b));
         }
         if let Ok(e) = s.parse::<DiveEnvironment>() {
             return Ok(Self::DiveEnvironment(e));
         }
-        Err(())
+        Err(ParseError::UnknownValue(s.to_owned()))
     }
 }
 
@@ -96,7 +105,9 @@ mod tests {
 
         #[rstest]
         fn eanx_uses_gas_name() -> Result<()> {
-            let ean32 = EANx::try_from(Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?)?;
+            let ean32 = EANx::try_from(
+                Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?,
+            )?;
             assert_eq!(RegisterValue::EANx(ean32).to_string(), "EANx 32");
             Ok(())
         }
@@ -120,7 +131,7 @@ mod tests {
         #[case("Pure O₂")]
         #[case("standard")]
         #[case("freshwater")]
-        fn known_string_roundtrips(#[case] s: &str) -> std::result::Result<(), ()> {
+        fn known_string_roundtrips(#[case] s: &str) -> Result<()> {
             let parsed: RegisterValue = s.parse()?;
             assert_eq!(parsed.to_string(), s);
             Ok(())
