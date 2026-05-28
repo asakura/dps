@@ -173,7 +173,9 @@ mod tests {
         #[rstest]
         fn ojos_del_salado_is_at_freezing() {
             assert_relative_eq!(Lake::OjosDeSalado.typical_temperature(), Celsius::new(0.0));
-            assert!(Lake::OjosDeSalado.typical_temperature() < Lake::Licancabur.typical_temperature());
+            assert!(
+                Lake::OjosDeSalado.typical_temperature() < Lake::Licancabur.typical_temperature()
+            );
         }
     }
 }
