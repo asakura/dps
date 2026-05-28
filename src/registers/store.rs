@@ -191,23 +191,22 @@ impl RegisterStore {
 
 #[cfg(test)]
 mod tests {
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::eyre::{Report, eyre};
     use rstest::{fixture, rstest};
 
-    use super::RegisterStore;
+    use super::{RegisterStore, RegisterValue};
     use crate::gas::EANx;
-    use crate::registers::RegisterValue;
     use crate::units::Percent;
 
     #[fixture]
-    fn ean32() -> Result<EANx> {
+    fn ean32() -> Result<EANx, Report> {
         let pct = Percent::new(0.32).ok_or_else(|| eyre!("invalid fraction"))?;
 
         Ok(EANx::try_from(pct)?)
     }
 
     #[fixture]
-    fn ean36() -> Result<EANx> {
+    fn ean36() -> Result<EANx, Report> {
         let pct = Percent::new(0.36).ok_or_else(|| eyre!("invalid fraction"))?;
 
         Ok(EANx::try_from(pct)?)
@@ -217,7 +216,7 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn regular_reg_stores_value(ean32: Result<EANx>) -> Result<()> {
+        fn regular_reg_stores_value(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.write('a', RegisterValue::EANx(ean32?));
 
@@ -227,7 +226,7 @@ mod tests {
         }
 
         #[rstest]
-        fn regular_reg_mirrors_to_unnamed(ean32: Result<EANx>) -> Result<()> {
+        fn regular_reg_mirrors_to_unnamed(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.write('a', RegisterValue::EANx(ean32?));
 
@@ -237,7 +236,7 @@ mod tests {
         }
 
         #[rstest]
-        fn black_hole_discards(ean32: Result<EANx>) -> Result<()> {
+        fn black_hole_discards(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.write('_', RegisterValue::EANx(ean32?));
 
@@ -247,7 +246,7 @@ mod tests {
         }
 
         #[rstest]
-        fn uppercase_redirects_to_lowercase(ean32: Result<EANx>) -> Result<()> {
+        fn uppercase_redirects_to_lowercase(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.write('A', RegisterValue::EANx(ean32?));
 
@@ -258,7 +257,7 @@ mod tests {
         }
 
         #[rstest]
-        fn uppercase_mirrors_to_unnamed(ean32: Result<EANx>) -> Result<()> {
+        fn uppercase_mirrors_to_unnamed(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.write('A', RegisterValue::EANx(ean32?));
 
@@ -272,7 +271,7 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn none_writes_to_unnamed_and_yank(ean32: Result<EANx>) -> Result<()> {
+        fn none_writes_to_unnamed_and_yank(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.push_yank(None, RegisterValue::EANx(ean32?));
 
@@ -283,7 +282,7 @@ mod tests {
         }
 
         #[rstest]
-        fn named_reg_writes_to_reg_and_yank(ean32: Result<EANx>) -> Result<()> {
+        fn named_reg_writes_to_reg_and_yank(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.push_yank(Some('a'), RegisterValue::EANx(ean32?));
 
@@ -298,7 +297,7 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn first_delete_writes_to_1_and_unnamed(ean32: Result<EANx>) -> Result<()> {
+        fn first_delete_writes_to_1_and_unnamed(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.push_delete(RegisterValue::EANx(ean32?));
 
@@ -309,7 +308,10 @@ mod tests {
         }
 
         #[rstest]
-        fn second_delete_shifts_stack(ean32: Result<EANx>, ean36: Result<EANx>) -> Result<()> {
+        fn second_delete_shifts_stack(
+            ean32: Result<EANx, Report>,
+            ean36: Result<EANx, Report>,
+        ) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v1 = RegisterValue::EANx(ean32?);
             let v2 = RegisterValue::EANx(ean36?);
@@ -324,7 +326,7 @@ mod tests {
         }
 
         #[rstest]
-        fn full_stack_stays_within_9(ean32: Result<EANx>) -> Result<()> {
+        fn full_stack_stays_within_9(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v = RegisterValue::EANx(ean32?);
 
@@ -338,7 +340,7 @@ mod tests {
         }
 
         #[rstest]
-        fn gap_in_stack_clears_higher_slot(ean32: Result<EANx>) -> Result<()> {
+        fn gap_in_stack_clears_higher_slot(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v = RegisterValue::EANx(ean32?);
 
@@ -369,7 +371,7 @@ mod tests {
         }
 
         #[rstest]
-        fn after_write_returns_value(ean32: Result<EANx>) -> Result<()> {
+        fn after_write_returns_value(ean32: Result<EANx, Report>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v = RegisterValue::EANx(ean32?);
 
