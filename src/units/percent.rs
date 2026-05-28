@@ -1,6 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
+use super::UnitError;
 use super::error::ParseError;
 
 /// Fractional proportion in [0.0, 1.0], displayed as a percentage.
@@ -88,9 +89,8 @@ impl fmt::Display for Percent {
 ///
 /// # Errors
 ///
-/// Returns [`ParseError::Percent`] if the suffix is not `"%"`, the numeric
-/// part cannot be parsed as `f64`, or the resulting fraction is outside
-/// `[0.0, 1.0]`.
+/// Returns [`UnitError`] if the suffix is not `"%"`, the numeric part cannot
+/// be parsed as `f64`, or the resulting fraction is outside `[0.0, 1.0]`.
 ///
 /// # Examples
 ///
@@ -104,17 +104,17 @@ impl fmt::Display for Percent {
 /// assert!("invalid".parse::<Percent>().is_err());
 /// ```
 impl FromStr for Percent {
-    type Err = ParseError;
+    type Err = UnitError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let num_str = s
             .strip_suffix("%")
-            .ok_or_else(|| ParseError::Percent(s.to_owned()))?;
+            .ok_or_else(|| UnitError::Parse(ParseError::Percent(s.to_owned())))?;
         let pct: f64 = num_str
             .parse()
-            .map_err(|_| ParseError::Percent(num_str.to_owned()))?;
+            .map_err(|_| UnitError::Parse(ParseError::Percent(num_str.to_owned())))?;
 
-        Self::new(pct / 100.0).ok_or_else(|| ParseError::Percent(s.to_owned()))
+        Self::new(pct / 100.0).ok_or_else(|| UnitError::Parse(ParseError::Percent(s.to_owned())))
     }
 }
 
@@ -143,10 +143,11 @@ impl approx::RelativeEq for Percent {
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::eyre::{Report, eyre};
     use rstest::rstest;
 
     use super::*;
+    use crate::units::UnitError;
     use crate::units::error::ParseError;
 
     mod new {
@@ -167,7 +168,7 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn gives_inner_value() -> Result<()> {
+        fn gives_inner_value() -> Result<(), Report> {
             let p = Percent::new(0.40).ok_or_else(|| eyre!("0.40 is a valid percent"))?;
             assert_relative_eq!(f64::from(p), 0.40);
             Ok(())
@@ -178,10 +179,12 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn gives_dimensionless_ratio() -> Result<()> {
+        fn gives_dimensionless_ratio() -> Result<(), Report> {
             let a = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?;
             let b = Percent::new(0.68).ok_or_else(|| eyre!("0.68 is a valid percent"))?;
+
             assert_relative_eq!(a / b, 0.32 / 0.68);
+
             Ok(())
         }
     }
@@ -193,9 +196,11 @@ mod tests {
         #[case(0.32, "32%")]
         #[case(0.999, "99.9%")]
         #[case(1.0, "100%")]
-        fn formats_correctly(#[case] val: f64, #[case] expected: &str) -> Result<()> {
+        fn formats_correctly(#[case] val: f64, #[case] expected: &str) -> Result<(), Report> {
             let p = Percent::new(val).ok_or_else(|| eyre!("{val} is a valid percent"))?;
+
             assert_eq!(p.to_string(), expected);
+
             Ok(())
         }
     }
@@ -204,17 +209,19 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn roundtrip() -> Result<()> {
+        fn roundtrip() -> Result<(), Report> {
             let v = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?;
+
             assert_eq!(v.to_string().parse::<Percent>()?, v);
+
             Ok(())
         }
 
         #[rstest]
-        #[case("invalid", ParseError::Percent("invalid".to_owned()))]
-        #[case("abc%",    ParseError::Percent("abc".to_owned()))]
-        #[case("101%",    ParseError::Percent("101%".to_owned()))]
-        fn error_carries_offending_input(#[case] input: &str, #[case] expected: ParseError) {
+        #[case("101%",    UnitError::Parse(ParseError::Percent("101%".to_owned())))]
+        #[case("abc%",    UnitError::Parse(ParseError::Percent("abc".to_owned())))]
+        #[case("invalid", UnitError::Parse(ParseError::Percent("invalid".to_owned())))]
+        fn error_carries_offending_input(#[case] input: &str, #[case] expected: UnitError) {
             assert_eq!(input.parse::<Percent>(), Err(expected));
         }
     }

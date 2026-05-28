@@ -8,6 +8,24 @@
 //! assert!("32%".parse::<Percent>().is_ok());
 //! ```
 
+/// Module-level parse error for unit types.
+///
+/// Wraps the lower-level [`ParseError`] variants behind a stable boundary.
+///
+/// # Examples
+///
+/// ```
+/// use dps::units::{Bar, UnitError};
+///
+/// assert!(matches!("bad".parse::<Bar>(), Err(UnitError::Parse(_))));
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum Error {
+    /// Wraps a specific unit-parse failure.
+    #[error(transparent)]
+    Parse(#[from] ParseError),
+}
+
 /// Error returned when a string cannot be parsed as a unit value.
 ///
 /// Each variant corresponds to one unit type and carries the specific
@@ -16,13 +34,12 @@
 /// # Examples
 ///
 /// ```
-/// use dps::units::{Bar, Celsius, Meters, Percent};
-/// use dps::units::error::ParseError;
+/// use dps::units::{Bar, Celsius, Meters, Percent, UnitError};
 ///
-/// assert!(matches!("nope".parse::<Bar>(), Err(ParseError::Bar(_))));
-/// assert!(matches!("nope".parse::<Celsius>(), Err(ParseError::Celsius(_))));
-/// assert!(matches!("nope".parse::<Meters>(), Err(ParseError::Meters(_))));
-/// assert!(matches!("nope".parse::<Percent>(), Err(ParseError::Percent(_))));
+/// assert!(matches!("nope".parse::<Bar>(), Err(UnitError::Parse(_))));
+/// assert!(matches!("nope".parse::<Celsius>(), Err(UnitError::Parse(_))));
+/// assert!(matches!("nope".parse::<Meters>(), Err(UnitError::Parse(_))));
+/// assert!(matches!("nope".parse::<Percent>(), Err(UnitError::Parse(_))));
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ParseError {

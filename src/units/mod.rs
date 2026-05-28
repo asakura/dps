@@ -3,7 +3,7 @@
 mod bar;
 mod celsius;
 mod cns_rate_per_minute;
-pub mod error;
+mod error;
 mod grams_per_litre;
 mod meters;
 mod meters_per_bar;
@@ -14,7 +14,7 @@ mod percent;
 pub use bar::Bar;
 pub use celsius::Celsius;
 pub use cns_rate_per_minute::CnsRatePerMinute;
-pub use error::ParseError;
+pub use error::Error as UnitError;
 pub use grams_per_litre::GramsPerLitre;
 pub use meters::Meters;
 pub use meters_per_bar::MetersPerBar;
@@ -79,15 +79,21 @@ macro_rules! unit_newtype {
         }
 
         impl ::std::str::FromStr for $ty {
-            type Err = $crate::units::error::ParseError;
+            type Err = $crate::units::UnitError;
 
             fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
                 let num_str = s
                     .strip_suffix(::std::concat!(" ", $suffix))
-                    .ok_or_else(|| $crate::units::error::ParseError::$ty(s.to_owned()))?;
-                let val: f64 = num_str
-                    .parse()
-                    .map_err(|_| $crate::units::error::ParseError::$ty(num_str.to_owned()))?;
+                    .ok_or_else(|| {
+                        $crate::units::UnitError::Parse($crate::units::error::ParseError::$ty(
+                            s.to_owned(),
+                        ))
+                    })?;
+                let val: f64 = num_str.parse().map_err(|_| {
+                    $crate::units::UnitError::Parse($crate::units::error::ParseError::$ty(
+                        num_str.to_owned(),
+                    ))
+                })?;
                 ::std::result::Result::Ok(Self(val))
             }
         }
@@ -289,9 +295,11 @@ macro_rules! unit_newtype {
                 use super::*;
 
                 #[rstest]
-                fn roundtrip() -> ::color_eyre::eyre::Result<()> {
+                fn roundtrip() -> Result<(), $crate::units::UnitError> {
                     let v = $ty::new(1.5);
+
                     assert_eq!(v.to_string().parse::<$ty>()?, v);
+
                     ::std::result::Result::Ok(())
                 }
 
@@ -301,16 +309,21 @@ macro_rules! unit_newtype {
                 fn missing_suffix_reports_full_input(#[case] input: &str, #[case] expected: &str) {
                     assert_eq!(
                         input.parse::<$ty>(),
-                        Err($crate::units::error::ParseError::$ty(expected.to_owned())),
+                        Err($crate::units::UnitError::Parse(
+                            $crate::units::error::ParseError::$ty(expected.to_owned())
+                        )),
                     );
                 }
 
                 #[rstest]
                 fn non_numeric_reports_numeric_part() {
                     let input = ::std::concat!("abc ", $suffix);
+
                     assert_eq!(
                         input.parse::<$ty>(),
-                        Err($crate::units::error::ParseError::$ty("abc".to_owned())),
+                        Err($crate::units::UnitError::Parse(
+                            $crate::units::error::ParseError::$ty("abc".to_owned())
+                        )),
                     );
                 }
             }
