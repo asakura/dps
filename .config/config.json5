@@ -204,6 +204,15 @@
       // select
       "<CR>": "Select",
 
+      // quit / suspend / redraw
+      q:      "Quit",
+      "<Esc>": "Quit",
+      "<C-z>": "Suspend",
+      "<C-l>": "ClearScreen",
+
+      // help
+      "?": "Help",
+
       // movement
       j: "Move(Down)",
       k: "Move(Up)",
@@ -229,7 +238,126 @@
       "<S-g>": "Move(GotoBottom)",
       "<Home>": "Move(GotoTop)",
       "<End>": "Move(GotoBottom)",
+
+      // ── planned bindings (actions not yet implemented) ──────────────────
+
+      // count prefixes (repetitions) — engine feature, not a config entry
+      //
+      //   SequenceEngine must strip a leading digit run before resolving the
+      //   chord and carry the count into ChordResult::Exact, e.g.:
+      //     5j  →  Move(Down)  × 5
+      //     3dd →  Delete      × 3
+      //     9k  →  Move(Up)    × 9
+      //   The action payload stays unchanged; the repeat multiplier travels
+      //   alongside it and is applied by the dispatch layer.
+      //   Note: "0" alone must still resolve to its own binding (e.g. GotoTop),
+      //   not as a count — the parser must disambiguate a bare "0" from a
+      //   leading-zero prefix.
+
+      // registers — engine feature, not a config entry
+      //
+      //   '"' enters a register-select state inside SequenceEngine; the next
+      //   key names the register.  The register label is then attached to the
+      //   following yank / paste / delete action, e.g.:
+      //     "ayy  →  YankRow(register: 'a')
+      //     "ap   →  Paste(register: 'a')
+      //     "+yy  →  YankRow(register: '+')   // system clipboard
+      //     "*p   →  Paste(register: '*')     // primary selection (X11)
+      //     "_dd  →  Delete(register: '_')    // black-hole (discard)
+      //   Default (unnamed) register is '"'; yank register is '0'.
+      //   Relevant actions (YankRow, Paste, Delete, Change) each need an
+      //   optional register field added to their payload.
+
+      // tab switching
+      // "<Tab>":   "NextTab",
+      // "<S-Tab>": "PrevTab",
+      // gt:        "NextTab",
+      // gT:        "PrevTab",
+      // "1":       "GotoTab(1)",
+      // "2":       "GotoTab(2)",
+      // "3":       "GotoTab(3)",
+      // "4":       "GotoTab(4)",
+      // "5":       "GotoTab(5)",
+      // "6":       "GotoTab(6)",
+      // "7":       "GotoTab(7)",
+      // "8":       "GotoTab(8)",
+      // "9":       "GotoTab(9)",
+
+      // add / delete rows (dive segments, gas entries)
+      // o:  "AddBelow",
+      // O:  "AddAbove",
+      // a:  "Append",        // add at end of list (distinct from o which adds below cursor)
+      // dd: "Delete",
+      // cc: "ChangeRow",     // change whole row; complement to dd
+      // x:  "DeleteItem",
+
+      // insert / edit / change mode
+      // i:  "EnterInsert",   // <Esc> will need to become mode-aware (Normal→Quit, Insert→EnterNormal)
+      // c:  "Change",        // delete value + EnterInsert (distinct from i which preserves existing)
+
+      // undo / redo
+      // u:       "Undo",
+      // "<C-r>": "Redo",
+      // ".":     "RepeatLast",
+
+      // visual / multi-select
+      // v:  "EnterVisual",
+      // V:  "EnterVisualLine",
+
+      // yank / paste
+      // yy: "YankRow",
+      // p:  "Paste",
+      // P:  "PasteAbove",
+
+      // search / filter
+      // "/": "EnterSearch",
+      // n:   "NextMatch",
+      // N:   "PrevMatch",
+
+      // sort
+      // s:  "SortColumn",
+
+      // save
+      // "<C-s>": "Save",
+
+      // fine scroll (one line at a time)
+      // "<C-e>": "Move(ScrollDownLine)",
+      // "<C-y>": "Move(ScrollUpLine)",
+
+      // view
+      // zz: "CenterRow",
+      // r:  "Refresh",
+      // gd: "DrillDown",     // detail view for the selected row
+
+      // dive-domain
+      // b:       "BestMix",         // calls EANx::best_mix for the focused depth
+      // E:       "EditEnvironment", // toggle ocean / lake (affects ppO2 limits)
+      // "<C-a>": "Increment",       // nudge O₂%, depth, or ppO2 limit up
+      // "<C-x>": "Decrement",       // nudge O₂%, depth, or ppO2 limit down
     },
+
+    // ── planned mode sections ────────────────────────────────────────────────
+
+    // Insert: {
+    //   "<Esc>": "EnterNormal",  // return to Normal without quitting
+    //   "<CR>":  "Confirm",      // commit the edited value
+    //   "<C-c>": "EnterNormal",  // discard edit
+    // },
+
+    // Visual: {
+    //   "<Esc>": "EnterNormal",
+    //   "<CR>":  "Confirm",      // act on selection
+    //   v:       "EnterNormal",  // toggle back
+    //   y:       "YankRow",
+    //   d:       "Delete",
+    //   s:       "SortColumn",
+    // },
+
+    // Search: {
+    //   "<Esc>": "EnterNormal",
+    //   "<CR>":  "Confirm",      // jump to match
+    //   "<C-c>": "EnterNormal",
+    // },
 
     Confirm: {
       // confirm
