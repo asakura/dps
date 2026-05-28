@@ -24,6 +24,7 @@ pub mod gas;
 /// Key-handling primitives: modes, sequences, maps, and chord accumulation.
 pub mod keymap;
 pub mod logging;
+pub mod registers;
 pub mod theme;
 /// Terminal setup, event loop, and input event types.
 pub mod tui;
