@@ -21,6 +21,18 @@ pub enum Error {
     /// Component error (invalid state, …).
     #[error(transparent)]
     Component(#[from] crate::components::ComponentError),
+    /// Action parse error (unknown variant, malformed payload, …).
+    #[error(transparent)]
+    Action(#[from] crate::action::ActionError),
+    /// Unit parse error (bad suffix, non-numeric value, …).
+    #[error(transparent)]
+    Unit(#[from] crate::units::UnitError),
+    /// Key-sequence parse error (empty sequence, unknown key, …).
+    #[error(transparent)]
+    KeyMap(#[from] crate::keymap::KeyMapError),
+    /// Register-value parse error (unknown value string, …).
+    #[error(transparent)]
+    Register(#[from] crate::registers::RegisterError),
 }
 
 /// Installs the `color_eyre` panic and error hooks.
