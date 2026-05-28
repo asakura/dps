@@ -13,6 +13,7 @@ use ratatui::{
 use super::{ComponentNew, Result};
 
 use crate::action::Action;
+use crate::registers::RegisterStore;
 
 /// Overlay that displays the current tick rate and frame rate.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -73,7 +74,7 @@ impl FpsCounter {
 }
 
 impl ComponentNew for FpsCounter {
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    fn update(&mut self, action: Action, _registers: &mut RegisterStore) -> Result<Option<Action>> {
         match action {
             Action::Tick => self.app_tick(),
             Action::Render => self.render_tick(),

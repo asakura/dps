@@ -4,7 +4,7 @@ use ratatui::{prelude::*, widgets::Paragraph};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::{ComponentNew, Result};
-use crate::{action::Action, config::Config};
+use crate::{action::Action, config::Config, registers::RegisterStore};
 
 /// Main home screen.
 #[derive(Debug, Default)]
@@ -34,7 +34,7 @@ impl ComponentNew for Home {
         Ok(())
     }
 
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    fn update(&mut self, action: Action, _registers: &mut RegisterStore) -> Result<Option<Action>> {
         let _ = action;
 
         Ok(None)

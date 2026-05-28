@@ -14,8 +14,10 @@
 //!   (`"Move(Down)"`, `"Resize(80,24)"`, `"Error(oops)"`) — for use in key-binding
 //!   configuration files.
 
+mod edit;
 mod movement;
 
+pub use edit::EditOp;
 pub use movement::Movement;
 
 use std::fmt;
@@ -133,6 +135,13 @@ pub enum Action {
     /// [`ComponentNew::update`](crate::components::ComponentNew::update),
     /// which applies the movement to its table selection or scroll offset.
     Move(Movement),
+    /// An edit operation: yank, paste, paste-above, or delete.
+    ///
+    /// Forwarded to every component's
+    /// [`ComponentNew::update`](crate::components::ComponentNew::update),
+    /// which reads or writes the [`RegisterStore`](crate::registers::RegisterStore)
+    /// and mutates its table state accordingly.
+    Edit(EditOp),
     /// Confirm or activate the currently highlighted row.
     ///
     /// Typically mapped to Enter. Forwarded to every component's
@@ -193,7 +202,7 @@ impl Action {
     /// ```
     #[must_use]
     pub const fn accepts_count(&self) -> bool {
-        matches!(self, Self::Move(_))
+        matches!(self, Self::Move(_) | Self::Edit(_))
     }
 }
 
@@ -221,6 +230,7 @@ impl fmt::Display for Action {
             Self::Resize(w, h) => write!(f, "Resize({w},{h})"),
             Self::ClearScreen => f.write_str("ClearScreen"),
             Self::Move(mv) => write!(f, "Move({mv})"),
+            Self::Edit(op) => write!(f, "Edit({op})"),
             Self::Select => f.write_str("Select"),
             Self::Help => f.write_str("Help"),
             Self::Confirm => f.write_str("Confirm"),
@@ -290,6 +300,10 @@ impl FromStr for Action {
             return Movement::from_str(inner).map(Self::Move);
         }
 
+        if let Some(inner) = s.strip_prefix("Edit(").and_then(|s| s.strip_suffix(")")) {
+            return EditOp::from_str(inner).map(Self::Edit);
+        }
+
         if let Some(inner) = s.strip_prefix("Error(").and_then(|s| s.strip_suffix(")")) {
             return Ok(Self::Error(inner.to_owned()));
         }
@@ -347,6 +361,11 @@ mod tests {
         #[case(Action::Cancel, "Cancel")]
         #[case(Action::None, "None")]
         #[case(Action::Select, "Select")]
+        #[case(Action::Edit(EditOp::YankRow(None)), "Edit(YankRow)")]
+        #[case(Action::Edit(EditOp::YankRow(Some('a'))), "Edit(YankRow(a))")]
+        #[case(Action::Edit(EditOp::Paste(None)), "Edit(Paste)")]
+        #[case(Action::Edit(EditOp::PasteAbove(None)), "Edit(PasteAbove)")]
+        #[case(Action::Edit(EditOp::Delete(Some('_'))), "Edit(Delete(_))")]
         fn simple_variants_display(#[case] action: Action, #[case] expected: &str) {
             assert_eq!(action.to_string(), expected);
         }
@@ -399,6 +418,14 @@ mod tests {
         #[case("Move(Up)", Action::Move(Movement::Up))]
         #[case("Move(Down)", Action::Move(Movement::Down))]
         #[case("Move(GotoBottom)", Action::Move(Movement::GotoBottom))]
+        #[case("Edit(YankRow)", Action::Edit(EditOp::YankRow(None)))]
+        #[case("Edit(YankRow(a))", Action::Edit(EditOp::YankRow(Some('a'))))]
+        #[case("Edit(Paste)", Action::Edit(EditOp::Paste(None)))]
+        #[case("Edit(Paste(+))", Action::Edit(EditOp::Paste(Some('+'))))]
+        #[case("Edit(PasteAbove)", Action::Edit(EditOp::PasteAbove(None)))]
+        #[case("Edit(PasteAbove(+))", Action::Edit(EditOp::PasteAbove(Some('+'))))]
+        #[case("Edit(Delete)", Action::Edit(EditOp::Delete(None)))]
+        #[case("Edit(Delete(_))", Action::Edit(EditOp::Delete(Some('_'))))]
         fn known_variants_parse(#[case] input: &str, #[case] expected: Action) -> Result<()> {
             assert_eq!(Action::from_str(input)?, expected);
 
@@ -529,6 +556,34 @@ mod tests {
         }
 
         #[rstest]
+        #[case(Action::Edit(EditOp::YankRow(None)))]
+        #[case(Action::Edit(EditOp::YankRow(Some('a'))))]
+        #[case(Action::Edit(EditOp::Paste(None)))]
+        #[case(Action::Edit(EditOp::Paste(Some('+'))))]
+        #[case(Action::Edit(EditOp::PasteAbove(None)))]
+        #[case(Action::Edit(EditOp::Delete(None)))]
+        #[case(Action::Edit(EditOp::Delete(Some('_'))))]
+        fn edit_variants_roundtrip(#[case] action: Action) -> Result<()> {
+            assert_eq!(roundtrip(&action)?, action);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn edit_serializes_as_edit_parens_string() -> Result<()> {
+            assert_eq!(
+                serde_json::to_string(&Action::Edit(EditOp::YankRow(None)))?,
+                "\"Edit(YankRow)\""
+            );
+            assert_eq!(
+                serde_json::to_string(&Action::Edit(EditOp::YankRow(Some('a'))))?,
+                "\"Edit(YankRow(a))\""
+            );
+
+            Ok(())
+        }
+
+        #[rstest]
         fn unknown_variant_returns_error() {
             assert!(serde_json::from_str::<Action>("\"NotAnAction\"").is_err());
         }
@@ -552,6 +607,17 @@ mod tests {
         #[case(Movement::GotoBottom)]
         fn move_variants_accept_count(#[case] mv: Movement) {
             assert!(Action::Move(mv).accepts_count());
+        }
+
+        #[rstest]
+        #[case(Action::Edit(EditOp::YankRow(None)))]
+        #[case(Action::Edit(EditOp::YankRow(Some('a'))))]
+        #[case(Action::Edit(EditOp::Paste(None)))]
+        #[case(Action::Edit(EditOp::PasteAbove(None)))]
+        #[case(Action::Edit(EditOp::Delete(None)))]
+        #[case(Action::Edit(EditOp::Delete(Some('_'))))]
+        fn edit_variants_accept_count(#[case] action: Action) {
+            assert!(action.accepts_count());
         }
 
         #[rstest]

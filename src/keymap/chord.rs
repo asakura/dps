@@ -186,6 +186,8 @@ pub trait ChordEngine {
 pub struct SequenceEngine {
     buffer: Vec<KeyEvent>,
     count: u32,
+    pending_register: Option<char>,
+    awaiting_register: bool,
 }
 
 impl SequenceEngine {
@@ -210,11 +212,30 @@ impl SequenceEngine {
 
         c
     }
+
+    fn inject_register(&mut self, action: Action) -> Action {
+        let Some(reg) = self.pending_register.take() else {
+            return action;
+        };
+        match action {
+            Action::Edit(op) => Action::Edit(op.with_register(Some(reg))),
+            other => other,
+        }
+    }
 }
 
 impl ChordEngine for SequenceEngine {
     fn advance(&mut self, key: KeyEvent, bindings: &ModeMap) -> ChordResult {
         if self.buffer.is_empty() {
+            // Register-select: consume the char typed after `"`
+            if self.awaiting_register {
+                if let KeyCode::Char(c) = key.code {
+                    self.pending_register = Some(c);
+                }
+                self.awaiting_register = false;
+                return ChordResult::Prefix;
+            }
+
             match key.code {
                 KeyCode::Char(c @ '1'..='9') => {
                     let digit = (c as u32) - ('0' as u32);
@@ -227,6 +248,10 @@ impl ChordEngine for SequenceEngine {
 
                     return ChordResult::Prefix;
                 }
+                KeyCode::Char('"') => {
+                    self.awaiting_register = true;
+                    return ChordResult::Prefix;
+                }
                 _ => {}
             }
         }
@@ -236,8 +261,10 @@ impl ChordEngine for SequenceEngine {
         match self.match_buffer(bindings) {
             (Some(action), _) => {
                 self.buffer.clear();
+                let count = self.take_count();
+                let action = self.inject_register(action);
 
-                ChordResult::Exact(action, self.take_count())
+                ChordResult::Exact(action, count)
             }
             (None, true) => ChordResult::Prefix,
             (None, false) => {
@@ -250,17 +277,23 @@ impl ChordEngine for SequenceEngine {
                     match self.match_buffer(bindings) {
                         (Some(action), _) => {
                             self.buffer.clear();
+                            let count = self.take_count();
+                            let action = self.inject_register(action);
 
-                            return ChordResult::Exact(action, self.take_count());
+                            return ChordResult::Exact(action, count);
                         }
                         (None, true) => return ChordResult::Prefix,
                         (None, false) => {
                             self.buffer.clear();
                             self.count = 0;
+                            self.pending_register = None;
+                            self.awaiting_register = false;
                         }
                     }
                 } else {
                     self.count = 0;
+                    self.pending_register = None;
+                    self.awaiting_register = false;
                 }
 
                 ChordResult::NoMatch
@@ -617,6 +650,81 @@ mod tests {
             assert!(matches!(
                 engine.advance(press(KeyCode::Char('j')), gg_j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 3)
+            ));
+        }
+    }
+
+    mod register {
+        use super::*;
+        use crate::action::EditOp;
+
+        /// `dd → Edit(Delete)` binding used for register tests.
+        #[fixture]
+        #[once]
+        fn dd_bindings() -> ModeMap {
+            bindings(
+                [(
+                    [KeyCode::Char('d'), KeyCode::Char('d')].as_slice(),
+                    Action::Edit(EditOp::Delete(None)),
+                )]
+                .as_slice(),
+            )
+        }
+
+        #[rstest]
+        fn quote_then_char_then_action_injects_register(
+            mut engine: SequenceEngine,
+            dd_bindings: &ModeMap,
+        ) {
+            engine.advance(press(KeyCode::Char('"')), dd_bindings); // awaiting register
+            engine.advance(press(KeyCode::Char('a')), dd_bindings); // register = 'a'
+            engine.advance(press(KeyCode::Char('d')), dd_bindings); // prefix
+
+            assert!(matches!(
+                engine.advance(press(KeyCode::Char('d')), dd_bindings),
+                ChordResult::Exact(Action::Edit(EditOp::Delete(Some('a'))), 1)
+            ));
+        }
+
+        #[rstest]
+        fn count_then_quote_then_char_also_works(
+            mut engine: SequenceEngine,
+            dd_bindings: &ModeMap,
+        ) {
+            engine.advance(press(KeyCode::Char('3')), dd_bindings); // count = 3
+            engine.advance(press(KeyCode::Char('"')), dd_bindings); // awaiting register
+            engine.advance(press(KeyCode::Char('a')), dd_bindings); // register = 'a'
+            engine.advance(press(KeyCode::Char('d')), dd_bindings); // prefix
+
+            assert!(matches!(
+                engine.advance(press(KeyCode::Char('d')), dd_bindings),
+                ChordResult::Exact(Action::Edit(EditOp::Delete(Some('a'))), 3)
+            ));
+        }
+
+        #[rstest]
+        fn register_clears_after_no_match(mut engine: SequenceEngine, dd_bindings: &ModeMap) {
+            engine.advance(press(KeyCode::Char('"')), dd_bindings);
+            engine.advance(press(KeyCode::Char('a')), dd_bindings);
+            engine.advance(press(KeyCode::Char('x')), dd_bindings); // no binding → NoMatch
+
+            // Next dd must have no register.
+            engine.advance(press(KeyCode::Char('d')), dd_bindings);
+            assert!(matches!(
+                engine.advance(press(KeyCode::Char('d')), dd_bindings),
+                ChordResult::Exact(Action::Edit(EditOp::Delete(None)), 1)
+            ));
+        }
+
+        #[rstest]
+        fn non_edit_action_discards_register(mut engine: SequenceEngine, j_bindings: &ModeMap) {
+            engine.advance(press(KeyCode::Char('"')), j_bindings);
+            engine.advance(press(KeyCode::Char('a')), j_bindings);
+
+            // 'j' fires Move(Down) — register 'a' is silently discarded.
+            assert!(matches!(
+                engine.advance(press(KeyCode::Char('j')), j_bindings),
+                ChordResult::Exact(Action::Move(Movement::Down), 1)
             ));
         }
     }

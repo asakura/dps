@@ -13,6 +13,7 @@ use crate::{
     components::{ComponentNew, FpsCounter, Home},
     config::Config,
     keymap::{ChordEngine, ChordResult, Mode, ModeMap, SequenceEngine},
+    registers::RegisterStore,
     tui::{Event, Tui},
 };
 
@@ -65,6 +66,7 @@ pub struct App {
     chord: SequenceEngine,
     action_tx: mpsc::UnboundedSender<Action>,
     action_rx: mpsc::UnboundedReceiver<Action>,
+    registers: RegisterStore,
 }
 
 impl fmt::Debug for App {
@@ -129,6 +131,7 @@ impl App {
             chord: SequenceEngine::default(),
             action_tx,
             action_rx,
+            registers: RegisterStore::default(),
         })
     }
 
@@ -334,7 +337,7 @@ impl App {
             }
 
             for component in &mut self.components {
-                if let Some(action) = component.update(action.clone())? {
+                if let Some(action) = component.update(action.clone(), &mut self.registers)? {
                     self.action_tx.send(action)?;
                 }
             }
@@ -411,6 +414,7 @@ mod tests {
             chord: SequenceEngine::default(),
             action_tx,
             action_rx,
+            registers: RegisterStore::default(),
         }
     }
 
@@ -475,7 +479,11 @@ mod tests {
     }
 
     impl ComponentNew for UpdateSpy {
-        fn update(&mut self, action: Action) -> crate::components::Result<Option<Action>> {
+        fn update(
+            &mut self,
+            action: Action,
+            _registers: &mut RegisterStore,
+        ) -> crate::components::Result<Option<Action>> {
             if !self.fired && action == self.trigger {
                 self.fired = true;
                 return Ok(Some(self.response.clone()));

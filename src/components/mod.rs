@@ -8,7 +8,7 @@ use ratatui::{
 use ratatui::{buffer::Buffer, widgets::TableState};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::{action::Action, config::Config, tui::Event};
+use crate::{action::Action, config::Config, registers::RegisterStore, tui::Event};
 
 use crate::theme::Theme;
 
@@ -170,6 +170,7 @@ pub trait Component {
 /// use tokio::sync::mpsc::UnboundedSender;
 /// use dps::action::{Action, Movement};
 /// use dps::components::{ComponentNew, Result};
+/// use dps::registers::RegisterStore;
 /// use ratatui::{Frame, layout::Rect, widgets::Paragraph};
 ///
 /// struct Counter {
@@ -190,7 +191,7 @@ pub trait Component {
 ///         })
 ///     }
 ///
-///     fn update(&mut self, action: Action) -> Result<Option<Action>> {
+///     fn update(&mut self, action: Action, _registers: &mut RegisterStore) -> Result<Option<Action>> {
 ///         if matches!(action, Action::Select) {
 ///             self.count += 1;
 ///         }
@@ -483,6 +484,7 @@ pub trait ComponentNew: Send {
     /// ```no_run
     /// use dps::action::Action;
     /// use dps::components::{ComponentNew, Result};
+    /// use dps::registers::RegisterStore;
     /// use ratatui::{Frame, layout::Rect};
     ///
     /// struct Counter {
@@ -490,7 +492,7 @@ pub trait ComponentNew: Send {
     /// }
     ///
     /// impl ComponentNew for Counter {
-    ///     fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    ///     fn update(&mut self, action: Action, _registers: &mut RegisterStore) -> Result<Option<Action>> {
     ///         if matches!(action, Action::Select) {
     ///             self.count += 1;
     ///         }
@@ -500,8 +502,8 @@ pub trait ComponentNew: Send {
     ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> { Ok(()) }
     /// }
     /// ```
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        let _ = action; // to appease clippy
+    fn update(&mut self, action: Action, registers: &mut RegisterStore) -> Result<Option<Action>> {
+        let _ = (action, registers); // to appease clippy
         Ok(None)
     }
 
