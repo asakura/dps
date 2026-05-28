@@ -190,23 +190,39 @@ impl Action {
     /// Returns `true` if the dispatch layer should repeat this action when the
     /// user types a count prefix (e.g. `5j` → `Move(Down)` × 5).
     ///
-    /// Only cursor/scroll movements make sense to repeat. State transitions,
-    /// prompts, and system events always fire once regardless of count.
+    /// Repetition is only meaningful when each firing has a distinct
+    /// side-effect. [`Movement`] variants advance the cursor each time.
+    /// [`EditOp::Delete`] removes the focused row so the cursor naturally
+    /// lands on the next row. [`EditOp::Paste`] and [`EditOp::PasteAbove`]
+    /// insert a new row each time, so `3p` inserts three copies.
+    ///
+    /// [`EditOp::YankRow`] does **not** accept a count: yanking does not move
+    /// the cursor, so repeating it N times merely overwrites the same register
+    /// slot with the same value N times — a no-op beyond the first. See the
+    /// `registers` module documentation for the planned `YankRows` action that
+    /// will handle count > 1 with proper multi-value semantics.
     ///
     /// # Examples
     ///
     /// ```
-    /// use dps::action::{Action, Movement};
+    /// use dps::action::{Action, EditOp, Movement};
     ///
     /// assert!(Action::Move(Movement::Down).accepts_count());
-    /// assert!(Action::Move(Movement::GotoTop).accepts_count());
+    /// assert!(Action::Edit(EditOp::Delete(None)).accepts_count());
+    /// assert!(!Action::Edit(EditOp::YankRow(None)).accepts_count());
     /// assert!(!Action::Quit.accepts_count());
     /// assert!(!Action::Help.accepts_count());
     /// assert!(!Action::Confirm.accepts_count());
     /// ```
     #[must_use]
     pub const fn accepts_count(&self) -> bool {
-        matches!(self, Self::Move(_) | Self::Edit(_))
+        match self {
+            Self::Move(_) => true,
+            Self::Edit(op) => {
+                matches!(op, EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_))
+            }
+            _ => false,
+        }
     }
 }
 
@@ -617,8 +633,6 @@ mod tests {
         }
 
         #[rstest]
-        #[case(Action::Edit(EditOp::YankRow(None)))]
-        #[case(Action::Edit(EditOp::YankRow(Some('a'))))]
         #[case(Action::Edit(EditOp::Paste(None)))]
         #[case(Action::Edit(EditOp::PasteAbove(None)))]
         #[case(Action::Edit(EditOp::Delete(None)))]
@@ -639,6 +653,8 @@ mod tests {
         #[case(Action::Cancel)]
         #[case(Action::Help)]
         #[case(Action::None)]
+        #[case(Action::Edit(EditOp::YankRow(None)))]
+        #[case(Action::Edit(EditOp::YankRow(Some('a'))))]
         fn non_movement_actions_reject_count(#[case] action: Action) {
             assert!(!action.accepts_count());
         }

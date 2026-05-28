@@ -6,12 +6,50 @@
 //! | Register | Behaviour |
 //! |---|---|
 //! | `'"'` | Unnamed — always receives the most recent yank or delete |
-//! | `'0'` | Yank register — most recent yank only |
+//! | `'0'` | Yank register — head of the internal yank ring (most recent yank) |
 //! | `'1'`–`'9'` | Delete history stack (oldest entry falls off `'9'`) |
 //! | `'a'`–`'z'` | Named registers (persist until overwritten) |
 //! | `'A'`–`'Z'` | Append to lowercase partner (last-write wins for typed values) |
 //! | `'_'` | Black hole — writes discarded, reads always `None` |
 //! | `'+'` / `'*'` | OS clipboard registers via [`arboard`] |
+//!
+//! ## Yank ring
+//!
+//! [`RegisterStore`] maintains an internal [`VecDeque`](std::collections::VecDeque)
+//! yank ring (capacity 9). Every [`push_yank`](RegisterStore::push_yank) call
+//! prepends to the ring; `'0'` always reads from the head. Older entries are
+//! preserved in insertion order but are not yet addressable via a register
+//! character — they exist to support a future paste-cycling operation.
+//!
+//! ## Future work: multi-value yank sequences (Design C)
+//!
+//! A possible future extension would add batch-yank support so that a count
+//! prefix like `3yy` collects N consecutive rows into a single register value
+//! rather than repeating a single-row yank N times (which is a no-op beyond
+//! the first because the cursor does not advance).
+//!
+//! The design requires three coordinated changes:
+//!
+//! 1. **`RegisterValue::Sequence(Box<[RegisterValue]>)`** — a new variant
+//!    holding an ordered slice of values. This drops `RegisterValue: Copy`
+//!    (since `Box<[_]>` is not `Copy`), requiring all `self.slots.insert` /
+//!    `.copied()` call sites in [`RegisterStore`] to switch to `clone()`.
+//!
+//! 2. **`EditOp::YankRows { reg: Option<char>, count: usize }`** — a separate
+//!    action variant that carries the count directly. The current dispatch
+//!    architecture implements count by repeating an action N times, which only
+//!    works when each repetition has a distinct side-effect (e.g. `Delete`
+//!    removes the focused row so the cursor naturally advances). `YankRow` has
+//!    no cursor side-effect, so dispatch repetition is useless; the count must
+//!    reach the component as data. `YankRows` opts out of `accepts_count` and
+//!    is emitted by the [`SequenceEngine`](crate::keymap::SequenceEngine) when
+//!    count > 1 for a yank binding.
+//!
+//! 3. **Paste semantics for `Sequence`** — a component receiving
+//!    `Edit(Paste(_))` where the register holds a `Sequence` would insert each
+//!    element as a new row. Paste semantics are currently undefined
+//!    (`EditOp::Paste` has a TODO); `Sequence` paste should be designed
+//!    alongside single-value paste to keep the two paths consistent.
 //!
 //! # Examples
 //!

@@ -1,6 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use super::RegisterValue;
+
+/// Maximum number of entries retained in the yank ring.
+const YANK_RING_CAP: usize = 9;
 
 /// Vim-style named register store.
 ///
@@ -25,9 +28,19 @@ use super::RegisterValue;
 /// irrelevant here: the store is accessed a handful of times per user
 /// keystroke, far below any throughput threshold where the difference would
 /// be measurable.
+///
+/// ## Yank ring
+///
+/// Each call to [`push_yank`](RegisterStore::push_yank) prepends to an internal
+/// `VecDeque` capped at [`YANK_RING_CAP`] entries. Reading register `'0'`
+/// always returns the head of the ring — the most recent yank — so the
+/// observable behaviour of `'0'` is unchanged from a flat-slot model. The
+/// ring preserves older yanks in insertion order, ready for a future
+/// paste-cycling operation.
 #[derive(Debug, Default)]
 pub struct RegisterStore {
     slots: HashMap<char, RegisterValue>,
+    yank_ring: VecDeque<RegisterValue>,
 }
 
 impl RegisterStore {
@@ -86,8 +99,10 @@ impl RegisterStore {
 
     /// Records a yank operation.
     ///
-    /// Writes to `reg` (defaulting to the unnamed register `'"'` when `None`)
-    /// and to the yank register `'0'`.
+    /// Writes to `reg` (defaulting to the unnamed register `'"'` when `None`),
+    /// and prepends `value` to the internal yank ring. Register `'0'` always
+    /// reads as the ring head (most recent yank); older entries are retained up
+    /// to [`YANK_RING_CAP`] for future paste-cycling.
     ///
     /// # Examples
     ///
@@ -112,7 +127,8 @@ impl RegisterStore {
     pub fn push_yank(&mut self, reg: Option<char>, value: RegisterValue) {
         let target = reg.unwrap_or('"');
         self.write(target, value);
-        let _ = self.slots.insert('0', value);
+        self.yank_ring.push_front(value);
+        self.yank_ring.truncate(YANK_RING_CAP);
     }
 
     /// Records a delete operation.
@@ -160,6 +176,8 @@ impl RegisterStore {
     ///
     /// - `'_'` (black hole): always `None`.
     /// - `'+'` / `'*'` (OS clipboard): reads from the OS clipboard.
+    /// - `'0'` (yank register): returns the head of the internal yank ring —
+    ///   the most recent value passed to [`push_yank`](RegisterStore::push_yank).
     /// - All other characters: reads from the in-memory slot.
     ///
     /// Returns `None` if the register has never been written to.
@@ -184,6 +202,7 @@ impl RegisterStore {
         match reg {
             '_' => None,
             '+' | '*' => Self::read_os(),
+            '0' => self.yank_ring.front().copied(),
             _ => self.slots.get(&reg).copied(),
         }
     }
@@ -269,6 +288,7 @@ mod tests {
 
     mod push_yank {
         use super::*;
+        use super::super::YANK_RING_CAP;
 
         #[rstest]
         fn none_writes_to_unnamed_and_yank(ean32: Result<EANx, Report>) -> Result<(), Report> {
@@ -288,6 +308,37 @@ mod tests {
 
             assert!(store.read('a').is_some());
             assert!(store.read('0').is_some());
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn yank_zero_returns_most_recent(
+            ean32: Result<EANx, Report>,
+            ean36: Result<EANx, Report>,
+        ) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+            let v1 = RegisterValue::EANx(ean32?);
+            let v2 = RegisterValue::EANx(ean36?);
+
+            store.push_yank(None, v1);
+            store.push_yank(None, v2);
+
+            assert_eq!(store.read('0'), Some(v2));
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn ring_retains_history_up_to_cap(ean32: Result<EANx, Report>) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+            let v = RegisterValue::EANx(ean32?);
+
+            for _ in 0..=YANK_RING_CAP {
+                store.push_yank(None, v);
+            }
+
+            assert_eq!(store.yank_ring.len(), YANK_RING_CAP);
 
             Ok(())
         }
