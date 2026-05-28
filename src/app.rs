@@ -287,9 +287,10 @@ impl App {
         let bindings = self.config.keybindings.get(&self.mode).unwrap_or(&EMPTY);
 
         if let ChordResult::Exact(action, count) = self.chord.advance(key, bindings) {
-            info!("Got action: {action:?} ×{count}");
+            let repeat = if action.accepts_count() { count } else { 1 };
+            info!("Got action: {action:?} ×{repeat}");
 
-            for _ in 0..count {
+            for _ in 0..repeat {
                 self.action_tx.send(action.clone())?;
             }
         }

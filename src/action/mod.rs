@@ -173,6 +173,29 @@ pub enum Action {
     Error(String),
 }
 
+impl Action {
+    /// Returns `true` if the dispatch layer should repeat this action when the
+    /// user types a count prefix (e.g. `5j` → `Move(Down)` × 5).
+    ///
+    /// Only cursor/scroll movements make sense to repeat. State transitions,
+    /// prompts, and system events always fire once regardless of count.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::action::{Action, Movement};
+    ///
+    /// assert!(Action::Move(Movement::Down).accepts_count());
+    /// assert!(Action::Move(Movement::GotoTop).accepts_count());
+    /// assert!(!Action::Quit.accepts_count());
+    /// assert!(!Action::Help.accepts_count());
+    /// assert!(!Action::Confirm.accepts_count());
+    /// ```
+    pub fn accepts_count(&self) -> bool {
+        matches!(self, Self::Move(_))
+    }
+}
+
 /// Serialises `Action` as a flat string.
 ///
 /// Simple (unit) variants render as their name; data variants use
@@ -507,6 +530,53 @@ mod tests {
         #[rstest]
         fn unknown_variant_returns_error() {
             assert!(serde_json::from_str::<Action>("\"NotAnAction\"").is_err());
+        }
+    }
+
+    mod accepts_count {
+        use super::*;
+
+        #[rstest]
+        #[case(Movement::Down)]
+        #[case(Movement::Up)]
+        #[case(Movement::Left)]
+        #[case(Movement::Right)]
+        #[case(Movement::LineUp)]
+        #[case(Movement::LineDown)]
+        #[case(Movement::ScrollUp)]
+        #[case(Movement::ScrollDown)]
+        #[case(Movement::PageUp)]
+        #[case(Movement::PageDown)]
+        #[case(Movement::GotoTop)]
+        #[case(Movement::GotoBottom)]
+        fn move_variants_accept_count(#[case] mv: Movement) {
+            assert!(Action::Move(mv).accepts_count());
+        }
+
+        #[rstest]
+        #[case(Action::Quit)]
+        #[case(Action::Suspend)]
+        #[case(Action::Resume)]
+        #[case(Action::Tick)]
+        #[case(Action::Render)]
+        #[case(Action::ClearScreen)]
+        #[case(Action::Select)]
+        #[case(Action::Confirm)]
+        #[case(Action::Cancel)]
+        #[case(Action::Help)]
+        #[case(Action::None)]
+        fn non_movement_actions_reject_count(#[case] action: Action) {
+            assert!(!action.accepts_count());
+        }
+
+        #[rstest]
+        fn resize_rejects_count() {
+            assert!(!Action::Resize(80, 24).accepts_count());
+        }
+
+        #[rstest]
+        fn error_rejects_count() {
+            assert!(!Action::Error("oops".to_owned()).accepts_count());
         }
     }
 }
