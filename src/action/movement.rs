@@ -1,7 +1,10 @@
 use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use strum::{Display, EnumString, VariantNames};
+use strum::{Display, VariantNames};
+
+use super::ActionError;
+use super::error::ParseError;
 
 /// Directional and positional navigation commands.
 ///
@@ -31,7 +34,7 @@ use strum::{Display, EnumString, VariantNames};
 /// assert_eq!(Movement::Down.to_string(), "Down");
 /// assert_eq!(Movement::from_str("GotoTop").unwrap(), Movement::GotoTop);
 /// ```
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Display, EnumString, VariantNames)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Display, VariantNames)]
 pub enum Movement {
     /// Move the cursor or selection up by one row.
     Up,
@@ -81,10 +84,47 @@ impl<'de> Deserialize<'de> for Movement {
     }
 }
 
+/// Parses a [`Movement`] from its display name.
+///
+/// # Errors
+///
+/// Returns [`ActionError`] if the string does not match any known variant name.
+///
+/// # Examples
+///
+/// ```
+/// use std::str::FromStr;
+/// use dps::action::{Movement, ActionError};
+///
+/// assert_eq!(Movement::from_str("Down").unwrap(), Movement::Down);
+/// assert!(matches!(Movement::from_str("Unknown"), Err(ActionError::Parse(_))));
+/// ```
+impl FromStr for Movement {
+    type Err = ActionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Up" => Ok(Self::Up),
+            "Down" => Ok(Self::Down),
+            "Left" => Ok(Self::Left),
+            "Right" => Ok(Self::Right),
+            "LineUp" => Ok(Self::LineUp),
+            "LineDown" => Ok(Self::LineDown),
+            "ScrollUp" => Ok(Self::ScrollUp),
+            "ScrollDown" => Ok(Self::ScrollDown),
+            "PageUp" => Ok(Self::PageUp),
+            "PageDown" => Ok(Self::PageDown),
+            "GotoTop" => Ok(Self::GotoTop),
+            "GotoBottom" => Ok(Self::GotoBottom),
+            "None" => Ok(Self::None),
+            _ => Err(ParseError::VariantNotFound.into()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use color_eyre::Result;
     use rstest::rstest;
     use std::str::FromStr;
 
@@ -127,7 +167,10 @@ mod tests {
         #[case("GotoTop", Movement::GotoTop)]
         #[case("GotoBottom", Movement::GotoBottom)]
         #[case("None", Movement::None)]
-        fn known_variants_parse(#[case] input: &str, #[case] expected: Movement) -> Result<()> {
+        fn known_variants_parse(
+            #[case] input: &str,
+            #[case] expected: Movement,
+        ) -> Result<(), ActionError> {
             assert_eq!(Movement::from_str(input)?, expected);
 
             Ok(())
@@ -144,7 +187,7 @@ mod tests {
     mod serde_roundtrip {
         use super::*;
 
-        fn roundtrip(mv: Movement) -> Result<Movement> {
+        fn roundtrip(mv: Movement) -> Result<Movement, serde_json::Error> {
             let json = serde_json::to_string(&mv)?;
 
             Ok(serde_json::from_str(&json)?)
@@ -164,14 +207,14 @@ mod tests {
         #[case(Movement::GotoTop)]
         #[case(Movement::GotoBottom)]
         #[case(Movement::None)]
-        fn all_variants_roundtrip(#[case] mv: Movement) -> Result<()> {
+        fn all_variants_roundtrip(#[case] mv: Movement) -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(mv)?, mv);
 
             Ok(())
         }
 
         #[rstest]
-        fn serializes_as_variant_name() -> Result<()> {
+        fn serializes_as_variant_name() -> Result<(), serde_json::Error> {
             assert_eq!(serde_json::to_string(&Movement::Down)?, "\"Down\"");
 
             Ok(())

@@ -15,16 +15,20 @@
 //!   configuration files.
 
 mod edit;
+mod error;
 mod movement;
 
 pub use edit::EditOp;
+pub use error::Error as ActionError;
 pub use movement::Movement;
 
 use std::fmt;
 use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use strum::{ParseError, VariantNames};
+use strum::VariantNames;
+
+use error::ParseError;
 
 /// The unified message type flowing through the application event loop.
 ///
@@ -249,9 +253,8 @@ impl fmt::Display for Action {
 ///
 /// # Errors
 ///
-/// Returns [`ParseError::VariantNotFound`] if the string does not match any
-/// known variant name or if a `Resize` payload cannot be parsed as two `u16`
-/// values.
+/// Returns [`ActionError`] if the string does not match any known variant name
+/// or if a `Resize` payload cannot be parsed as two `u16` values.
 ///
 /// # Examples
 ///
@@ -282,7 +285,7 @@ impl fmt::Display for Action {
 /// assert!(Action::from_str("Resize(abc,40)").is_err());
 /// ```
 impl FromStr for Action {
-    type Err = ParseError;
+    type Err = ActionError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         if let Some(inner) = s.strip_prefix("Resize(").and_then(|s| s.strip_suffix(")")) {
@@ -292,7 +295,7 @@ impl FromStr for Action {
 
             return match (w, h) {
                 (Some(w), Some(h)) => Ok(Self::Resize(w, h)),
-                _ => Err(ParseError::VariantNotFound),
+                _ => Err(ParseError::VariantNotFound.into()),
             };
         }
 
@@ -320,7 +323,7 @@ impl FromStr for Action {
             "Confirm" => Ok(Self::Confirm),
             "Cancel" => Ok(Self::Cancel),
             "None" => Ok(Self::None),
-            _ => Err(ParseError::VariantNotFound),
+            _ => Err(ParseError::VariantNotFound.into()),
         }
     }
 }
@@ -342,7 +345,6 @@ impl<'de> Deserialize<'de> for Action {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use color_eyre::Result;
     use rstest::rstest;
     use std::str::FromStr;
 
@@ -426,21 +428,24 @@ mod tests {
         #[case("Edit(PasteAbove(+))", Action::Edit(EditOp::PasteAbove(Some('+'))))]
         #[case("Edit(Delete)", Action::Edit(EditOp::Delete(None)))]
         #[case("Edit(Delete(_))", Action::Edit(EditOp::Delete(Some('_'))))]
-        fn known_variants_parse(#[case] input: &str, #[case] expected: Action) -> Result<()> {
+        fn known_variants_parse(
+            #[case] input: &str,
+            #[case] expected: Action,
+        ) -> Result<(), ActionError> {
             assert_eq!(Action::from_str(input)?, expected);
 
             Ok(())
         }
 
         #[rstest]
-        fn resize_parses_width_and_height() -> Result<()> {
+        fn resize_parses_width_and_height() -> Result<(), ActionError> {
             assert_eq!(Action::from_str("Resize(80,24)")?, Action::Resize(80, 24));
 
             Ok(())
         }
 
         #[rstest]
-        fn error_parses_message() -> Result<()> {
+        fn error_parses_message() -> Result<(), ActionError> {
             assert_eq!(
                 Action::from_str("Error(oops)")?,
                 Action::Error("oops".to_owned())
@@ -456,7 +461,7 @@ mod tests {
         fn error_with_parens_in_payload_parses(
             #[case] input: &str,
             #[case] expected: Action,
-        ) -> Result<()> {
+        ) -> Result<(), ActionError> {
             assert_eq!(Action::from_str(input)?, expected);
 
             Ok(())
@@ -475,7 +480,7 @@ mod tests {
     mod serde_roundtrip {
         use super::*;
 
-        fn roundtrip(action: &Action) -> Result<Action> {
+        fn roundtrip(action: &Action) -> Result<Action, serde_json::Error> {
             let json = serde_json::to_string(action)?;
 
             Ok(serde_json::from_str(&json)?)
@@ -493,21 +498,21 @@ mod tests {
         #[case(Action::Cancel)]
         #[case(Action::None)]
         #[case(Action::Select)]
-        fn simple_actions_roundtrip(#[case] action: Action) -> Result<()> {
+        fn simple_actions_roundtrip(#[case] action: Action) -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(&action)?, action);
 
             Ok(())
         }
 
         #[rstest]
-        fn resize_roundtrips() -> Result<()> {
+        fn resize_roundtrips() -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(&Action::Resize(80, 24))?, Action::Resize(80, 24));
 
             Ok(())
         }
 
         #[rstest]
-        fn error_roundtrips() -> Result<()> {
+        fn error_roundtrips() -> Result<(), serde_json::Error> {
             let action = Action::Error("oops".to_owned());
             assert_eq!(roundtrip(&action)?, action);
 
@@ -518,7 +523,9 @@ mod tests {
         #[case(")")]
         #[case("(")]
         #[case("(nested)")]
-        fn error_with_parens_in_message_roundtrips(#[case] msg: &str) -> Result<()> {
+        fn error_with_parens_in_message_roundtrips(
+            #[case] msg: &str,
+        ) -> Result<(), serde_json::Error> {
             let action = Action::Error(msg.to_owned());
             assert_eq!(roundtrip(&action)?, action);
 
@@ -538,7 +545,7 @@ mod tests {
         #[case(Movement::PageDown)]
         #[case(Movement::GotoTop)]
         #[case(Movement::GotoBottom)]
-        fn movement_roundtrips(#[case] mv: Movement) -> Result<()> {
+        fn movement_roundtrips(#[case] mv: Movement) -> Result<(), serde_json::Error> {
             let action = Action::Move(mv);
             assert_eq!(roundtrip(&action)?, action);
 
@@ -546,7 +553,7 @@ mod tests {
         }
 
         #[rstest]
-        fn movement_serializes_as_move_parens_string() -> Result<()> {
+        fn movement_serializes_as_move_parens_string() -> Result<(), serde_json::Error> {
             assert_eq!(
                 serde_json::to_string(&Action::Move(Movement::Down))?,
                 "\"Move(Down)\""
@@ -563,14 +570,14 @@ mod tests {
         #[case(Action::Edit(EditOp::PasteAbove(None)))]
         #[case(Action::Edit(EditOp::Delete(None)))]
         #[case(Action::Edit(EditOp::Delete(Some('_'))))]
-        fn edit_variants_roundtrip(#[case] action: Action) -> Result<()> {
+        fn edit_variants_roundtrip(#[case] action: Action) -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(&action)?, action);
 
             Ok(())
         }
 
         #[rstest]
-        fn edit_serializes_as_edit_parens_string() -> Result<()> {
+        fn edit_serializes_as_edit_parens_string() -> Result<(), serde_json::Error> {
             assert_eq!(
                 serde_json::to_string(&Action::Edit(EditOp::YankRow(None)))?,
                 "\"Edit(YankRow)\""

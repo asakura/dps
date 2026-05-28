@@ -3,7 +3,8 @@
 use std::fmt;
 use std::str::FromStr;
 
-use strum::ParseError;
+use super::ActionError;
+use super::error::ParseError;
 
 /// Edit operations produced by yank, paste, and delete key bindings.
 ///
@@ -121,8 +122,7 @@ impl fmt::Display for EditOp {
 ///
 /// # Errors
 ///
-/// Returns [`ParseError::VariantNotFound`] if the string does not match any
-/// known variant name.
+/// Returns [`ActionError`] if the string does not match any known variant name.
 ///
 /// # Examples
 ///
@@ -136,7 +136,7 @@ impl fmt::Display for EditOp {
 /// assert!(EditOp::from_str("Unknown").is_err());
 /// ```
 impl FromStr for EditOp {
-    type Err = ParseError;
+    type Err = ActionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (name, reg) = split_name_reg(s);
@@ -145,7 +145,7 @@ impl FromStr for EditOp {
             "Paste" => Ok(Self::Paste(reg)),
             "PasteAbove" => Ok(Self::PasteAbove(reg)),
             "Delete" => Ok(Self::Delete(reg)),
-            _ => Err(ParseError::VariantNotFound),
+            _ => Err(ParseError::VariantNotFound.into()),
         }
     }
 }
@@ -173,7 +173,6 @@ fn split_name_reg(s: &str) -> (&str, Option<char>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use color_eyre::Result;
     use rstest::rstest;
 
     mod display {
@@ -204,7 +203,10 @@ mod tests {
         #[case("PasteAbove", EditOp::PasteAbove(None))]
         #[case("Delete", EditOp::Delete(None))]
         #[case("Delete(_)", EditOp::Delete(Some('_')))]
-        fn parses_correctly(#[case] input: &str, #[case] expected: EditOp) -> Result<()> {
+        fn parses_correctly(
+            #[case] input: &str,
+            #[case] expected: EditOp,
+        ) -> Result<(), ActionError> {
             assert_eq!(EditOp::from_str(input)?, expected);
             Ok(())
         }
@@ -230,7 +232,7 @@ mod tests {
         #[case(EditOp::PasteAbove(Some('*')))]
         #[case(EditOp::Delete(None))]
         #[case(EditOp::Delete(Some('_')))]
-        fn display_then_from_str_is_identity(#[case] op: EditOp) -> Result<()> {
+        fn display_then_from_str_is_identity(#[case] op: EditOp) -> Result<(), ActionError> {
             assert_eq!(EditOp::from_str(&op.to_string())?, op);
             Ok(())
         }
