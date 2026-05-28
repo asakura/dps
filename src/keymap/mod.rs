@@ -76,11 +76,11 @@
 //! - `bindings` — [`crate::keymap::bindings::KeyBindings`], [`crate::keymap::bindings::KeyBindingsBuilder`]: mode-indexed registry; supports TOML/JSON deserialization.
 //! - `chord` — [`crate::keymap::chord::SequenceEngine`], [`crate::keymap::chord::ChordResult`]: stateful multi-key chord accumulator.
 //! - `keys` — [`crate::keymap::keys::parse_key_sequence`], [`crate::keymap::keys::key_event_to_string`]: Vim-notation ↔ [`crossterm::event::KeyEvent`] conversion.
-//! - `error` — [`crate::keymap::error::ParseError`]: errors produced by key-spec parsing.
+//! - `error` — [`crate::keymap::KeyMapError`]: errors produced by key-spec parsing.
 
 pub mod bindings;
 pub mod chord;
-pub mod error;
+mod error;
 pub mod keys;
 pub mod map;
 pub mod mode;
@@ -88,7 +88,7 @@ pub mod seq;
 
 pub use bindings::{KeyBindings, KeyBindingsBuilder};
 pub use chord::{ChordEngine, ChordResult, SequenceEngine};
-pub use error::ParseError;
+pub use error::Error as KeyMapError;
 pub use keys::{key_event_to_string, parse_key_sequence};
 pub use map::{ModeMap, ModeMapBuilder};
 pub use mode::Mode;

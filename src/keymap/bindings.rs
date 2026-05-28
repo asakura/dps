@@ -110,7 +110,7 @@ impl<'de> Deserialize<'de> for KeyBindingsBuilder {
 mod tests {
     use super::*;
     use crate::action::{Action, Movement};
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::eyre::{Report, eyre};
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use rstest::fixture;
     use rstest::rstest;
@@ -143,7 +143,9 @@ mod tests {
         }
 
         #[rstest]
-        fn binding_in_registered_mode_resolves(simple_bindings: &KeyBindings) -> Result<()> {
+        fn binding_in_registered_mode_resolves(
+            simple_bindings: &KeyBindings,
+        ) -> Result<(), Report> {
             let home = simple_bindings
                 .get(&Mode::Normal)
                 .ok_or_else(|| eyre!("no Normal mode in bindings"))?;
@@ -240,7 +242,7 @@ mod tests {
         }
 
         #[rstest]
-        fn bind_overwrites_in_same_mode(overwritten_binding: &KeyBindings) -> Result<()> {
+        fn bind_overwrites_in_same_mode(overwritten_binding: &KeyBindings) -> Result<(), Report> {
             assert_eq!(
                 overwritten_binding
                     .get(&Mode::Normal)
@@ -254,7 +256,9 @@ mod tests {
         }
 
         #[rstest]
-        fn bind_default_does_not_overwrite(default_not_overwritten: &KeyBindings) -> Result<()> {
+        fn bind_default_does_not_overwrite(
+            default_not_overwritten: &KeyBindings,
+        ) -> Result<(), Report> {
             assert_eq!(
                 default_not_overwritten
                     .get(&Mode::Normal)
@@ -292,7 +296,9 @@ mod tests {
         }
 
         #[rstest]
-        fn merge_defaults_fills_missing_bindings(merged_with_defaults: &KeyBindings) -> Result<()> {
+        fn merge_defaults_fills_missing_bindings(
+            merged_with_defaults: &KeyBindings,
+        ) -> Result<(), Report> {
             let home = merged_with_defaults
                 .get(&Mode::Normal)
                 .ok_or_else(|| eyre!("no Normal mode in bindings"))?;
@@ -309,7 +315,7 @@ mod tests {
         #[rstest]
         fn merge_defaults_does_not_overwrite_user_binding(
             user_overrides_merged: &KeyBindings,
-        ) -> Result<()> {
+        ) -> Result<(), Report> {
             assert_eq!(
                 user_overrides_merged
                     .get(&Mode::Normal)
@@ -324,10 +330,8 @@ mod tests {
 
     mod deserialize {
         use super::*;
-        use color_eyre::Result;
-
         #[rstest]
-        fn single_binding_deserializes() -> Result<()> {
+        fn single_binding_deserializes() -> Result<(), Report> {
             let json = r#"{ "Normal": { "j": "Move(Down)" } }"#;
             let mut builder: KeyBindingsBuilder = serde_json::from_str(json)?;
             let bindings = builder.build();
@@ -344,7 +348,7 @@ mod tests {
         }
 
         #[rstest]
-        fn multi_key_chord_deserializes() -> Result<()> {
+        fn multi_key_chord_deserializes() -> Result<(), Report> {
             let json = r#"{ "Normal": { "gg": "Move(GotoTop)" } }"#;
             let mut builder: KeyBindingsBuilder = serde_json::from_str(json)?;
             let bindings = builder.build();
@@ -366,7 +370,10 @@ mod tests {
             3
         )]
         #[case(r#"{ "Normal": {} }"#, 0)]
-        fn binding_count_matches(#[case] json: &str, #[case] expected: usize) -> Result<()> {
+        fn binding_count_matches(
+            #[case] json: &str,
+            #[case] expected: usize,
+        ) -> Result<(), Report> {
             let mut builder: KeyBindingsBuilder = serde_json::from_str(json)?;
             let bindings = builder.build();
             let count = bindings.get(&Mode::Normal).map_or(0, |m| m.iter().count());
@@ -389,7 +396,7 @@ mod tests {
         }
 
         #[rstest]
-        fn special_key_deserializes() -> Result<()> {
+        fn special_key_deserializes() -> Result<(), Report> {
             let json = r#"{ "Normal": { "<C-d>": "Move(ScrollDown)" } }"#;
             let bindings: KeyBindings = serde_json::from_str::<KeyBindingsBuilder>(json)?.build();
             let home = bindings

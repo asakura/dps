@@ -1,12 +1,9 @@
 //! Per-mode key-sequence-to-action map and its builder.
 
-use std::collections::HashMap;
-
-use crossterm::event::KeyEvent;
-
-use crate::action::Action;
-
 use super::seq::KeySeq;
+use crate::action::Action;
+use crossterm::event::KeyEvent;
+use std::collections::HashMap;
 
 /// Read-only key-sequence-to-action map for a single application [`Mode`](super::Mode).
 ///

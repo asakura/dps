@@ -2,6 +2,7 @@
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKeyCode};
 
+use super::KeyMapError;
 use super::error::ParseError;
 
 /// Parses a Vim-style key sequence into a [`Vec<KeyEvent>`].
@@ -54,9 +55,9 @@ use super::error::ParseError;
 /// assert!(parse_key_sequence("<C-d").is_err());
 /// assert!(parse_key_sequence("<nope>").is_err());
 /// ```
-pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, ParseError> {
+pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, KeyMapError> {
     if raw.is_empty() {
-        return Err(ParseError::EmptySequence);
+        return Err(ParseError::EmptySequence.into());
     }
 
     let mut keys = Vec::new();
@@ -77,7 +78,7 @@ pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, ParseError> {
             }
 
             if !closed {
-                return Err(ParseError::UnclosedAngleBracket(raw.to_owned()));
+                return Err(ParseError::UnclosedAngleBracket(raw.to_owned()).into());
             }
 
             keys.push(parse_key_event(&spec)?);
@@ -243,7 +244,7 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
 /// Parses the content of a `<…>` spec (without the angle brackets) into a
 /// [`KeyEvent`]. The input is lowercased before modifier extraction so that
 /// `<C-A>` and `<c-a>` are equivalent.
-fn parse_key_event(raw: &str) -> Result<KeyEvent, ParseError> {
+fn parse_key_event(raw: &str) -> Result<KeyEvent, KeyMapError> {
     let raw_lower = raw.to_ascii_lowercase();
     let (remaining, modifiers) = extract_modifiers(&raw_lower);
 
@@ -284,7 +285,7 @@ fn extract_modifiers(raw: &str) -> (&str, KeyModifiers) {
 fn parse_key_code_with_modifiers(
     raw: &str,
     mut modifiers: KeyModifiers,
-) -> Result<KeyEvent, ParseError> {
+) -> Result<KeyEvent, KeyMapError> {
     let c = match raw {
         "esc" | "escape" => KeyCode::Esc,
         "cr" | "enter" | "return" => KeyCode::Enter,
@@ -359,7 +360,7 @@ fn parse_key_code_with_modifiers(
 
             KeyCode::Char(c)
         }
-        _ => return Err(ParseError::UnknownKey(raw.to_owned())),
+        _ => return Err(ParseError::UnknownKey(raw.to_owned()).into()),
     };
 
     Ok(KeyEvent::new(c, modifiers))
@@ -368,7 +369,6 @@ fn parse_key_code_with_modifiers(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use color_eyre::Result;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use rstest::rstest;
 
@@ -379,7 +379,10 @@ mod tests {
         #[case("a", KeyCode::Char('a'))]
         #[case("enter", KeyCode::Enter)]
         #[case("esc", KeyCode::Esc)]
-        fn simple_chars_and_named_keys(#[case] key: &str, #[case] code: KeyCode) -> Result<()> {
+        fn simple_chars_and_named_keys(
+            #[case] key: &str,
+            #[case] code: KeyCode,
+        ) -> Result<(), KeyMapError> {
             assert_eq!(
                 parse_key_event(key)?,
                 KeyEvent::new(code, KeyModifiers::empty())
@@ -397,7 +400,7 @@ mod tests {
             #[case] key: &str,
             #[case] code: KeyCode,
             #[case] modifier: KeyModifiers,
-        ) -> Result<()> {
+        ) -> Result<(), KeyMapError> {
             assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifier));
 
             Ok(())
@@ -410,7 +413,7 @@ mod tests {
             #[case] key: &str,
             #[case] code: KeyCode,
             #[case] modifier: KeyModifiers,
-        ) -> Result<()> {
+        ) -> Result<(), KeyMapError> {
             assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifier));
 
             Ok(())
@@ -419,7 +422,7 @@ mod tests {
         #[rstest]
         #[case("f1", 1u8)]
         #[case("f12", 12u8)]
-        fn f_keys(#[case] key: &str, #[case] n: u8) -> Result<()> {
+        fn f_keys(#[case] key: &str, #[case] n: u8) -> Result<(), KeyMapError> {
             assert_eq!(
                 parse_key_event(key)?,
                 KeyEvent::new(KeyCode::F(n), KeyModifiers::NONE)
@@ -442,14 +445,14 @@ mod tests {
             #[case] key: &str,
             #[case] code: KeyCode,
             #[case] modifiers: KeyModifiers,
-        ) -> Result<()> {
+        ) -> Result<(), KeyMapError> {
             assert_eq!(parse_key_event(key)?, KeyEvent::new(code, modifiers));
 
             Ok(())
         }
 
         #[rstest]
-        fn backtab_inserts_shift() -> Result<()> {
+        fn backtab_inserts_shift() -> Result<(), KeyMapError> {
             assert_eq!(
                 parse_key_event("backtab")?,
                 KeyEvent::new(KeyCode::BackTab, KeyModifiers::SHIFT)
@@ -459,7 +462,7 @@ mod tests {
         }
 
         #[rstest]
-        fn shift_prefix_uppercases_char() -> Result<()> {
+        fn shift_prefix_uppercases_char() -> Result<(), KeyMapError> {
             assert_eq!(
                 parse_key_event("s-g")?,
                 KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT)
@@ -529,14 +532,17 @@ mod tests {
 
         #[rstest]
         fn empty_input_returns_empty_sequence_variant() {
-            assert_eq!(parse_key_sequence(""), Err(ParseError::EmptySequence));
+            assert_eq!(
+                parse_key_sequence(""),
+                Err(KeyMapError::Parse(ParseError::EmptySequence))
+            );
         }
 
         #[rstest]
         fn unclosed_bracket_returns_correct_variant() {
             assert!(matches!(
                 parse_key_sequence("<C-d"),
-                Err(ParseError::UnclosedAngleBracket(_))
+                Err(KeyMapError::Parse(ParseError::UnclosedAngleBracket(_)))
             ));
         }
 
@@ -544,7 +550,7 @@ mod tests {
         fn unknown_key_returns_correct_variant() {
             assert!(matches!(
                 parse_key_sequence("<nope>"),
-                Err(ParseError::UnknownKey(_))
+                Err(KeyMapError::Parse(ParseError::UnknownKey(_)))
             ));
         }
     }
@@ -561,7 +567,7 @@ mod tests {
         }
 
         #[rstest]
-        fn round_trip() -> Result<()> {
+        fn round_trip() -> Result<(), KeyMapError> {
             let seq = parse_key_sequence("<C-w>j")?;
 
             assert_eq!(seq.len(), 2);
@@ -572,7 +578,7 @@ mod tests {
         }
 
         #[rstest]
-        fn two_consecutive_angle_bracket_specs() -> Result<()> {
+        fn two_consecutive_angle_bracket_specs() -> Result<(), KeyMapError> {
             let seq = parse_key_sequence("<C-w><C-j>")?;
 
             assert_eq!(seq.len(), 2);
@@ -589,7 +595,7 @@ mod tests {
         }
 
         #[rstest]
-        fn space_key_parses_and_round_trips() -> Result<()> {
+        fn space_key_parses_and_round_trips() -> Result<(), KeyMapError> {
             let seq = parse_key_sequence("<Space>")?;
 
             assert_eq!(seq, [KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)]);
@@ -599,7 +605,7 @@ mod tests {
         }
 
         #[rstest]
-        fn bare_and_bracketed_mixed_sequence() -> Result<()> {
+        fn bare_and_bracketed_mixed_sequence() -> Result<(), KeyMapError> {
             let seq = parse_key_sequence("j<Down>")?;
 
             assert_eq!(seq.len(), 2);
@@ -613,7 +619,7 @@ mod tests {
         }
 
         #[rstest]
-        fn shift_char_round_trips() -> Result<()> {
+        fn shift_char_round_trips() -> Result<(), KeyMapError> {
             let upper = KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT);
             let s = key_event_to_string(&upper);
 
@@ -688,7 +694,7 @@ mod tests {
         fn named_special_key_parses_to_expected_code(
             #[case] name: &str,
             #[case] expected_code: KeyCode,
-        ) -> Result<()> {
+        ) -> Result<(), KeyMapError> {
             let key = format!("<{name}>");
             let events = parse_key_sequence(&key)?;
 
