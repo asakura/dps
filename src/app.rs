@@ -324,7 +324,6 @@ impl App {
             }
 
             match action {
-                Action::Tick => {}
                 Action::Quit => self.should_quit = true,
                 Action::Suspend => self.should_suspend = true,
                 Action::Resume => self.should_suspend = false,

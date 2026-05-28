@@ -146,13 +146,11 @@ impl PpO2Tab {
 
     fn handle_movement(&mut self, mv: Movement) {
         match mv {
-            Movement::Up => self.move_up(),
-            Movement::Down => self.move_down(),
+            // TODO: implement single-line scroll; for now falls back to one-row cursor move
+            Movement::Up | Movement::LineUp => self.move_up(),
+            Movement::Down | Movement::LineDown => self.move_down(),
             Movement::Left => self.move_left(),
             Movement::Right => self.move_right(),
-            // TODO: implement single-line scroll; for now falls back to one-row cursor move
-            Movement::LineUp => self.move_up(),
-            Movement::LineDown => self.move_down(),
             Movement::ScrollUp => self.scroll_up(),
             Movement::ScrollDown => self.scroll_down(),
             Movement::PageUp => self.page_up(),

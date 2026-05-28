@@ -191,7 +191,8 @@ impl Action {
     /// assert!(!Action::Help.accepts_count());
     /// assert!(!Action::Confirm.accepts_count());
     /// ```
-    pub fn accepts_count(&self) -> bool {
+    #[must_use]
+    pub const fn accepts_count(&self) -> bool {
         matches!(self, Self::Move(_))
     }
 }
