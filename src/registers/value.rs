@@ -83,6 +83,7 @@ impl FromStr for RegisterValue {
 
 #[cfg(test)]
 mod tests {
+    use color_eyre::{Result, eyre::eyre};
     use rstest::rstest;
 
     use super::RegisterValue;
@@ -93,13 +94,14 @@ mod tests {
     mod display {
         use super::*;
 
-        #[test]
-        fn eanx_uses_gas_name() {
-            let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+        #[rstest]
+        fn eanx_uses_gas_name() -> Result<()> {
+            let ean32 = EANx::try_from(Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?)?;
             assert_eq!(RegisterValue::EANx(ean32).to_string(), "EANx 32");
+            Ok(())
         }
 
-        #[test]
+        #[rstest]
         fn dive_environment_uses_preset_name() {
             assert_eq!(
                 RegisterValue::DiveEnvironment(DiveEnvironment::standard()).to_string(),
@@ -118,12 +120,13 @@ mod tests {
         #[case("Pure O₂")]
         #[case("standard")]
         #[case("freshwater")]
-        fn known_string_roundtrips(#[case] s: &str) {
-            let parsed: RegisterValue = s.parse().expect("valid input");
+        fn known_string_roundtrips(#[case] s: &str) -> std::result::Result<(), ()> {
+            let parsed: RegisterValue = s.parse()?;
             assert_eq!(parsed.to_string(), s);
+            Ok(())
         }
 
-        #[test]
+        #[rstest]
         fn unknown_string_returns_err() {
             assert!("nonsense".parse::<RegisterValue>().is_err());
         }
