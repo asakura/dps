@@ -5,7 +5,7 @@
 //! [`DiveEnvironment::ocean`](crate::environment::DiveEnvironment::ocean) to obtain a
 //! correctly configured environment.
 //!
-//! ```no_run
+//! ```
 //! use dps::environment::{DiveEnvironment, Ocean};
 //!
 //! // Red Sea (40 ‰) is saltier and denser than ISO standard seawater (35 ‰)
@@ -122,37 +122,46 @@ impl Ocean {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use rstest::rstest;
 
-    #[test]
-    fn red_sea_is_saltiest() {
-        assert_relative_eq!(Ocean::RedSea.salinity(), PartsPerThousand::new(40.0));
-        assert!(Ocean::RedSea.salinity() > Ocean::Atlantic.salinity());
+    mod salinity {
+        use super::*;
+
+        #[rstest]
+        fn red_sea_is_saltiest() {
+            assert_relative_eq!(Ocean::RedSea.salinity(), PartsPerThousand::new(40.0));
+            assert!(Ocean::RedSea.salinity() > Ocean::Atlantic.salinity());
+        }
+
+        #[rstest]
+        fn baltic_is_least_salty() {
+            assert_relative_eq!(Ocean::BalticSea.salinity(), PartsPerThousand::new(7.0));
+            assert!(Ocean::BalticSea.salinity() < Ocean::Mediterranean.salinity());
+        }
     }
 
-    #[test]
-    fn baltic_is_least_salty() {
-        assert_relative_eq!(Ocean::BalticSea.salinity(), PartsPerThousand::new(7.0));
-        assert!(Ocean::BalticSea.salinity() < Ocean::Mediterranean.salinity());
-    }
+    mod typical_temperature {
+        use super::*;
 
-    #[test]
-    fn arctic_and_southern_are_coldest() {
-        assert_relative_eq!(Ocean::Arctic.typical_temperature(), Celsius::new(2.0));
-        assert_relative_eq!(Ocean::Southern.typical_temperature(), Celsius::new(2.0));
-        assert!(Ocean::Arctic.typical_temperature() < Ocean::Caribbean.typical_temperature());
-    }
+        #[rstest]
+        fn arctic_and_southern_are_coldest() {
+            assert_relative_eq!(Ocean::Arctic.typical_temperature(), Celsius::new(2.0));
+            assert_relative_eq!(Ocean::Southern.typical_temperature(), Celsius::new(2.0));
+            assert!(Ocean::Arctic.typical_temperature() < Ocean::Caribbean.typical_temperature());
+        }
 
-    #[test]
-    fn tropical_seas_are_warmest() {
-        let warm = [
-            Ocean::AndamanSea,
-            Ocean::PersianGulf,
-            Ocean::BandaSea,
-            Ocean::CelebesSea,
-            Ocean::SouthChinaSea,
-        ];
-        for ocean in warm {
-            assert_relative_eq!(ocean.typical_temperature(), Celsius::new(28.0));
+        #[rstest]
+        fn tropical_seas_are_warmest() {
+            let warm = [
+                Ocean::AndamanSea,
+                Ocean::PersianGulf,
+                Ocean::BandaSea,
+                Ocean::CelebesSea,
+                Ocean::SouthChinaSea,
+            ];
+            for ocean in warm {
+                assert_relative_eq!(ocean.typical_temperature(), Celsius::new(28.0));
+            }
         }
     }
 }
