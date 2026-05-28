@@ -297,11 +297,8 @@ macro_rules! unit_newtype {
 
                 #[rstest]
                 #[case("1.5", "1.5")]
-                #[case("",    "")]
-                fn missing_suffix_reports_full_input(
-                    #[case] input: &str,
-                    #[case] expected: &str,
-                ) {
+                #[case("", "")]
+                fn missing_suffix_reports_full_input(#[case] input: &str, #[case] expected: &str) {
                     assert_eq!(
                         input.parse::<$ty>(),
                         Err($crate::units::error::ParseError::$ty(expected.to_owned())),

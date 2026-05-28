@@ -190,9 +190,9 @@ mod tests {
         use super::*;
 
         #[rstest]
-        #[case(0.32,  "32%")]
+        #[case(0.32, "32%")]
         #[case(0.999, "99.9%")]
-        #[case(1.0,   "100%")]
+        #[case(1.0, "100%")]
         fn formats_correctly(#[case] val: f64, #[case] expected: &str) -> Result<()> {
             let p = Percent::new(val).ok_or_else(|| eyre!("{val} is a valid percent"))?;
             assert_eq!(p.to_string(), expected);
