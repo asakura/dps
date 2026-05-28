@@ -1,5 +1,21 @@
 use crate::units::Percent;
 
+/// Error returned when a string cannot be parsed as an [`EANx`](crate::gas::EANx) blend.
+///
+/// Produced by [`EANx::from_str`](std::str::FromStr) when the input does not match any known
+/// gas-name format or the resulting O₂ fraction is outside the valid range.
+///
+/// ```
+/// use dps::gas::EANx;
+///
+/// assert!("invalid".parse::<EANx>().is_err());
+/// assert!("EANx 999".parse::<EANx>().is_err());
+/// assert!("EANx 32".parse::<EANx>().is_ok());
+/// ```
+#[derive(Debug, Clone, Copy, thiserror::Error)]
+#[error("invalid EANx blend name")]
+pub struct ParseEANxError;
+
 /// Error returned when an [`EANxBlend`](crate::gas::EANxBlend) cannot be constructed.
 ///
 /// ```no_run
@@ -32,6 +48,9 @@ pub enum InvalidEANxError {
     /// would be depleted and the output is pure O₂ + Ar.
     #[error("O₂ fraction {0} exceeds the blend method ceiling")]
     BlendCeilingExceeded(Percent),
+    /// The input string is not a recognised [`EANx`](crate::gas::EANx) blend name.
+    #[error(transparent)]
+    ParseFailed(#[from] ParseEANxError),
 }
 
 #[cfg(test)]

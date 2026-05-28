@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
@@ -18,7 +19,7 @@ mod equivalent_narcotic_depth;
 pub use equivalent_narcotic_depth::{END, ENDSummary};
 
 mod error;
-pub use error::InvalidEANxError;
+pub use error::{InvalidEANxError, ParseEANxError};
 
 mod maximum_narcotic_depth;
 pub use maximum_narcotic_depth::{MND, MNDSummary};
@@ -579,6 +580,56 @@ impl TryFrom<Percent> for EANx {
 
     fn try_from(pct: Percent) -> Result<Self, Self::Error> {
         Self::new(pct, PartialPressure)
+    }
+}
+
+/// Parses an [`EANx`] blend from its display representation.
+///
+/// Accepts the formats produced by [`Display`](std::fmt::Display):
+/// `"Air"`, `"EANx N"`, `"Hypoxic N"`, `"O₂ N%"`, `"Pure O₂"`, and the
+/// fallback `"N%"` / `"N.d%"` percentage format from
+/// [`Percent`](crate::units::Percent)'s own display.
+///
+/// # Errors
+///
+/// Returns [`InvalidEANxError`] if the string does not match any known format or
+/// the resulting O₂ fraction is outside the valid [`EANx`] range (≥ 10 %).
+///
+/// # Examples
+///
+/// ```
+/// use dps::gas::EANx;
+///
+/// assert_eq!("Air".parse::<EANx>().unwrap().to_string(),    "Air");
+/// assert_eq!("EANx 32".parse::<EANx>().unwrap().to_string(), "EANx 32");
+/// assert_eq!("Pure O₂".parse::<EANx>().unwrap().to_string(), "Pure O₂");
+/// assert_eq!("25%".parse::<EANx>().unwrap().to_string(),    "25%");
+/// assert!("invalid".parse::<EANx>().is_err());
+/// ```
+impl FromStr for EANx {
+    type Err = InvalidEANxError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let fo2_frac: f64 = if s == "Air" {
+            0.21
+        } else if s == "Pure O₂" {
+            1.0
+        } else if let Some(n_str) = s.strip_prefix("EANx ") {
+            let n: u8 = n_str.parse().map_err(|_| ParseEANxError)?;
+            f64::from(n) / 100.0
+        } else if let Some(n_str) = s.strip_prefix("Hypoxic ") {
+            let n: u8 = n_str.parse().map_err(|_| ParseEANxError)?;
+            f64::from(n) / 100.0
+        } else if let Some(inner) = s.strip_prefix("O₂ ").and_then(|t| t.strip_suffix('%')) {
+            let n: u8 = inner.parse().map_err(|_| ParseEANxError)?;
+            f64::from(n) / 100.0
+        } else {
+            let pct: Percent = s.parse().map_err(|_| ParseEANxError)?;
+            return Self::try_from(pct).map_err(|_| ParseEANxError.into());
+        };
+
+        let pct = Percent::new(fo2_frac).ok_or(ParseEANxError)?;
+        Self::try_from(pct).map_err(|_| ParseEANxError.into())
     }
 }
 

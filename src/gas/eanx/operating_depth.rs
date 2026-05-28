@@ -209,7 +209,7 @@ impl fmt::Display for MODSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gas::InvalidEANxError;
+    use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Meters, Percent};
     use color_eyre::{Result, eyre::eyre};
 
