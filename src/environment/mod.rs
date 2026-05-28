@@ -103,12 +103,11 @@
 //! ```
 
 mod dive_environment;
-mod error;
 mod lake;
 mod ocean;
 mod physics;
 
-pub use dive_environment::DiveEnvironment;
-pub use error::DiveEnvironmentError;
+pub use dive_environment::DiveEnvironmentError;
+pub use dive_environment::{DiveEnvironment, ParseDiveEnvironmentError};
 pub use lake::Lake;
 pub use ocean::Ocean;
