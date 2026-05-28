@@ -241,6 +241,19 @@ impl Component for ModTab {
                     registers.push_yank(reg, RegisterValue::EANx(self.mixes[row]));
                 }
             }
+            Action::Edit(EditOp::Delete(reg)) => {
+                if let Some(row) = self.table_state.selected() {
+                    let value = RegisterValue::EANx(self.mixes.remove(row));
+                    let new_sel = (!self.mixes.is_empty()).then(|| row.min(self.mixes.len() - 1));
+                    self.table_state.select(new_sel);
+                    match reg {
+                        Some(r @ ('a'..='z' | 'A'..='Z' | '+' | '*' | '_')) => {
+                            registers.write(r, value);
+                        }
+                        _ => registers.push_delete(value),
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -504,6 +517,122 @@ mod tests {
 
             assert_eq!(regs.read('a'), Some(expected));
             assert_eq!(regs.read('0'), Some(expected));
+            Ok(())
+        }
+    }
+
+    mod delete {
+        use rstest::rstest;
+        use super::*;
+        use crate::action::EditOp;
+
+        #[rstest]
+        fn removes_focused_row_from_mixes() -> Result<()> {
+            let mut tab = ModTab::new();
+            let before_len = tab.mixes.len();
+
+            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut RegisterStore::default());
+
+            assert_eq!(tab.mixes.len(), before_len - 1);
+            Ok(())
+        }
+
+        #[rstest]
+        fn deleted_value_is_stored_in_register() -> Result<()> {
+            let mut tab = ModTab::new();
+            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let expected = RegisterValue::EANx(tab.mixes[row]);
+            let mut regs = RegisterStore::default();
+
+            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut regs);
+
+            assert_eq!(regs.read('1'), Some(expected));
+            Ok(())
+        }
+
+        #[rstest]
+        fn unnamed_routes_to_delete_stack() -> Result<()> {
+            let mut tab = ModTab::new();
+            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let expected = RegisterValue::EANx(tab.mixes[row]);
+            let mut regs = RegisterStore::default();
+
+            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut regs);
+
+            assert_eq!(regs.read('1'), Some(expected));
+            assert_eq!(regs.read('"'), Some(expected));
+            assert!(regs.read('a').is_none());
+            Ok(())
+        }
+
+        #[rstest]
+        fn named_reg_bypasses_delete_stack() -> Result<()> {
+            let mut tab = ModTab::new();
+            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let expected = RegisterValue::EANx(tab.mixes[row]);
+            let mut regs = RegisterStore::default();
+
+            tab.handle_action(Action::Edit(EditOp::Delete(Some('a'))), &mut regs);
+
+            assert_eq!(regs.read('a'), Some(expected));
+            assert_eq!(regs.read('"'), Some(expected));
+            assert!(regs.read('1').is_none());
+            Ok(())
+        }
+
+        #[rstest]
+        fn blackhole_reg_discards_value() -> Result<()> {
+            let mut tab = ModTab::new();
+            let mut regs = RegisterStore::default();
+
+            tab.handle_action(Action::Edit(EditOp::Delete(Some('_'))), &mut regs);
+
+            assert!(regs.read('_').is_none());
+            assert!(regs.read('"').is_none());
+            assert!(regs.read('1').is_none());
+            Ok(())
+        }
+
+        #[rstest]
+        fn digit_reg_routes_to_delete_stack() -> Result<()> {
+            let mut tab = ModTab::new();
+            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let expected = RegisterValue::EANx(tab.mixes[row]);
+            let mut regs = RegisterStore::default();
+
+            tab.handle_action(Action::Edit(EditOp::Delete(Some('3'))), &mut regs);
+
+            assert_eq!(regs.read('1'), Some(expected));
+            assert!(regs.read('3').is_none());
+            Ok(())
+        }
+
+        #[rstest]
+        fn selection_clamps_when_last_row_deleted() -> Result<()> {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            let last = tab.mixes.len() - 1;
+
+            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut RegisterStore::default());
+
+            assert_eq!(
+                tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?,
+                last - 1,
+            );
+            Ok(())
+        }
+
+        #[rstest]
+        fn selection_stays_stable_when_mid_row_deleted() -> Result<()> {
+            let mut tab = ModTab::new();
+            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
+
+            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut RegisterStore::default());
+
+            assert_eq!(
+                tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?,
+                0,
+            );
             Ok(())
         }
     }
