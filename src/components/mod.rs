@@ -87,7 +87,7 @@ pub trait Component {
     }
 }
 
-/// Interface for visual and interactive UI elements in the [`AppNew`] event loop.
+/// Interface for visual and interactive UI elements in the [`App`] event loop.
 ///
 /// Implementors receive events, maintain state, and render themselves into the
 /// terminal each frame.  Only [`draw`] is required; all other methods have
@@ -95,7 +95,7 @@ pub trait Component {
 ///
 /// # Lifecycle
 ///
-/// [`AppNew`] calls trait methods in a fixed sequence:
+/// [`App`] calls trait methods in a fixed sequence:
 ///
 /// **Startup (once per run):**
 ///
@@ -113,19 +113,19 @@ pub trait Component {
 /// 4. [`handle_events`] — receives the raw [`Event`] from the TUI stream.
 ///    The default routes [`Key`] → [`handle_key_event`] and
 ///    [`Mouse`] → [`handle_mouse_event`].  Any returned [`Action`] is
-///    forwarded to [`AppNew`]'s action channel.
+///    forwarded to [`App`]'s action channel.
 /// 5. [`update`] — called once per queued [`Action`], for every action
-///    dequeued by [`AppNew`] regardless of which component or system
+///    dequeued by [`App`] regardless of which component or system
 ///    produced it.  May return an [`Action`] to chain effects.
 /// 6. [`draw`] — renders the component's current state into `area`.
 ///    Called only when a [`Render`] action fires; errors are caught by
-///    [`AppNew`] and converted to [`Action::Error`] rather than propagating.
+///    [`App`] and converted to [`Action::Error`] rather than propagating.
 ///
 /// # Action channel
 ///
 /// The sender received via [`register_action_handler`] can be stored and used
 /// anywhere — from within [`update`], or from a background task spawned
-/// during [`init`].  Every action pushed on it is processed by [`AppNew`] on
+/// during [`init`].  Every action pushed on it is processed by [`App`] on
 /// the next drain pass, and every component's [`update`] will see it.
 ///
 /// # Event dispatch
@@ -204,7 +204,7 @@ pub trait Component {
 /// }
 /// ```
 ///
-/// [`AppNew`]: crate::app::AppNew
+/// [`App`]: crate::app::App
 /// [`draw`]: ComponentNew::draw
 /// [`register_action_handler`]: ComponentNew::register_action_handler
 /// [`register_config_handler`]: ComponentNew::register_config_handler
@@ -219,7 +219,7 @@ pub trait Component {
 /// [`Render`]: crate::action::Action::Render
 /// [`mpsc::UnboundedSender<Action>`]: tokio::sync::mpsc::UnboundedSender
 /// [`Size`]: ratatui::layout::Size
-pub trait ComponentNew {
+pub trait ComponentNew: Send {
     /// Provides the component with a sender for dispatching [`Action`]s.
     ///
     /// The default is a no-op; override to store `tx` so the component can push
@@ -460,18 +460,18 @@ pub trait ComponentNew {
 
     /// Applies a semantic [`Action`] to the component's state.
     ///
-    /// Called by [`AppNew`] for every action dequeued from the channel,
+    /// Called by [`App`] for every action dequeued from the channel,
     /// regardless of which component or system produced it — infrastructure
     /// actions (`Tick`, `Render`, `Resize`, …) pass through here too.
     ///
     /// Returning `Some(action)` re-enqueues that action on the global channel,
-    /// so effects can be chained: the returned action is processed by [`AppNew`]
+    /// so effects can be chained: the returned action is processed by [`App`]
     /// and fanned back out to every component's `update`.  Avoid returning an
     /// action unconditionally — it will cycle forever.
     ///
     /// Returns `None` by default.
     ///
-    /// [`AppNew`]: crate::app::AppNew
+    /// [`App`]: crate::app::App
     ///
     /// # Errors
     ///
@@ -507,15 +507,15 @@ pub trait ComponentNew {
 
     /// Renders the component into `area` on the current `frame`.
     ///
-    /// This is the only required method.  Called each time [`AppNew`] processes
+    /// This is the only required method.  Called each time [`App`] processes
     /// an [`Action::Render`] (driven by the configured frame rate);
     /// implementations must complete quickly to keep the TUI responsive.
     ///
-    /// Errors returned here are **not** propagated to the caller.  [`AppNew`]
+    /// Errors returned here are **not** propagated to the caller.  [`App`]
     /// catches them and converts each one to an [`Action::Error`], keeping a
     /// single misbehaving component from aborting the whole render pass.
     ///
-    /// [`AppNew`]: crate::app::AppNew
+    /// [`App`]: crate::app::App
     /// [`Action::Render`]: crate::action::Action::Render
     /// [`Action::Error`]: crate::action::Action::Error
     ///

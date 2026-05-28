@@ -1,325 +1,27 @@
-//! Application state and tab routing.
+//! Top-level application coordinator: owns components, drives the event loop.
 
 use std::{fmt, path::Path};
 
 use color_eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{
-    Frame,
-    buffer::Buffer,
-    layout::{Constraint, Layout, Rect},
-    widgets::{Tabs, Widget},
-};
+use crossterm::event::KeyEvent;
+use ratatui::layout::Rect;
 use tokio::sync::mpsc;
-
 use tracing::{debug, info};
 
 use crate::{
     action::Action,
-    components::{
-        Component, ComponentNew, FpsCounter, Home, KeyBinding, hint_bar::HintBar, mod_tab::ModTab,
-        ppo2_tab::PpO2Tab, which_key::WhichKey,
-    },
+    components::{ComponentNew, FpsCounter, Home},
     config::Config,
-    keymap::{ChordEngine, ChordResult, KeyBindings, Mode, ModeMap, SequenceEngine},
-    theme::Theme,
+    keymap::{ChordEngine, ChordResult, Mode, ModeMap, SequenceEngine},
     tui::{Event, Tui},
 };
 
-static GLOBAL_BINDINGS: &[KeyBinding] = [
-    KeyBinding {
-        key: "Tab",
-        desc: "next table",
-    },
-    KeyBinding {
-        key: "q/Esc",
-        desc: "quit",
-    },
-    KeyBinding {
-        key: "?",
-        desc: "toggle bindings",
-    },
-]
-.as_slice();
-
-/// Top-level coordinator: owns the tab list, tracks the active tab, and routes
-/// key events and render calls to the appropriate component.
-pub struct App {
-    tabs: Vec<Box<dyn Component + Send>>,
-    active: usize,
-    show_which_key: bool,
-    keybindings: KeyBindings,
-    chord: SequenceEngine,
-    mode: Mode,
-    tick_rate: f64,
-    frame_rate: f64,
-    theme: Theme,
-}
-
-impl fmt::Debug for App {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("App")
-            .field("active", &self.active)
-            .field("show_which_key", &self.show_which_key)
-            .field("mode", &self.mode)
-            .field("tick_rate", &self.tick_rate)
-            .field("frame_rate", &self.frame_rate)
-            .finish_non_exhaustive()
-    }
-}
-
-impl Default for App {
-    /// Creates an `App` with hardcoded rates and [`Config::default`] — no disk I/O.
-    ///
-    /// Intended for tests and harness use. For production, use [`App::new`], which
-    /// loads configuration from disk and propagates errors.
-    fn default() -> Self {
-        Self::from_config(4.0, 60.0, Config::default())
-    }
-}
-
-impl App {
-    /// Creates an `App`, loading configuration from disk.
-    ///
-    /// `tick_rate` controls how often the internal timer fires (Hz);
-    /// `frame_rate` caps the render rate (Hz).  `config_dir` and `data_dir`
-    /// override the env-var / platform defaults when `Some`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`crate::Error::Config`] if a config file is present but cannot
-    /// be parsed, if theme resolution fails, or if `defaultTheme` does not
-    /// match any resolved theme.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use dps::app::App;
-    /// let _app = App::new(4.0, 60.0, None, None)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn new(
-        tick_rate: f64,
-        frame_rate: f64,
-        config_dir: Option<&Path>,
-        data_dir: Option<&Path>,
-    ) -> Result<Self, crate::Error> {
-        let config = Config::from_dirs(config_dir, data_dir)?;
-        tracing::debug!(
-            data_dir = %config.config.data_dir.display(),
-            config_dir = %config.config.config_dir.display(),
-            "effective directories"
-        );
-        Ok(Self::from_config(tick_rate, frame_rate, config))
-    }
-
-    fn from_config(tick_rate: f64, frame_rate: f64, config: Config) -> Self {
-        let theme = *config.active_theme();
-        Self {
-            tabs: vec![Box::new(ModTab::new()), Box::new(PpO2Tab::new())],
-            active: 0,
-            show_which_key: false,
-            keybindings: config.keybindings,
-            chord: SequenceEngine::default(),
-            mode: Mode::Normal,
-            tick_rate,
-            frame_rate,
-            theme,
-        }
-    }
-
-    /// Runs the event loop until the user quits.
-    ///
-    /// Enters the terminal (raw mode + alternate screen), then drives
-    /// tick/render intervals and key input until [`Action::Quit`] is received,
-    /// the event stream closes, or a termination signal (`SIGTERM`/`SIGINT`) arrives.
-    /// On Unix, `Ctrl+Z` (mapped to [`Action::Suspend`]) saves the terminal state,
-    /// suspends the process, and restores it on resume (`SIGCONT`).
-    /// Terminal state is restored on return.
-    ///
-    /// # Errors
-    ///
-    /// Propagates I/O errors from terminal setup ([`Tui::new`], [`Tui::enter`]),
-    /// frame rendering, signal-handler registration, and terminal teardown.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use dps::app::App;
-    /// let mut app = App::new(4.0, 60.0, None, None)?;
-    /// app.run().await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn run(&mut self) -> Result<()> {
-        let mut tui = Tui::new()?
-            .tick_rate(self.tick_rate)
-            .frame_rate(self.frame_rate);
-        tui.enter()?;
-
-        #[cfg(unix)]
-        let mut sigterm =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
-        #[cfg(unix)]
-        let mut sigint = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
-
-        let mut needs_render = true;
-
-        loop {
-            #[cfg(unix)]
-            let event = tokio::select! {
-                event = tui.next_event() => event,
-                _ = sigterm.recv() => Some(Event::Quit),
-                _ = sigint.recv() => Some(Event::Quit),
-            };
-            #[cfg(not(unix))]
-            let event = tui.next_event().await;
-
-            match event {
-                Some(Event::Render) => {
-                    if needs_render {
-                        tui.draw(|f| self.render(f))?;
-                        needs_render = false;
-                    }
-                }
-                Some(Event::Init | Event::Resize(_, _)) => {
-                    needs_render = true;
-                }
-                Some(Event::Key(key)) => {
-                    match self.handle_key(key) {
-                        Action::Quit => break,
-                        #[cfg(unix)]
-                        Action::Suspend => {
-                            tui.exit()?;
-                            signal_hook::low_level::emulate_default_handler(
-                                signal_hook::consts::SIGTSTP,
-                            )?;
-                            tui.resume()?;
-                        }
-                        _ => {}
-                    }
-                    needs_render = true;
-                }
-                Some(Event::Quit | Event::Closed) | None => break,
-                Some(
-                    Event::Error
-                    | Event::Tick
-                    | Event::FocusGained
-                    | Event::FocusLost
-                    | Event::Paste(_)
-                    | Event::Mouse(_),
-                ) => {}
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Advances the chord engine with `key` and routes the result.
-    ///
-    /// - **Exact match** — dispatches the bound [`Action`] and returns its result.
-    /// - **Prefix match** — returns [`Action::None`] and keeps accumulating.
-    /// - **No match** — delegates to the hardcoded global fallback.
-    pub fn handle_key(&mut self, key: KeyEvent) -> Action {
-        static EMPTY: std::sync::LazyLock<ModeMap> = std::sync::LazyLock::new(ModeMap::default);
-        let bindings = self.keybindings.get(&self.mode).unwrap_or(&EMPTY);
-
-        match self.chord.advance(key, bindings) {
-            ChordResult::Exact(action) => self.dispatch(action),
-            ChordResult::Prefix => Action::None,
-            ChordResult::NoMatch => self.handle_key_fallback(key),
-        }
-    }
-
-    /// Routes a resolved [`Action`] to the right handler.
-    ///
-    /// `Quit` propagates to the caller; all other actions are dispatched to
-    /// the active component and `None` is returned so the event loop only
-    /// needs to check for `Quit`.
-    fn dispatch(&mut self, action: Action) -> Action {
-        match action {
-            Action::Quit => Action::Quit,
-            Action::Suspend => Action::Suspend,
-            other @ (Action::Move(_) | Action::Select | Action::None) => {
-                self.tabs[self.active].handle_action(other);
-                Action::None
-            }
-            _ => Action::None,
-        }
-    }
-
-    /// Hardcoded global bindings: `?` toggles which-key, `q`/Esc quits,
-    /// Tab cycles tabs. Everything else is delegated to the active component.
-    fn handle_key_fallback(&mut self, key: KeyEvent) -> Action {
-        match key.code {
-            KeyCode::Char('?') => {
-                self.show_which_key = !self.show_which_key;
-                Action::None
-            }
-            KeyCode::Char('q') | KeyCode::Esc => Action::Quit,
-            KeyCode::Tab => {
-                self.active = (self.active + 1) % self.tabs.len();
-                Action::None
-            }
-            _ => Action::None,
-        }
-    }
-
-    /// Draws the tab bar, active component, status bar, and help line.
-    pub fn render(&mut self, f: &mut Frame<'_>) {
-        f.render_widget(self, f.area());
-    }
-}
-
-impl Widget for &mut App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let chunks = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Fill(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-        ])
-        .split(area);
-
-        let titles: Vec<&str> = self.tabs.iter().map(|t| t.title()).collect();
-        Tabs::new(titles)
-            .select(self.active)
-            .style(self.theme.nav_bar())
-            .highlight_style(self.theme.selection())
-            .divider("│")
-            .render(chunks[0], buf);
-
-        self.tabs[self.active].render(chunks[1], buf, &self.theme);
-        self.tabs[self.active].render_status(chunks[2], buf, &self.theme);
-
-        HintBar::new(
-            self.tabs[self.active].key_bindings(),
-            GLOBAL_BINDINGS,
-            self.theme,
-        )
-        .render(chunks[3], buf);
-
-        if self.show_which_key {
-            WhichKey::new(
-                GLOBAL_BINDINGS,
-                self.tabs[self.active].key_bindings(),
-                self.theme,
-            )
-            .render(area, buf);
-        }
-    }
-}
-
 /// Event-loop coordinator that owns a set of [`ComponentNew`] instances.
 ///
-/// `AppNew` drives the TUI using the channel-based action pipeline introduced
+/// `App` drives the TUI using the channel-based action pipeline introduced
 /// by the [`ComponentNew`] trait family.  Every component receives a clone of
 /// the [`mpsc::UnboundedSender<Action>`] during initialisation so it can push
-/// actions at any time; `AppNew` owns the matching receiver and drains it on
+/// actions at any time; `App` owns the matching receiver and drains it on
 /// every loop iteration.
 ///
 /// # Architecture
@@ -352,7 +54,7 @@ impl Widget for &mut App {
 /// When [`Action::Suspend`] arrives the TUI is torn down, a `Resume` +
 /// `ClearScreen` pair is enqueued, and the TUI is immediately re-entered so the
 /// next render paints over any shell output that appeared while suspended.
-pub struct AppNew {
+pub struct App {
     config: Config,
     tick_rate: f64,
     frame_rate: f64,
@@ -365,9 +67,9 @@ pub struct AppNew {
     action_rx: mpsc::UnboundedReceiver<Action>,
 }
 
-impl fmt::Debug for AppNew {
+impl fmt::Debug for App {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("AppNew")
+        f.debug_struct("App")
             .field("tick_rate", &self.tick_rate)
             .field("frame_rate", &self.frame_rate)
             .field("mode", &self.mode)
@@ -375,8 +77,8 @@ impl fmt::Debug for AppNew {
     }
 }
 
-impl AppNew {
-    /// Creates an `AppNew` with the given tick and frame rates, loading config from disk.
+impl App {
+    /// Creates an `App` with the given tick and frame rates, loading config from disk.
     ///
     /// `tick_rate` controls how many [`Action::Tick`] events fire per second.
     /// `frame_rate` caps the render rate in Hz.  Both are forwarded to [`Tui`]
@@ -394,13 +96,13 @@ impl AppNew {
     ///
     /// ```no_run
     /// # fn main() -> color_eyre::Result<()> {
-    /// use dps::app::AppNew;
-    /// let _app = AppNew::new(4.0, 60.0, None, None)?;
+    /// use dps::app::App;
+    /// let _app = App::new(4.0, 60.0, None, None)?;
     /// # Ok(())
     /// # }
     /// ```
     ///
-    /// [`run`]: AppNew::run
+    /// [`run`]: App::run
     pub fn new(
         tick_rate: f64,
         frame_rate: f64,
@@ -476,16 +178,12 @@ impl AppNew {
     /// ```no_run
     /// # #[tokio::main]
     /// # async fn main() -> color_eyre::Result<()> {
-    /// use dps::app::AppNew;
-    /// let mut app = AppNew::new(4.0, 60.0, None, None)?;
+    /// use dps::app::App;
+    /// let mut app = App::new(4.0, 60.0, None, None)?;
     /// app.run().await?;
     /// # Ok(())
     /// # }
     /// ```
-    #[expect(
-        clippy::future_not_send,
-        reason = "dyn ComponentNew is not Send by design"
-    )]
     pub async fn run(&mut self) -> color_eyre::Result<()> {
         let mut tui = Tui::new()?
             .mouse(true)
@@ -494,16 +192,11 @@ impl AppNew {
 
         tui.enter()?;
 
+        let size = tui.size()?;
         for component in &mut self.components {
             component.register_action_handler(self.action_tx.clone())?;
-        }
-
-        for component in &mut self.components {
             component.register_config_handler(self.config.clone())?;
-        }
-
-        for component in &mut self.components {
-            component.init(tui.size()?)?;
+            component.init(size)?;
         }
 
         #[cfg(unix)]
@@ -511,8 +204,6 @@ impl AppNew {
             tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
         #[cfg(unix)]
         let mut sigint = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
-
-        let action_tx = self.action_tx.clone();
 
         loop {
             #[cfg(unix)]
@@ -528,11 +219,12 @@ impl AppNew {
             self.handle_actions(&mut tui)?;
 
             if self.should_suspend {
+                self.should_suspend = false;
                 tui.exit()?;
                 #[cfg(unix)]
                 signal_hook::low_level::emulate_default_handler(signal_hook::consts::SIGTSTP)?;
-                action_tx.send(Action::Resume)?;
-                action_tx.send(Action::ClearScreen)?;
+                self.action_tx.send(Action::Resume)?;
+                self.action_tx.send(Action::ClearScreen)?;
                 tui.resume()?;
             } else if self.should_quit {
                 tui.stop()?;
@@ -557,7 +249,7 @@ impl AppNew {
     /// Returns `Ok(())` immediately if `event` is `None`.
     ///
     /// [`Key`]: Event::Key
-    /// [`handle_key_event`]: AppNew::handle_key_event
+    /// [`handle_key_event`]: App::handle_key_event
     /// [`handle_events`]: ComponentNew::handle_events
     fn handle_events(&mut self, event: Option<Event>) -> color_eyre::Result<()> {
         let Some(event) = event else {
@@ -619,8 +311,8 @@ impl AppNew {
     /// component's [`ComponentNew::update`].  Any [`Action`] returned by
     /// `update` is re-enqueued so components can chain effects.
     ///
-    /// [`handle_resize`]: AppNew::handle_resize
-    /// [`render`]: AppNew::render
+    /// [`handle_resize`]: App::handle_resize
+    /// [`render`]: App::render
     fn handle_actions(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
         while let Ok(action) = self.action_rx.try_recv() {
             if action != Action::Tick && action != Action::Render {
@@ -683,12 +375,114 @@ impl AppNew {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
+
     use approx::assert_relative_eq;
-    use crossterm::event::KeyModifiers;
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use ratatui::Frame;
+    use rstest::rstest;
+
+    use super::*;
+    use crate::{
+        action::Movement,
+        config::{AppConfig, Styles},
+        keymap::{KeyBindingsBuilder, KeySeq, parse_key_sequence},
+        theme::Theme,
+        tui::Tui,
+    };
 
     fn press(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn make_app(config: Config) -> App {
+        let (action_tx, action_rx) = mpsc::unbounded_channel();
+        App {
+            config,
+            tick_rate: 4.0,
+            frame_rate: 60.0,
+            components: vec![],
+            should_quit: false,
+            should_suspend: false,
+            mode: Mode::Normal,
+            chord: SequenceEngine::default(),
+            action_tx,
+            action_rx,
+        }
+    }
+
+    fn default_app() -> App {
+        make_app(Config::default())
+    }
+
+    fn drain(app: &mut App) -> Vec<Action> {
+        let mut out = vec![];
+        while let Ok(a) = app.action_rx.try_recv() {
+            out.push(a);
+        }
+        out
+    }
+
+    fn config_with_bindings(bindings: &[(&str, Action)]) -> color_eyre::Result<Config> {
+        let mut builder = KeyBindingsBuilder::new();
+        for (seq_str, action) in bindings {
+            builder.bind(
+                Mode::Normal,
+                KeySeq::from(parse_key_sequence(seq_str)?),
+                action.clone(),
+            );
+        }
+        Ok(Config {
+            config: AppConfig::default(),
+            keybindings: builder.build(),
+            styles: Styles(),
+            themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
+            default_theme: "catpuccineFrappe".to_string(),
+        })
+    }
+
+    /// Returns a fixed action from `handle_events` for every event; no-op update.
+    struct EventSpy(Option<Action>);
+
+    impl ComponentNew for EventSpy {
+        fn handle_events(&mut self, _: Option<Event>) -> crate::components::Result<Option<Action>> {
+            Ok(self.0.clone())
+        }
+
+        fn draw(&mut self, _: &mut Frame<'_>, _: Rect) -> crate::components::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Returns `response` from `update` the first time it sees `trigger`; silent thereafter.
+    struct UpdateSpy {
+        trigger: Action,
+        response: Action,
+        fired: bool,
+    }
+
+    impl UpdateSpy {
+        fn new(trigger: Action, response: Action) -> Self {
+            Self {
+                trigger,
+                response,
+                fired: false,
+            }
+        }
+    }
+
+    impl ComponentNew for UpdateSpy {
+        fn update(&mut self, action: Action) -> crate::components::Result<Option<Action>> {
+            if !self.fired && action == self.trigger {
+                self.fired = true;
+                return Ok(Some(self.response.clone()));
+            }
+            Ok(None)
+        }
+
+        fn draw(&mut self, _: &mut Frame<'_>, _: Rect) -> crate::components::Result<()> {
+            Ok(())
+        }
     }
 
     mod new {
@@ -699,181 +493,267 @@ mod tests {
             assert!(App::new(4.0, 60.0, None, None).is_ok());
         }
 
-        #[test]
-        fn stores_tick_and_frame_rate() -> Result<()> {
-            let app = App::new(10.0, 30.0, None, None)?;
+        #[rstest]
+        #[case(10.0, 30.0)]
+        #[case(4.0, 60.0)]
+        fn stores_tick_and_frame_rate(
+            #[case] tick: f64,
+            #[case] frame: f64,
+        ) -> color_eyre::Result<()> {
+            let app = App::new(tick, frame, None, None)?;
 
-            assert_relative_eq!(app.tick_rate, 10.0);
-            assert_relative_eq!(app.frame_rate, 30.0);
+            assert_relative_eq!(app.tick_rate, tick);
+            assert_relative_eq!(app.frame_rate, frame);
 
             Ok(())
         }
 
         #[test]
-        fn starts_on_first_tab() -> Result<()> {
+        fn starts_with_mode_normal() -> color_eyre::Result<()> {
             let app = App::new(4.0, 60.0, None, None)?;
 
-            assert_eq!(app.active, 0);
+            assert_eq!(app.mode, Mode::Normal);
 
             Ok(())
         }
 
         #[test]
-        fn default_uses_fallback_rates() {
-            let app = App::default();
+        fn starts_with_flags_cleared() -> color_eyre::Result<()> {
+            let app = App::new(4.0, 60.0, None, None)?;
 
-            assert_relative_eq!(app.tick_rate, 4.0);
-            assert_relative_eq!(app.frame_rate, 60.0);
+            assert!(!app.should_quit);
+            assert!(!app.should_suspend);
+
+            Ok(())
         }
     }
 
-    mod handle_key {
+    mod handle_events {
         use super::*;
-        use std::collections::HashMap;
 
-        use crate::action::Movement;
-        use crate::config::{AppConfig, Config, Styles};
-        use crate::keymap::{KeyBindingsBuilder, KeySeq, parse_key_sequence};
+        #[rstest]
+        #[case(Event::Quit, Action::Quit)]
+        #[case(Event::Tick, Action::Tick)]
+        #[case(Event::Render, Action::Render)]
+        fn infrastructure_event_enqueues_matching_action(
+            #[case] event: Event,
+            #[case] expected: Action,
+        ) -> color_eyre::Result<()> {
+            let mut app = default_app();
 
-        fn with_config(config: Config) -> App {
-            App::from_config(4.0, 60.0, config)
-        }
+            app.handle_events(Some(event))?;
 
-        fn config_with_keybindings(bindings: &[(&str, Action)]) -> Result<Config> {
-            let mut builder = KeyBindingsBuilder::new();
-            for (seq_str, action) in bindings {
-                builder.bind(
-                    Mode::Normal,
-                    KeySeq::from(parse_key_sequence(seq_str)?),
-                    action.clone(),
-                );
-            }
-
-            Ok(Config {
-                config: AppConfig::default(),
-                keybindings: builder.build(),
-                styles: Styles(),
-                themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
-                default_theme: "catpuccineFrappe".to_string(),
-            })
-        }
-
-        #[test]
-        fn q_quits() {
-            assert!(matches!(
-                with_config(Config::default()).handle_key(press(KeyCode::Char('q'))),
-                Action::Quit
-            ));
-        }
-
-        #[test]
-        fn esc_quits() {
-            assert!(matches!(
-                with_config(Config::default()).handle_key(press(KeyCode::Esc)),
-                Action::Quit
-            ));
-        }
-
-        #[test]
-        fn question_mark_toggles_which_key() {
-            let mut app = with_config(Config::default());
-
-            assert!(!app.show_which_key);
-
-            app.handle_key(press(KeyCode::Char('?')));
-            assert!(app.show_which_key);
-
-            app.handle_key(press(KeyCode::Char('?')));
-            assert!(!app.show_which_key);
-        }
-
-        #[test]
-        fn tab_cycles_active() {
-            let mut app = with_config(Config::default());
-
-            assert_eq!(app.active, 0);
-
-            app.handle_key(press(KeyCode::Tab));
-            assert_eq!(app.active, 1);
-
-            app.handle_key(press(KeyCode::Tab));
-            assert_eq!(app.active, 0);
-        }
-
-        #[test]
-        fn other_keys_return_none() {
-            assert!(matches!(
-                with_config(Config::default()).handle_key(press(KeyCode::Char('j'))),
-                Action::None
-            ));
-        }
-
-        #[test]
-        fn chord_broken_unbound_key_falls_to_global_fallback() -> Result<()> {
-            // "g" is a prefix of "gg"; "q" breaks the chord and has no
-            // configured binding, so the hardcoded fallback fires: q → Quit.
-            let mut app = with_config(config_with_keybindings(
-                [("gg", Action::Move(Movement::GotoTop))].as_slice(),
-            )?);
-
-            app.handle_key(press(KeyCode::Char('g')));
-
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('q'))),
-                Action::Quit
-            ));
+            assert_eq!(drain(&mut app), vec![expected]);
 
             Ok(())
         }
 
         #[test]
-        fn bound_movement_action_is_dispatched_and_returns_none() -> Result<()> {
-            // A configured binding resolves to Action::Move(Down); App dispatches it
-            // to the component and returns None — the caller never sees the movement.
-            let mut app = with_config(config_with_keybindings(
-                [("j", Action::Move(Movement::Down))].as_slice(),
-            )?);
+        fn resize_enqueues_resize_action() -> color_eyre::Result<()> {
+            let mut app = default_app();
 
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('j'))),
-                Action::None
-            ));
+            app.handle_events(Some(Event::Resize(80, 24)))?;
+
+            assert_eq!(drain(&mut app), vec![Action::Resize(80, 24)]);
 
             Ok(())
         }
 
         #[test]
-        fn quit_action_propagates_to_caller() -> Result<()> {
-            // Quit must still reach the event loop even when routed through dispatch.
-            let mut app = with_config(config_with_keybindings([("q", Action::Quit)].as_slice())?);
+        fn none_enqueues_nothing() -> color_eyre::Result<()> {
+            let mut app = default_app();
 
-            assert!(matches!(
-                app.handle_key(press(KeyCode::Char('q'))),
-                Action::Quit
-            ));
+            app.handle_events(None)?;
+
+            assert!(drain(&mut app).is_empty());
 
             Ok(())
         }
 
         #[test]
-        fn chord_break_retries_against_config_before_fallback() -> Result<()> {
-            // "gg" makes 'g' a prefix; "<Tab>" is explicitly bound to None, overriding
-            // the built-in fallback that cycles tabs.
-            // When a chord breaks (g then Tab), Tab must be retried against config bindings
-            // before falling through to the built-in handler — otherwise it bypasses the
-            // explicit binding and cycles the active tab from 0 to 1.
-            let mut app = with_config(config_with_keybindings(
-                [
-                    ("gg", Action::Move(Movement::GotoTop)),
-                    ("<Tab>", Action::None),
-                ]
-                .as_slice(),
-            )?);
+        fn unbound_key_enqueues_nothing() -> color_eyre::Result<()> {
+            let mut app = default_app();
 
-            app.handle_key(press(KeyCode::Char('g'))); // prefix
-            app.handle_key(press(KeyCode::Tab)); // breaks chord; retried as "<Tab>" binding
+            app.handle_events(Some(Event::Key(press(KeyCode::Char('z')))))?;
 
-            assert_eq!(app.active, 0);
+            assert!(drain(&mut app).is_empty());
+
+            Ok(())
+        }
+
+        #[test]
+        fn component_returned_action_is_enqueued() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            // FocusGained has no built-in routing, so only the component contributes.
+            app.components
+                .push(Box::new(EventSpy(Some(Action::Select))));
+
+            app.handle_events(Some(Event::FocusGained))?;
+
+            assert_eq!(drain(&mut app), vec![Action::Select]);
+
+            Ok(())
+        }
+
+        #[test]
+        fn key_event_fans_out_to_component_after_keymap_lookup() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            // Unbound key → handle_key_event enqueues nothing.
+            // Component still receives the event and contributes Select.
+            app.components
+                .push(Box::new(EventSpy(Some(Action::Select))));
+
+            app.handle_events(Some(Event::Key(press(KeyCode::Char('x')))))?;
+
+            assert_eq!(drain(&mut app), vec![Action::Select]);
+
+            Ok(())
+        }
+    }
+
+    mod handle_key_event {
+        use super::*;
+
+        #[test]
+        fn bound_key_enqueues_action() -> color_eyre::Result<()> {
+            let mut app = make_app(config_with_bindings(&[(
+                "j",
+                Action::Move(Movement::Down),
+            )])?);
+
+            app.handle_key_event(press(KeyCode::Char('j')))?;
+
+            assert_eq!(drain(&mut app), vec![Action::Move(Movement::Down)]);
+
+            Ok(())
+        }
+
+        #[test]
+        fn prefix_enqueues_nothing_until_chord_completes() -> color_eyre::Result<()> {
+            let mut app = make_app(config_with_bindings(&[(
+                "gg",
+                Action::Move(Movement::GotoTop),
+            )])?);
+
+            app.handle_key_event(press(KeyCode::Char('g')))?;
+            assert!(drain(&mut app).is_empty());
+
+            app.handle_key_event(press(KeyCode::Char('g')))?;
+            assert_eq!(drain(&mut app), vec![Action::Move(Movement::GotoTop)]);
+
+            Ok(())
+        }
+
+        #[test]
+        fn unbound_key_enqueues_nothing() -> color_eyre::Result<()> {
+            let mut app = make_app(Config::default());
+
+            app.handle_key_event(press(KeyCode::Char('q')))?;
+
+            assert!(drain(&mut app).is_empty());
+
+            Ok(())
+        }
+
+        #[test]
+        fn chord_break_after_prefix_enqueues_nothing() -> color_eyre::Result<()> {
+            let mut app = make_app(config_with_bindings(&[(
+                "gg",
+                Action::Move(Movement::GotoTop),
+            )])?);
+
+            app.handle_key_event(press(KeyCode::Char('g')))?; // prefix
+            app.handle_key_event(press(KeyCode::Char('x')))?; // breaks chord — no binding
+
+            assert!(drain(&mut app).is_empty());
+
+            Ok(())
+        }
+    }
+
+    mod handle_actions {
+        use super::*;
+
+        #[test]
+        fn quit_sets_should_quit() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            let mut tui = Tui::new()?;
+
+            app.action_tx.send(Action::Quit)?;
+            app.handle_actions(&mut tui)?;
+
+            assert!(app.should_quit);
+
+            Ok(())
+        }
+
+        #[test]
+        fn suspend_sets_should_suspend() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            let mut tui = Tui::new()?;
+
+            app.action_tx.send(Action::Suspend)?;
+            app.handle_actions(&mut tui)?;
+
+            assert!(app.should_suspend);
+
+            Ok(())
+        }
+
+        #[test]
+        fn resume_clears_should_suspend() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            let mut tui = Tui::new()?;
+            app.should_suspend = true;
+
+            app.action_tx.send(Action::Resume)?;
+            app.handle_actions(&mut tui)?;
+
+            assert!(!app.should_suspend);
+
+            Ok(())
+        }
+
+        #[test]
+        fn tick_leaves_flags_unchanged() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            let mut tui = Tui::new()?;
+
+            app.action_tx.send(Action::Tick)?;
+            app.handle_actions(&mut tui)?;
+
+            assert!(!app.should_quit);
+            assert!(!app.should_suspend);
+
+            Ok(())
+        }
+
+        #[test]
+        fn processes_all_queued_actions_in_one_call() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            let mut tui = Tui::new()?;
+
+            app.action_tx.send(Action::Suspend)?;
+            app.action_tx.send(Action::Resume)?;
+            app.handle_actions(&mut tui)?;
+
+            assert!(!app.should_suspend);
+
+            Ok(())
+        }
+
+        #[test]
+        fn component_returned_action_is_reenqueued_and_processed() -> color_eyre::Result<()> {
+            let mut app = default_app();
+            // On first Tick, spy returns Quit once; Quit is re-enqueued and processed.
+            app.components
+                .push(Box::new(UpdateSpy::new(Action::Tick, Action::Quit)));
+            let mut tui = Tui::new()?;
+
+            app.action_tx.send(Action::Tick)?;
+            app.handle_actions(&mut tui)?;
+
+            assert!(app.should_quit);
 
             Ok(())
         }

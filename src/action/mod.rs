@@ -9,7 +9,7 @@
 //!
 //! - [`Action`] — the unified message type flowing through the application event loop.
 //!   Produced by timers, OS signals, key bindings, and component logic; consumed by
-//!   `App::run` and `App::dispatch`. Serialises as a flat string — simple variants
+//!   `App::run`. Serialises as a flat string — simple variants
 //!   by name (`"Quit"`, `"Tick"`, …), data variants with parenthesised payload
 //!   (`"Move(Down)"`, `"Resize(80,24)"`, `"Error(oops)"`) — for use in key-binding
 //!   configuration files.
@@ -28,8 +28,9 @@ use strum::{ParseError, VariantNames};
 ///
 /// `Action` is produced by the tick/render timers, OS signals, key bindings,
 /// and component logic. `App::run` handles infrastructure variants directly
-/// (`Tick`, `Render`, `Resize`, `Quit`, `Suspend`, `Resume`) and forwards
-/// everything else to `App::dispatch`, which routes to the active component.
+/// (`Tick`, `Render`, `Resize`, `Quit`, `Suspend`, `Resume`, `ClearScreen`) and
+/// forwards every action to each component's
+/// [`ComponentNew::update`](crate::components::ComponentNew::update).
 ///
 /// ## Serialisation
 ///
@@ -128,15 +129,15 @@ pub enum Action {
 
     /// A directional or positional navigation command.
     ///
-    /// `App::dispatch` forwards this to the active component's
-    /// [`Component::handle_action`](crate::components::Component::handle_action),
+    /// Forwarded to every component's
+    /// [`ComponentNew::update`](crate::components::ComponentNew::update),
     /// which applies the movement to its table selection or scroll offset.
     Move(Movement),
     /// Confirm or activate the currently highlighted row.
     ///
-    /// Typically mapped to Enter. `App::dispatch` forwards it to the active
-    /// component, which records the selection and may produce a follow-up
-    /// action.
+    /// Typically mapped to Enter. Forwarded to every component's
+    /// [`ComponentNew::update`](crate::components::ComponentNew::update),
+    /// which records the selection and may produce a follow-up action.
     Select,
     /// Affirmative answer to a confirmation prompt.
     ///
@@ -152,8 +153,8 @@ pub enum Action {
     Cancel,
     /// Toggle the which-key / help overlay.
     ///
-    /// Wired to `?` by default. Handled by `App` before the active
-    /// component receives the key.
+    /// Wired to `?` by default. Forwarded to every component's
+    /// [`ComponentNew::update`](crate::components::ComponentNew::update).
     Help,
 
     /// A key was consumed but produced no state change.
