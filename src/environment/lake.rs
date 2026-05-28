@@ -6,7 +6,7 @@
 //! [`DiveEnvironment::lake`](crate::environment::DiveEnvironment::lake) to obtain an
 //! environment with the correct surface pressure and freshwater density.
 //!
-//! ```no_run
+//! ```
 //! use dps::environment::{DiveEnvironment, Lake};
 //!
 //! let titicaca = DiveEnvironment::lake(Lake::Titicaca);
@@ -133,28 +133,47 @@ mod tests {
     use super::*;
     use crate::units::Meters;
     use approx::assert_relative_eq;
+    use rstest::rstest;
 
-    #[test]
-    fn titicaca_altitude_and_temperature() {
-        assert_relative_eq!(Lake::Titicaca.altitude(), Meters::new(3_812.0));
-        assert_relative_eq!(Lake::Titicaca.typical_temperature(), Celsius::new(12.0));
+    mod altitude {
+        use super::*;
+
+        #[rstest]
+        fn titicaca() {
+            assert_relative_eq!(Lake::Titicaca.altitude(), Meters::new(3_812.0));
+        }
+
+        #[rstest]
+        fn sea_level_lakes_have_zero_altitude() {
+            assert_relative_eq!(Lake::Cenotes.altitude(), Meters::new(0.0));
+            assert_relative_eq!(Lake::FloridaSprings.altitude(), Meters::new(0.0));
+        }
+
+        #[rstest]
+        fn ojos_del_salado_is_highest() {
+            assert!(Lake::OjosDeSalado.altitude() > Lake::Licancabur.altitude());
+            assert!(Lake::Licancabur.altitude() > Lake::Titicaca.altitude());
+        }
     }
 
-    #[test]
-    fn sea_level_lakes_have_zero_altitude() {
-        assert_relative_eq!(Lake::Cenotes.altitude(), Meters::new(0.0));
-        assert_relative_eq!(Lake::FloridaSprings.altitude(), Meters::new(0.0));
-    }
+    mod typical_temperature {
+        use super::*;
 
-    #[test]
-    fn ojos_del_salado_is_highest() {
-        assert!(Lake::OjosDeSalado.altitude() > Lake::Licancabur.altitude());
-        assert!(Lake::Licancabur.altitude() > Lake::Titicaca.altitude());
-    }
+        #[rstest]
+        fn titicaca() {
+            assert_relative_eq!(Lake::Titicaca.typical_temperature(), Celsius::new(12.0));
+        }
 
-    #[test]
-    fn licancabur_is_coldest() {
-        assert_relative_eq!(Lake::Licancabur.typical_temperature(), Celsius::new(2.0));
-        assert!(Lake::Licancabur.typical_temperature() < Lake::Titicaca.typical_temperature());
+        #[rstest]
+        fn licancabur_is_coldest() {
+            assert_relative_eq!(Lake::Licancabur.typical_temperature(), Celsius::new(2.0));
+            assert!(Lake::Licancabur.typical_temperature() < Lake::Titicaca.typical_temperature());
+        }
+
+        #[rstest]
+        fn ojos_del_salado_is_at_freezing() {
+            assert_relative_eq!(Lake::OjosDeSalado.typical_temperature(), Celsius::new(0.0));
+            assert!(Lake::OjosDeSalado.typical_temperature() < Lake::Licancabur.typical_temperature());
+        }
     }
 }
