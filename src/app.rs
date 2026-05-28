@@ -286,9 +286,12 @@ impl App {
         static EMPTY: std::sync::LazyLock<ModeMap> = std::sync::LazyLock::new(ModeMap::default);
         let bindings = self.config.keybindings.get(&self.mode).unwrap_or(&EMPTY);
 
-        if let ChordResult::Exact(action) = self.chord.advance(key, bindings) {
-            info!("Got action: {action:?}");
-            self.action_tx.send(action)?;
+        if let ChordResult::Exact(action, count) = self.chord.advance(key, bindings) {
+            info!("Got action: {action:?} ×{count}");
+
+            for _ in 0..count {
+                self.action_tx.send(action.clone())?;
+            }
         }
 
         Ok(())
