@@ -150,6 +150,8 @@ impl ModTab {
             Movement::Down => self.move_down(),
             Movement::Left => self.move_left(),
             Movement::Right => self.move_right(),
+            Movement::LineUp => self.move_up(),
+            Movement::LineDown => self.move_down(),
             Movement::ScrollUp => self.scroll_up(),
             Movement::ScrollDown => self.scroll_down(),
             Movement::PageUp => self.page_up(),

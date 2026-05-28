@@ -479,6 +479,8 @@ mod tests {
         #[case(Movement::Down)]
         #[case(Movement::Left)]
         #[case(Movement::Right)]
+        #[case(Movement::LineUp)]
+        #[case(Movement::LineDown)]
         #[case(Movement::ScrollUp)]
         #[case(Movement::ScrollDown)]
         #[case(Movement::PageUp)]

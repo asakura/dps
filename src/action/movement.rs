@@ -42,6 +42,11 @@ pub enum Movement {
     /// Move the cursor or selection right by one column.
     Right,
 
+    /// Scroll up by one row without moving the selection.
+    LineUp,
+    /// Scroll down by one row without moving the selection.
+    LineDown,
+
     /// Scroll up by [`crate::components::SCROLL_DELTA`] rows without moving the selection.
     ScrollUp,
     /// Scroll down by [`crate::components::SCROLL_DELTA`] rows without moving the selection.
@@ -91,6 +96,8 @@ mod tests {
         #[case(Movement::Down, "Down")]
         #[case(Movement::Left, "Left")]
         #[case(Movement::Right, "Right")]
+        #[case(Movement::LineUp, "LineUp")]
+        #[case(Movement::LineDown, "LineDown")]
         #[case(Movement::ScrollUp, "ScrollUp")]
         #[case(Movement::ScrollDown, "ScrollDown")]
         #[case(Movement::PageUp, "PageUp")]
@@ -111,6 +118,8 @@ mod tests {
         #[case("Down", Movement::Down)]
         #[case("Left", Movement::Left)]
         #[case("Right", Movement::Right)]
+        #[case("LineUp", Movement::LineUp)]
+        #[case("LineDown", Movement::LineDown)]
         #[case("ScrollUp", Movement::ScrollUp)]
         #[case("ScrollDown", Movement::ScrollDown)]
         #[case("PageUp", Movement::PageUp)]
@@ -146,6 +155,8 @@ mod tests {
         #[case(Movement::Down)]
         #[case(Movement::Left)]
         #[case(Movement::Right)]
+        #[case(Movement::LineUp)]
+        #[case(Movement::LineDown)]
         #[case(Movement::ScrollUp)]
         #[case(Movement::ScrollDown)]
         #[case(Movement::PageUp)]

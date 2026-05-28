@@ -321,8 +321,8 @@
       // "<C-s>": "Save",
 
       // fine scroll (one line at a time)
-      // "<C-e>": "Move(ScrollDownLine)",
-      // "<C-y>": "Move(ScrollUpLine)",
+      // "<C-e>": "Move(LineDown)",
+      // "<C-y>": "Move(LineUp)",
 
       // view
       // zz: "CenterRow",
