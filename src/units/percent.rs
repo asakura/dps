@@ -1,4 +1,7 @@
 use std::fmt;
+use std::str::FromStr;
+
+use super::error::ParseError;
 
 /// Fractional proportion in [0.0, 1.0], displayed as a percentage.
 ///
@@ -7,9 +10,9 @@ use std::fmt;
 /// use dps::units::Percent;
 /// let p = Percent::new(0.32).unwrap();
 /// assert_relative_eq!(f64::from(p), 0.32);
-/// assert_eq!(p.to_string(), "32 %");
-/// assert_eq!(Percent::new(1.0).unwrap().to_string(), "100 %");
-/// assert_eq!(Percent::new(0.999).unwrap().to_string(), "99.9 %");
+/// assert_eq!(p.to_string(), "32%");
+/// assert_eq!(Percent::new(1.0).unwrap().to_string(), "100%");
+/// assert_eq!(Percent::new(0.999).unwrap().to_string(), "99.9%");
 /// assert!(Percent::new(1.1).is_none());
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -71,10 +74,47 @@ impl fmt::Display for Percent {
         let rounded = (pct * 10.0).round() / 10.0;
 
         if rounded.fract() == 0.0 {
-            write!(f, "{rounded:.0} %")
+            write!(f, "{rounded:.0}%")
         } else {
-            write!(f, "{rounded:.1} %")
+            write!(f, "{rounded:.1}%")
         }
+    }
+}
+
+/// Parses a [`Percent`] from its display representation.
+///
+/// Accepts the format produced by [`Display`](std::fmt::Display): a number
+/// (integer or one decimal place) followed by `"%"`.
+///
+/// # Errors
+///
+/// Returns [`ParseError::Percent`] if the suffix is not `"%"`, the numeric
+/// part cannot be parsed as `f64`, or the resulting fraction is outside
+/// `[0.0, 1.0]`.
+///
+/// # Examples
+///
+/// ```
+/// use dps::units::Percent;
+/// use approx::assert_relative_eq;
+///
+/// assert_relative_eq!(f64::from("32%".parse::<Percent>().unwrap()), 0.32);
+/// assert_relative_eq!(f64::from("99.9%".parse::<Percent>().unwrap()), 0.999);
+/// assert_relative_eq!(f64::from("100%".parse::<Percent>().unwrap()), 1.0);
+/// assert!("invalid".parse::<Percent>().is_err());
+/// ```
+impl FromStr for Percent {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let num_str = s
+            .strip_suffix("%")
+            .ok_or_else(|| ParseError::Percent(s.to_owned()))?;
+        let pct: f64 = num_str
+            .parse()
+            .map_err(|_| ParseError::Percent(num_str.to_owned()))?;
+
+        Self::new(pct / 100.0).ok_or_else(|| ParseError::Percent(s.to_owned()))
     }
 }
 
@@ -102,50 +142,80 @@ impl approx::RelativeEq for Percent {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use approx::assert_relative_eq;
+    use color_eyre::{Result, eyre::eyre};
+    use rstest::rstest;
 
-    #[test]
-    fn display_percent_whole_number() -> Result<(), &'static str> {
-        assert_eq!(Percent::new(0.32).ok_or("invalid")?.to_string(), "32 %");
-        Ok(())
+    use super::*;
+    use crate::units::error::ParseError;
+
+    mod new {
+        use super::*;
+
+        #[rstest]
+        fn rejects_above_one() {
+            assert!(Percent::new(1.1).is_none());
+        }
+
+        #[rstest]
+        fn rejects_negative() {
+            assert!(Percent::new(-0.1).is_none());
+        }
     }
 
-    #[test]
-    fn display_percent_one_decimal() -> Result<(), &'static str> {
-        assert_eq!(Percent::new(0.999).ok_or("invalid")?.to_string(), "99.9 %");
-        Ok(())
+    mod from {
+        use super::*;
+
+        #[rstest]
+        fn gives_inner_value() -> Result<()> {
+            let p = Percent::new(0.40).ok_or_else(|| eyre!("0.40 is a valid percent"))?;
+            assert_relative_eq!(f64::from(p), 0.40);
+            Ok(())
+        }
     }
 
-    #[test]
-    fn display_percent_one() -> Result<(), &'static str> {
-        assert_eq!(Percent::new(1.0).ok_or("invalid")?.to_string(), "100 %");
-        Ok(())
+    mod div {
+        use super::*;
+
+        #[rstest]
+        fn gives_dimensionless_ratio() -> Result<()> {
+            let a = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?;
+            let b = Percent::new(0.68).ok_or_else(|| eyre!("0.68 is a valid percent"))?;
+            assert_relative_eq!(a / b, 0.32 / 0.68);
+            Ok(())
+        }
     }
 
-    #[test]
-    fn new_percent_rejects_above_one() {
-        assert!(Percent::new(1.1).is_none());
+    mod display {
+        use super::*;
+
+        #[rstest]
+        #[case(0.32,  "32%")]
+        #[case(0.999, "99.9%")]
+        #[case(1.0,   "100%")]
+        fn formats_correctly(#[case] val: f64, #[case] expected: &str) -> Result<()> {
+            let p = Percent::new(val).ok_or_else(|| eyre!("{val} is a valid percent"))?;
+            assert_eq!(p.to_string(), expected);
+            Ok(())
+        }
     }
 
-    #[test]
-    fn new_percent_rejects_negative() {
-        assert!(Percent::new(-0.1).is_none());
-    }
+    mod from_str {
+        use super::*;
 
-    #[test]
-    fn f64_from_percent() -> Result<(), &'static str> {
-        assert_relative_eq!(f64::from(Percent::new(0.40).ok_or("invalid")?), 0.40);
-        Ok(())
-    }
+        #[rstest]
+        fn roundtrip() -> Result<()> {
+            let v = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?;
+            assert_eq!(v.to_string().parse::<Percent>()?, v);
+            Ok(())
+        }
 
-    #[test]
-    fn div_gives_dimensionless_ratio() -> Result<(), &'static str> {
-        let a = Percent::new(0.32).ok_or("invalid")?;
-        let b = Percent::new(0.68).ok_or("invalid")?;
-
-        assert_relative_eq!(a / b, 0.32 / 0.68);
-
-        Ok(())
+        #[rstest]
+        #[case("invalid", ParseError::Percent("invalid".to_owned()))]
+        #[case("abc%",    ParseError::Percent("abc".to_owned()))]
+        #[case("101%",    ParseError::Percent("101%".to_owned()))]
+        fn error_carries_offending_input(#[case] input: &str, #[case] expected: ParseError) {
+            assert_eq!(input.parse::<Percent>(), Err(expected));
+        }
     }
 }

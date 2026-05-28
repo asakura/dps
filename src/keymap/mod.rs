@@ -61,9 +61,9 @@
 //!     let _ = engine.advance(press(KeyCode::Char('g')), map); // Prefix
 //!
 //!     match engine.advance(press(KeyCode::Char('g')), map) {
-//!         ChordResult::Exact(action) => { /* dispatch action */ let _ = action; }
-//!         ChordResult::Prefix        => { /* keep waiting */ }
-//!         ChordResult::NoMatch       => { /* global fallback */ }
+//!         ChordResult::Exact(action, _) => { /* dispatch action */ let _ = action; }
+//!         ChordResult::Prefix           => { /* keep waiting */ }
+//!         ChordResult::NoMatch          => { /* global fallback */ }
 //!     }
 //! }
 //! ```

@@ -3,6 +3,7 @@
 mod bar;
 mod celsius;
 mod cns_rate_per_minute;
+pub mod error;
 mod grams_per_litre;
 mod meters;
 mod meters_per_bar;
@@ -13,6 +14,7 @@ mod percent;
 pub use bar::Bar;
 pub use celsius::Celsius;
 pub use cns_rate_per_minute::CnsRatePerMinute;
+pub use error::ParseError;
 pub use grams_per_litre::GramsPerLitre;
 pub use meters::Meters;
 pub use meters_per_bar::MetersPerBar;
@@ -24,7 +26,7 @@ use std::ops::{Div, Mul};
 
 /// Generates standard impls for a newtype unit struct backed by f64.
 ///
-/// Provides: `new`, `max`, `Display`, `From<f64>`, `From<T> for f64`,
+/// Provides: `new`, `max`, `Display`, `FromStr`, `From<f64>`, `From<T> for f64`,
 /// `Add`, `Sub`, `Neg`, `Mul<f64>`, `Div<f64>`, `Mul<T> for f64`, `Div` (ratio),
 /// `Mul<Percent>`, and `Div<Percent>`.
 #[doc(hidden)]
@@ -73,6 +75,20 @@ macro_rules! unit_newtype {
         impl ::std::fmt::Display for $ty {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "{:.1} {}", self.0, $suffix)
+            }
+        }
+
+        impl ::std::str::FromStr for $ty {
+            type Err = $crate::units::error::ParseError;
+
+            fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
+                let num_str = s
+                    .strip_suffix(::std::concat!(" ", $suffix))
+                    .ok_or_else(|| $crate::units::error::ParseError::$ty(s.to_owned()))?;
+                let val: f64 = num_str
+                    .parse()
+                    .map_err(|_| $crate::units::error::ParseError::$ty(num_str.to_owned()))?;
+                ::std::result::Result::Ok(Self(val))
             }
         }
 
@@ -184,77 +200,164 @@ macro_rules! unit_newtype {
 
         #[cfg(test)]
         mod unit_newtype_tests {
+            use ::rstest::rstest;
+
             use super::*;
 
-            #[test]
-            fn display() {
-                assert_eq!($ty::new(10.0).to_string(), concat!("10.0 ", $suffix));
+            mod is_finite {
+                use super::*;
+
+                #[rstest]
+                fn finite_value() {
+                    assert!($ty::new(5.0).is_finite());
+                }
+
+                #[rstest]
+                fn infinity_is_not_finite() {
+                    assert!(!$ty::new(f64::INFINITY).is_finite());
+                }
+
+                #[rstest]
+                fn nan_is_not_finite() {
+                    assert!(!$ty::new(f64::NAN).is_finite());
+                }
             }
 
-            #[test]
-            fn from_f64() {
-                ::approx::assert_relative_eq!($ty::from(5.0_f64), $ty::new(5.0));
+            mod is_positive_finite {
+                use super::*;
+
+                #[rstest]
+                fn small_positive_value() {
+                    assert!($ty::new(0.001).is_positive_finite());
+                }
+
+                #[rstest]
+                fn zero_is_not_positive_finite() {
+                    assert!(!$ty::new(0.0).is_positive_finite());
+                }
+
+                #[rstest]
+                fn negative_is_not_positive_finite() {
+                    assert!(!$ty::new(-1.0).is_positive_finite());
+                }
+
+                #[rstest]
+                fn infinity_is_not_positive_finite() {
+                    assert!(!$ty::new(f64::INFINITY).is_positive_finite());
+                }
             }
 
-            #[test]
-            fn f64_from() {
-                ::approx::assert_relative_eq!(f64::from($ty::new(5.0)), 5.0);
+            mod contains {
+                use super::*;
+
+                #[rstest]
+                fn inclusive_range_contains_interior() {
+                    assert!($ty::new(5.0).contains($ty::new(0.0)..=$ty::new(10.0)));
+                }
+
+                #[rstest]
+                fn inclusive_range_contains_boundary() {
+                    assert!($ty::new(5.0).contains($ty::new(5.0)..=$ty::new(5.0)));
+                }
+
+                #[rstest]
+                fn inclusive_range_rejects_exterior() {
+                    assert!(!$ty::new(5.0).contains($ty::new(6.0)..=$ty::new(10.0)));
+                }
+
+                #[rstest]
+                fn exclusive_range_contains_interior() {
+                    assert!($ty::new(5.0).contains($ty::new(0.0)..$ty::new(10.0)));
+                }
+
+                #[rstest]
+                fn exclusive_range_rejects_boundary() {
+                    assert!(!$ty::new(5.0).contains($ty::new(0.0)..$ty::new(5.0)));
+                }
             }
 
-            #[test]
-            fn f64_mul() {
-                ::approx::assert_relative_eq!(2.0_f64 * $ty::new(5.0), $ty::new(10.0));
+            mod display {
+                use super::*;
+
+                #[rstest]
+                fn formats_with_suffix() {
+                    assert_eq!($ty::new(10.0).to_string(), concat!("10.0 ", $suffix));
+                }
             }
 
-            #[test]
-            fn ratio_div() {
-                let ratio: f64 = $ty::new(10.0) / $ty::new(2.0);
-                ::approx::assert_relative_eq!(ratio, 5.0);
+            mod from_str {
+                use super::*;
+
+                #[rstest]
+                fn roundtrip() -> ::color_eyre::eyre::Result<()> {
+                    let v = $ty::new(1.5);
+                    assert_eq!(v.to_string().parse::<$ty>()?, v);
+                    ::std::result::Result::Ok(())
+                }
+
+                #[rstest]
+                #[case("1.5", "1.5")]
+                #[case("",    "")]
+                fn missing_suffix_reports_full_input(
+                    #[case] input: &str,
+                    #[case] expected: &str,
+                ) {
+                    assert_eq!(
+                        input.parse::<$ty>(),
+                        Err($crate::units::error::ParseError::$ty(expected.to_owned())),
+                    );
+                }
+
+                #[rstest]
+                fn non_numeric_reports_numeric_part() {
+                    let input = ::std::concat!("abc ", $suffix);
+                    assert_eq!(
+                        input.parse::<$ty>(),
+                        Err($crate::units::error::ParseError::$ty("abc".to_owned())),
+                    );
+                }
             }
 
-            #[test]
-            fn neg() {
-                ::approx::assert_relative_eq!(-$ty::new(5.0), $ty::new(-5.0));
+            mod from {
+                use super::*;
+
+                #[rstest]
+                fn from_f64() {
+                    ::approx::assert_relative_eq!($ty::from(5.0_f64), $ty::new(5.0));
+                }
+
+                #[rstest]
+                fn f64_from() {
+                    ::approx::assert_relative_eq!(f64::from($ty::new(5.0)), 5.0);
+                }
             }
 
-            #[test]
-            fn is_finite_true() {
-                assert!($ty::new(5.0).is_finite());
+            mod mul {
+                use super::*;
+
+                #[rstest]
+                fn f64_mul() {
+                    ::approx::assert_relative_eq!(2.0_f64 * $ty::new(5.0), $ty::new(10.0));
+                }
             }
 
-            #[test]
-            fn is_finite_false() {
-                assert!(!$ty::new(f64::INFINITY).is_finite());
-                assert!(!$ty::new(f64::NAN).is_finite());
+            mod div {
+                use super::*;
+
+                #[rstest]
+                fn ratio_div() {
+                    let ratio: f64 = $ty::new(10.0) / $ty::new(2.0);
+                    ::approx::assert_relative_eq!(ratio, 5.0);
+                }
             }
 
-            #[test]
-            fn is_positive_finite_true() {
-                assert!($ty::new(0.001).is_positive_finite());
-            }
+            mod neg {
+                use super::*;
 
-            #[test]
-            fn is_positive_finite_false() {
-                assert!(!$ty::new(0.0).is_positive_finite());
-                assert!(!$ty::new(-1.0).is_positive_finite());
-                assert!(!$ty::new(f64::INFINITY).is_positive_finite());
-            }
-
-            #[test]
-            fn contains_inclusive_range() {
-                let v = $ty::new(5.0);
-
-                assert!(v.contains($ty::new(0.0)..=$ty::new(10.0)));
-                assert!(v.contains($ty::new(5.0)..=$ty::new(5.0)));
-                assert!(!v.contains($ty::new(6.0)..=$ty::new(10.0)));
-            }
-
-            #[test]
-            fn contains_exclusive_range() {
-                let v = $ty::new(5.0);
-
-                assert!(v.contains($ty::new(0.0)..$ty::new(10.0)));
-                assert!(!v.contains($ty::new(0.0)..$ty::new(5.0)));
+                #[rstest]
+                fn negates_value() {
+                    ::approx::assert_relative_eq!(-$ty::new(5.0), $ty::new(-5.0));
+                }
             }
         }
     };

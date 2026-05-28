@@ -69,7 +69,7 @@ pub struct EANxBlend<M: BlendMethod> {
 /// assert_eq!(try_ean(0.21).to_string(), "Air");
 /// assert_eq!(try_ean(0.32).to_string(), "EANx 32");
 /// assert_eq!(try_ean(1.00).to_string(), "Pure O₂");
-/// assert_eq!(try_ean(0.25).to_string(), "25 %");
+/// assert_eq!(try_ean(0.25).to_string(), "25%");
 /// ```
 pub type EANx = EANxBlend<PartialPressure>;
 
@@ -989,8 +989,8 @@ mod tests {
 
         #[test]
         fn display_unnamed_mix_shows_fraction() -> Result<()> {
-            assert_eq!(ean(0.25)?.to_string(), "25 %");
-            assert_eq!(ean(0.33)?.to_string(), "33 %");
+            assert_eq!(ean(0.25)?.to_string(), "25%");
+            assert_eq!(ean(0.33)?.to_string(), "33%");
 
             Ok(())
         }
