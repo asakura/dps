@@ -2,8 +2,8 @@
 
 use std::num::ParseIntError;
 
-/// Key-sequence parse error. Re-exported from [`crate::keymap::error::ParseError`].
-pub use crate::keymap::error::ParseError as KeyResolutionError;
+/// Key-sequence parse error.
+pub use crate::keymap::KeyMapError as KeyResolutionError;
 
 /// Error from a theme-resolution operation.
 #[derive(Debug, thiserror::Error)]
