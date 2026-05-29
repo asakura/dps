@@ -14,7 +14,7 @@ use super::error::ParseError;
 /// assert_eq!(p.to_string(), "32%");
 /// assert_eq!(Percent::new(1.0).unwrap().to_string(), "100%");
 /// assert_eq!(Percent::new(0.999).unwrap().to_string(), "99.9%");
-/// assert!(Percent::new(1.1).is_none());
+/// assert!(Percent::new(1.1).is_err());
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Percent(f64);
@@ -22,22 +22,51 @@ pub struct Percent(f64);
 impl Percent {
     /// Constructs a `Percent` from a fraction in [0.0, 1.0].
     ///
-    /// Returns `None` if `val` is outside [0.0, 1.0].
+    /// # Errors
+    ///
+    /// Returns [`UnitError::OutOfRange`] if `val` is outside `[0.0, 1.0]`.
     ///
     /// ```no_run
     /// use dps::units::Percent;
-    /// assert!(Percent::new(0.32).is_some());
-    /// assert!(Percent::new(0.0).is_some());
-    /// assert!(Percent::new(1.0).is_some());
-    /// assert!(Percent::new(1.1).is_none());
-    /// assert!(Percent::new(-0.1).is_none());
+    /// assert!(Percent::new(0.32).is_ok());
+    /// assert!(Percent::new(0.0).is_ok());
+    /// assert!(Percent::new(1.0).is_ok());
+    /// assert!(Percent::new(1.1).is_err());
+    /// assert!(Percent::new(-0.1).is_err());
+    /// ```
+    pub const fn new(val: f64) -> Result<Self, UnitError> {
+        if val >= 0.0 && val <= 1.0 {
+            Ok(Self(val))
+        } else {
+            Err(UnitError::OutOfRange(val))
+        }
+    }
+
+    /// Constructs a `Percent` from a compile-time-known fraction, panicking if
+    /// out of range.
+    ///
+    /// Intended for `const` contexts where the value is a literal guaranteed to
+    /// lie in `[0.0, 1.0]`. For runtime use, prefer [`Percent::new`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `val` is outside `[0.0, 1.0]`. When used in a `const` item
+    /// this becomes a compile-time error.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use dps::units::Percent;
+    /// let p = Percent::literal(0.32);
+    /// assert_eq!(p.to_string(), "32%");
     /// ```
     #[must_use]
-    pub const fn new(val: f64) -> Option<Self> {
+    pub const fn literal(val: f64) -> Self {
         if val >= 0.0 && val <= 1.0 {
-            Some(Self(val))
+            Self(val)
         } else {
-            None
+            // TODO: validate that panic can occur only during build time
+            panic!("Percent value is outside [0.0, 1.0]")
         }
     }
 }
@@ -114,7 +143,7 @@ impl FromStr for Percent {
             .parse()
             .map_err(|_| UnitError::Parse(ParseError::Percent(num_str.to_owned())))?;
 
-        Self::new(pct / 100.0).ok_or_else(|| UnitError::Parse(ParseError::Percent(s.to_owned())))
+        Self::new(pct / 100.0)
     }
 }
 
@@ -143,7 +172,7 @@ impl approx::RelativeEq for Percent {
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
-    use color_eyre::eyre::{Report, eyre};
+    use color_eyre::eyre::Report;
     use rstest::rstest;
 
     use super::*;
@@ -155,12 +184,12 @@ mod tests {
 
         #[rstest]
         fn rejects_above_one() {
-            assert!(Percent::new(1.1).is_none());
+            assert!(Percent::new(1.1).is_err());
         }
 
         #[rstest]
         fn rejects_negative() {
-            assert!(Percent::new(-0.1).is_none());
+            assert!(Percent::new(-0.1).is_err());
         }
     }
 
@@ -169,7 +198,7 @@ mod tests {
 
         #[rstest]
         fn gives_inner_value() -> Result<(), Report> {
-            let p = Percent::new(0.40).ok_or_else(|| eyre!("0.40 is a valid percent"))?;
+            let p = Percent::new(0.40)?;
             assert_relative_eq!(f64::from(p), 0.40);
             Ok(())
         }
@@ -180,8 +209,8 @@ mod tests {
 
         #[rstest]
         fn gives_dimensionless_ratio() -> Result<(), Report> {
-            let a = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?;
-            let b = Percent::new(0.68).ok_or_else(|| eyre!("0.68 is a valid percent"))?;
+            let a = Percent::new(0.32)?;
+            let b = Percent::new(0.68)?;
 
             assert_relative_eq!(a / b, 0.32 / 0.68);
 
@@ -197,7 +226,7 @@ mod tests {
         #[case(0.999, "99.9%")]
         #[case(1.0, "100%")]
         fn formats_correctly(#[case] val: f64, #[case] expected: &str) -> Result<(), Report> {
-            let p = Percent::new(val).ok_or_else(|| eyre!("{val} is a valid percent"))?;
+            let p = Percent::new(val)?;
 
             assert_eq!(p.to_string(), expected);
 
@@ -210,7 +239,7 @@ mod tests {
 
         #[rstest]
         fn roundtrip() -> Result<(), Report> {
-            let v = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?;
+            let v = Percent::new(0.32)?;
 
             assert_eq!(v.to_string().parse::<Percent>()?, v);
 

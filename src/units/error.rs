@@ -10,7 +10,7 @@
 
 /// Module-level parse error for unit types.
 ///
-/// Wraps the lower-level [`ParseError`] variants behind a stable boundary.
+/// Wraps the lower-level `ParseError` variants behind a stable boundary.
 ///
 /// # Examples
 ///
@@ -19,11 +19,14 @@
 ///
 /// assert!(matches!("bad".parse::<Bar>(), Err(UnitError::Parse(_))));
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum Error {
     /// Wraps a specific unit-parse failure.
     #[error(transparent)]
     Parse(#[from] ParseError),
+    /// The supplied value is outside the valid range `[0.0, 1.0]`.
+    #[error("value {0} is outside the valid range [0.0, 1.0]")]
+    OutOfRange(f64),
 }
 
 /// Error returned when a string cannot be parsed as a unit value.
