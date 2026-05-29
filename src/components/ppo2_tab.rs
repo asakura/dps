@@ -610,7 +610,10 @@ mod tests {
         fn down_clamped_at_max_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
             tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(
@@ -670,7 +673,10 @@ mod tests {
                 tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
             }
 
-            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoTop),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -686,7 +692,10 @@ mod tests {
         fn goto_bottom_selects_max_depth() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -702,7 +711,10 @@ mod tests {
         fn scroll_down_moves_by_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::ScrollDown), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::ScrollDown),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -718,8 +730,14 @@ mod tests {
         fn scroll_up_moves_by_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
-            tab.handle_action(Action::Move(Movement::ScrollUp), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
+            tab.handle_action(
+                Action::Move(Movement::ScrollUp),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -735,7 +753,10 @@ mod tests {
         fn page_down_moves_by_page_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::PageDown), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::PageDown),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -751,8 +772,14 @@ mod tests {
         fn page_up_moves_by_page_delta() -> Result<()> {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
-            tab.handle_action(Action::Move(Movement::PageUp), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
+            tab.handle_action(
+                Action::Move(Movement::PageUp),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state

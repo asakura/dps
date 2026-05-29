@@ -219,7 +219,10 @@ impl Action {
         match self {
             Self::Move(_) => true,
             Self::Edit(op) => {
-                matches!(op, EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_))
+                matches!(
+                    op,
+                    EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_)
+                )
             }
             _ => false,
         }
@@ -655,6 +658,7 @@ mod tests {
         #[case(Action::None)]
         #[case(Action::Edit(EditOp::YankRow(None)))]
         #[case(Action::Edit(EditOp::YankRow(Some('a'))))]
+        #[case(Action::Edit(EditOp::CyclePaste))]
         fn non_movement_actions_reject_count(#[case] action: Action) {
             assert!(!action.accepts_count());
         }

@@ -44,6 +44,7 @@ pub struct ModTab {
     table_state: TableState,
     ppo2_idx: usize,
     selection: Option<MOD>,
+    last_paste_row: Option<usize>,
 }
 
 impl Default for ModTab {
@@ -71,6 +72,7 @@ impl ModTab {
             table_state,
             ppo2_idx: PPO2_DEFAULT_IDX,
             selection: None,
+            last_paste_row: None,
         }
     }
 
@@ -229,6 +231,11 @@ impl Component for ModTab {
     }
 
     fn handle_action(&mut self, action: Action, registers: &mut RegisterStore) {
+        if !matches!(action, Action::Edit(EditOp::CyclePaste)) {
+            self.last_paste_row = None;
+            registers.reset_ring_cursor();
+        }
+
         match action {
             Action::Move(mv) => self.handle_movement(mv),
             Action::Select => {
@@ -239,6 +246,31 @@ impl Component for ModTab {
             Action::Edit(EditOp::YankRow(reg)) => {
                 if let Some(row) = self.table_state.selected() {
                     registers.push_yank(reg, RegisterValue::EANx(self.mixes[row]));
+                }
+            }
+            Action::Edit(EditOp::Paste(reg)) => {
+                let reg_char = reg.unwrap_or('"');
+                if let Some(RegisterValue::EANx(mix)) = registers.read(reg_char) {
+                    let insert_at = self.table_state.selected().map_or(0, |r| r + 1);
+                    self.mixes.insert(insert_at, mix);
+                    self.table_state.select(Some(insert_at));
+                    self.last_paste_row = Some(insert_at);
+                }
+            }
+            Action::Edit(EditOp::PasteAbove(reg)) => {
+                let reg_char = reg.unwrap_or('"');
+                if let Some(RegisterValue::EANx(mix)) = registers.read(reg_char) {
+                    let insert_at = self.table_state.selected().unwrap_or(0);
+                    self.mixes.insert(insert_at, mix);
+                    self.table_state.select(Some(insert_at));
+                    self.last_paste_row = Some(insert_at);
+                }
+            }
+            Action::Edit(EditOp::CyclePaste) => {
+                if let Some(row) = self.last_paste_row {
+                    if let Some(RegisterValue::EANx(mix)) = registers.cycle_yank() {
+                        self.mixes[row] = mix;
+                    }
                 }
             }
             Action::Edit(EditOp::Delete(reg)) => {
@@ -482,9 +514,9 @@ mod tests {
     }
 
     mod yank_row {
-        use rstest::rstest;
         use super::*;
         use crate::action::EditOp;
+        use rstest::rstest;
 
         #[rstest]
         fn unnamed_reg_writes_mix_to_unnamed_and_yank_register() -> Result<()> {
@@ -522,16 +554,19 @@ mod tests {
     }
 
     mod delete {
-        use rstest::rstest;
         use super::*;
         use crate::action::EditOp;
+        use rstest::rstest;
 
         #[rstest]
         fn removes_focused_row_from_mixes() -> Result<()> {
             let mut tab = ModTab::new();
             let before_len = tab.mixes.len();
 
-            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Edit(EditOp::Delete(None)),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(tab.mixes.len(), before_len - 1);
             Ok(())
@@ -540,7 +575,10 @@ mod tests {
         #[rstest]
         fn deleted_value_is_stored_in_register() -> Result<()> {
             let mut tab = ModTab::new();
-            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
             let expected = RegisterValue::EANx(tab.mixes[row]);
             let mut regs = RegisterStore::default();
 
@@ -553,7 +591,10 @@ mod tests {
         #[rstest]
         fn unnamed_routes_to_delete_stack() -> Result<()> {
             let mut tab = ModTab::new();
-            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
             let expected = RegisterValue::EANx(tab.mixes[row]);
             let mut regs = RegisterStore::default();
 
@@ -568,7 +609,10 @@ mod tests {
         #[rstest]
         fn named_reg_bypasses_delete_stack() -> Result<()> {
             let mut tab = ModTab::new();
-            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
             let expected = RegisterValue::EANx(tab.mixes[row]);
             let mut regs = RegisterStore::default();
 
@@ -596,7 +640,10 @@ mod tests {
         #[rstest]
         fn digit_reg_routes_to_delete_stack() -> Result<()> {
             let mut tab = ModTab::new();
-            let row = tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?;
+            let row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
             let expected = RegisterValue::EANx(tab.mixes[row]);
             let mut regs = RegisterStore::default();
 
@@ -610,13 +657,21 @@ mod tests {
         #[rstest]
         fn selection_clamps_when_last_row_deleted() -> Result<()> {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
             let last = tab.mixes.len() - 1;
 
-            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Edit(EditOp::Delete(None)),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
-                tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 last - 1,
             );
             Ok(())
@@ -625,14 +680,213 @@ mod tests {
         #[rstest]
         fn selection_stays_stable_when_mid_row_deleted() -> Result<()> {
             let mut tab = ModTab::new();
-            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoTop),
+                &mut RegisterStore::default(),
+            );
 
-            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Edit(EditOp::Delete(None)),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
-                tab.table_state.selected().ok_or_else(|| eyre!("no row selected"))?,
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
                 0,
             );
+            Ok(())
+        }
+    }
+
+    mod paste {
+        use super::*;
+        use crate::action::EditOp;
+        use rstest::rstest;
+
+        #[rstest]
+        fn inserts_below_focused_row() -> Result<()> {
+            let mut tab = ModTab::new();
+            let before_len = tab.mixes.len();
+            let cursor = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let mut regs = RegisterStore::default();
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+
+            tab.handle_action(Action::Edit(EditOp::Paste(None)), &mut regs);
+
+            assert_eq!(tab.mixes.len(), before_len + 1);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                cursor + 1,
+            );
+            Ok(())
+        }
+
+        #[rstest]
+        fn inserts_from_named_register() -> Result<()> {
+            let mut tab = ModTab::new();
+            let cursor = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let yanked = tab.mixes[cursor];
+            let mut regs = RegisterStore::default();
+            tab.handle_action(Action::Edit(EditOp::YankRow(Some('a'))), &mut regs);
+
+            tab.handle_action(Action::Edit(EditOp::Paste(Some('a'))), &mut regs);
+
+            assert_eq!(tab.mixes[cursor + 1], yanked);
+            Ok(())
+        }
+
+        #[rstest]
+        fn no_op_when_register_empty() -> Result<()> {
+            let mut tab = ModTab::new();
+            let before_len = tab.mixes.len();
+
+            tab.handle_action(
+                Action::Edit(EditOp::Paste(None)),
+                &mut RegisterStore::default(),
+            );
+
+            assert_eq!(tab.mixes.len(), before_len);
+            Ok(())
+        }
+    }
+
+    mod paste_above {
+        use super::*;
+        use crate::action::EditOp;
+        use rstest::rstest;
+
+        #[rstest]
+        fn inserts_at_focused_row() -> Result<()> {
+            let mut tab = ModTab::new();
+            let before_len = tab.mixes.len();
+            let cursor = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let mut regs = RegisterStore::default();
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+
+            tab.handle_action(Action::Edit(EditOp::PasteAbove(None)), &mut regs);
+
+            assert_eq!(tab.mixes.len(), before_len + 1);
+            assert_eq!(
+                tab.table_state
+                    .selected()
+                    .ok_or_else(|| eyre!("no row selected"))?,
+                cursor,
+            );
+            Ok(())
+        }
+    }
+
+    mod cycle_paste {
+        use super::*;
+        use crate::action::EditOp;
+        use rstest::rstest;
+
+        #[rstest]
+        fn replaces_pasted_row_with_older_yank() -> Result<()> {
+            let mut tab = ModTab::new();
+            let cursor = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let mut regs = RegisterStore::default();
+
+            // Yank row A (older), move down, yank row B (newer).
+            let mix_a = tab.mixes[cursor];
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+            tab.handle_action(Action::Move(Movement::Down), &mut regs);
+            let mix_b = tab.mixes[cursor + 1];
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+
+            // Paste inserts B (most recent) below cursor.
+            tab.handle_action(Action::Edit(EditOp::Paste(None)), &mut regs);
+            let paste_row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            assert_eq!(tab.mixes[paste_row], mix_b);
+
+            // CyclePaste replaces that row with A (older entry).
+            tab.handle_action(Action::Edit(EditOp::CyclePaste), &mut regs);
+            assert_eq!(tab.mixes[paste_row], mix_a);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn no_op_without_prior_paste() -> Result<()> {
+            let mut tab = ModTab::new();
+            let before_len = tab.mixes.len();
+            let mut regs = RegisterStore::default();
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+
+            tab.handle_action(Action::Edit(EditOp::CyclePaste), &mut regs);
+
+            assert_eq!(tab.mixes.len(), before_len);
+            Ok(())
+        }
+
+        #[rstest]
+        fn no_op_when_ring_has_single_entry() -> Result<()> {
+            let mut tab = ModTab::new();
+            let cursor = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let mut regs = RegisterStore::default();
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+            tab.handle_action(Action::Edit(EditOp::Paste(None)), &mut regs);
+            let paste_row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let pasted_mix = tab.mixes[paste_row];
+
+            tab.handle_action(Action::Edit(EditOp::CyclePaste), &mut regs);
+
+            assert_eq!(tab.mixes[paste_row], pasted_mix);
+            assert_eq!(tab.mixes[paste_row], tab.mixes[cursor]);
+            Ok(())
+        }
+
+        #[rstest]
+        fn intervening_move_breaks_chain() -> Result<()> {
+            let mut tab = ModTab::new();
+            let cursor = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+            let mut regs = RegisterStore::default();
+
+            let mix_a = tab.mixes[cursor];
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+            tab.handle_action(Action::Move(Movement::Down), &mut regs);
+            tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
+            tab.handle_action(Action::Edit(EditOp::Paste(None)), &mut regs);
+            let paste_row = tab
+                .table_state
+                .selected()
+                .ok_or_else(|| eyre!("no row selected"))?;
+
+            // A Move between Paste and CyclePaste clears last_paste_row.
+            tab.handle_action(Action::Move(Movement::Up), &mut regs);
+            tab.handle_action(Action::Edit(EditOp::CyclePaste), &mut regs);
+
+            // Row at paste_row is unchanged (CyclePaste was a no-op).
+            assert_ne!(tab.mixes[paste_row], mix_a);
             Ok(())
         }
     }
@@ -750,7 +1004,10 @@ mod tests {
         fn down_clamped_at_last_mix() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
             tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(
@@ -788,7 +1045,10 @@ mod tests {
         fn up_clamped_at_zero() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoTop),
+                &mut RegisterStore::default(),
+            );
             tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
 
             assert_eq!(
@@ -809,7 +1069,10 @@ mod tests {
                 tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
             }
 
-            tab.handle_action(Action::Move(Movement::GotoTop), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoTop),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -825,7 +1088,10 @@ mod tests {
         fn goto_bottom_selects_last_row() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -841,7 +1107,10 @@ mod tests {
         fn scroll_down_moves_by_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::ScrollDown), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::ScrollDown),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -861,8 +1130,14 @@ mod tests {
         fn scroll_up_moves_by_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
-            tab.handle_action(Action::Move(Movement::ScrollUp), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
+            tab.handle_action(
+                Action::Move(Movement::ScrollUp),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -882,7 +1157,10 @@ mod tests {
                 .selected()
                 .ok_or_else(|| eyre!("no row selected"))?;
 
-            tab.handle_action(Action::Move(Movement::PageDown), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::PageDown),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state
@@ -898,8 +1176,14 @@ mod tests {
         fn page_up_moves_by_page_delta() -> Result<()> {
             let mut tab = ModTab::new();
 
-            tab.handle_action(Action::Move(Movement::GotoBottom), &mut RegisterStore::default());
-            tab.handle_action(Action::Move(Movement::PageUp), &mut RegisterStore::default());
+            tab.handle_action(
+                Action::Move(Movement::GotoBottom),
+                &mut RegisterStore::default(),
+            );
+            tab.handle_action(
+                Action::Move(Movement::PageUp),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(
                 tab.table_state

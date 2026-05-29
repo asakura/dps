@@ -26,6 +26,7 @@ use super::error::ParseError;
 /// assert_eq!(EditOp::YankRow(Some('a')).to_string(), "YankRow(a)");
 /// assert_eq!(EditOp::from_str("Paste").unwrap(),    EditOp::Paste(None));
 /// assert_eq!(EditOp::from_str("Paste(+)").unwrap(), EditOp::Paste(Some('+')));
+/// assert_eq!(EditOp::from_str("CyclePaste").unwrap(), EditOp::CyclePaste);
 /// ```
 ///
 /// [`SequenceEngine`]: crate::keymap::SequenceEngine
@@ -34,26 +35,27 @@ use super::error::ParseError;
 pub enum EditOp {
     /// Yank (copy) the focused row to a register.
     YankRow(Option<char>),
-    /// Paste from a register below the current row.
+    /// Insert a row from a register below the focused row.
     ///
-    /// # Table semantics
-    ///
-    /// TODO: Paste semantics in table components are undefined.
-    /// Decide between:
-    /// (a) insert a new row below the cursor populated with the pasted value, or
-    /// (b) replace the focused cell/row value in-place.
-    /// Option (a) mirrors Vim line-paste; option (b) is more natural for structured data.
+    /// Inserts a new row immediately below the cursor and moves the cursor to
+    /// it. A subsequent [`CyclePaste`](EditOp::CyclePaste) replaces that row
+    /// with the next entry in the yank ring.
     Paste(Option<char>),
-    /// Paste from a register above the current row.
+    /// Insert a row from a register above the focused row.
     ///
-    /// # Table semantics
-    ///
-    /// TODO: Paste semantics in table components are undefined.
-    /// Decide between:
-    /// (a) insert a new row above the cursor populated with the pasted value, or
-    /// (b) replace the focused cell/row value in-place.
-    /// Option (a) mirrors Vim line-paste; option (b) is more natural for structured data.
+    /// Inserts a new row at the cursor position (pushing the current row down)
+    /// and keeps the cursor on the newly inserted row. A subsequent
+    /// [`CyclePaste`](EditOp::CyclePaste) replaces that row with the next
+    /// entry in the yank ring.
     PasteAbove(Option<char>),
+    /// Replace the most recently pasted row with the next yank-ring entry.
+    ///
+    /// Only has an effect immediately after [`Paste`](EditOp::Paste) or
+    /// [`PasteAbove`](EditOp::PasteAbove). Any intervening action (move,
+    /// yank, delete, …) breaks the chain and makes this a no-op. Successive
+    /// `CyclePaste` actions walk the ring from newest to oldest, wrapping when
+    /// the ring is exhausted.
+    CyclePaste,
     /// Delete the focused row, pushing to the delete history stack.
     Delete(Option<char>),
     // TODO: Change(Option<char>) — blocked on Mode::Insert (Insert mode not yet implemented).
@@ -80,6 +82,7 @@ impl EditOp {
             Self::YankRow(_) => Self::YankRow(reg),
             Self::Paste(_) => Self::Paste(reg),
             Self::PasteAbove(_) => Self::PasteAbove(reg),
+            Self::CyclePaste => Self::CyclePaste,
             Self::Delete(_) => Self::Delete(reg),
         }
     }
@@ -96,6 +99,7 @@ impl EditOp {
     pub const fn register(self) -> Option<char> {
         match self {
             Self::YankRow(r) | Self::Paste(r) | Self::PasteAbove(r) | Self::Delete(r) => r,
+            Self::CyclePaste => None,
         }
     }
 }
@@ -109,6 +113,7 @@ impl fmt::Display for EditOp {
             Self::Paste(Some(r)) => write!(f, "Paste({r})"),
             Self::PasteAbove(None) => f.write_str("PasteAbove"),
             Self::PasteAbove(Some(r)) => write!(f, "PasteAbove({r})"),
+            Self::CyclePaste => f.write_str("CyclePaste"),
             Self::Delete(None) => f.write_str("Delete"),
             Self::Delete(Some(r)) => write!(f, "Delete({r})"),
         }
@@ -144,6 +149,7 @@ impl FromStr for EditOp {
             "YankRow" => Ok(Self::YankRow(reg)),
             "Paste" => Ok(Self::Paste(reg)),
             "PasteAbove" => Ok(Self::PasteAbove(reg)),
+            "CyclePaste" => Ok(Self::CyclePaste),
             "Delete" => Ok(Self::Delete(reg)),
             _ => Err(ParseError::VariantNotFound.into()),
         }
@@ -185,6 +191,7 @@ mod tests {
         #[case(EditOp::Paste(Some('+')), "Paste(+)")]
         #[case(EditOp::PasteAbove(None), "PasteAbove")]
         #[case(EditOp::PasteAbove(Some('*')), "PasteAbove(*)")]
+        #[case(EditOp::CyclePaste, "CyclePaste")]
         #[case(EditOp::Delete(None), "Delete")]
         #[case(EditOp::Delete(Some('_')), "Delete(_)")]
         fn formats_correctly(#[case] op: EditOp, #[case] expected: &str) {
@@ -201,6 +208,7 @@ mod tests {
         #[case("Paste", EditOp::Paste(None))]
         #[case("Paste(+)", EditOp::Paste(Some('+')))]
         #[case("PasteAbove", EditOp::PasteAbove(None))]
+        #[case("CyclePaste", EditOp::CyclePaste)]
         #[case("Delete", EditOp::Delete(None))]
         #[case("Delete(_)", EditOp::Delete(Some('_')))]
         fn parses_correctly(
@@ -230,6 +238,7 @@ mod tests {
         #[case(EditOp::Paste(Some('+')))]
         #[case(EditOp::PasteAbove(None))]
         #[case(EditOp::PasteAbove(Some('*')))]
+        #[case(EditOp::CyclePaste)]
         #[case(EditOp::Delete(None))]
         #[case(EditOp::Delete(Some('_')))]
         fn display_then_from_str_is_identity(#[case] op: EditOp) -> Result<(), ActionError> {
@@ -268,6 +277,15 @@ mod tests {
             let op = EditOp::PasteAbove(None);
             assert_eq!(op.with_register(Some('+')), EditOp::PasteAbove(Some('+')));
         }
+
+        #[rstest]
+        fn cycle_paste_ignores_register() {
+            assert_eq!(
+                EditOp::CyclePaste.with_register(Some('a')),
+                EditOp::CyclePaste
+            );
+            assert_eq!(EditOp::CyclePaste.with_register(None), EditOp::CyclePaste);
+        }
     }
 
     mod register_accessor {
@@ -277,6 +295,7 @@ mod tests {
         #[case(EditOp::YankRow(Some('a')), Some('a'))]
         #[case(EditOp::YankRow(None), None)]
         #[case(EditOp::Delete(Some('_')), Some('_'))]
+        #[case(EditOp::CyclePaste, None)]
         fn returns_inner_char(#[case] op: EditOp, #[case] expected: Option<char>) {
             assert_eq!(op.register(), expected);
         }

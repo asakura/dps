@@ -308,6 +308,7 @@
       dd: "Edit(Delete)",
       p:  "Edit(Paste)",
       "<S-p>": "Edit(PasteAbove)",
+      "<C-p>": "Edit(CyclePaste)",
       // cc: "Edit(Change)",  // blocked on Mode::Insert (not yet implemented)
 
       // search / filter

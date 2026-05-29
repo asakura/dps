@@ -32,15 +32,16 @@ const YANK_RING_CAP: usize = 9;
 /// ## Yank ring
 ///
 /// Each call to [`push_yank`](RegisterStore::push_yank) prepends to an internal
-/// `VecDeque` capped at [`YANK_RING_CAP`] entries. Reading register `'0'`
-/// always returns the head of the ring — the most recent yank — so the
-/// observable behaviour of `'0'` is unchanged from a flat-slot model. The
-/// ring preserves older yanks in insertion order, ready for a future
-/// paste-cycling operation.
+/// `VecDeque` capped at [`YANK_RING_CAP`] entries and resets the ring cursor
+/// to 0. Reading register `'0'` always returns the ring head. Older entries
+/// drive paste cycling: [`cycle_yank`](RegisterStore::cycle_yank) advances the
+/// cursor so components can replace the most recently pasted row with the next
+/// ring entry.
 #[derive(Debug, Default)]
 pub struct RegisterStore {
     slots: HashMap<char, RegisterValue>,
     yank_ring: VecDeque<RegisterValue>,
+    ring_cursor: usize,
 }
 
 impl RegisterStore {
@@ -129,6 +130,70 @@ impl RegisterStore {
         self.write(target, value);
         self.yank_ring.push_front(value);
         self.yank_ring.truncate(YANK_RING_CAP);
+        self.ring_cursor = 0;
+    }
+
+    /// Advances the yank-ring cursor and returns the entry at the new position.
+    ///
+    /// Returns `None` when the ring has fewer than two entries (nothing to
+    /// cycle to). The cursor wraps on overflow, so successive calls cycle
+    /// indefinitely through the ring.
+    ///
+    /// Called by components in response to [`EditOp::CyclePaste`](crate::action::EditOp).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::gas::EANx;
+    /// use dps::units::Percent;
+    ///
+    /// let mut store = RegisterStore::default();
+    /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// let ean36 = EANx::try_from(Percent::new(0.36).unwrap()).unwrap();
+    ///
+    /// store.push_yank(None, RegisterValue::EANx(ean32)); // ring = [ean32]
+    /// store.push_yank(None, RegisterValue::EANx(ean36)); // ring = [ean36, ean32]
+    ///
+    /// // First cycle: advance to ring[1] (older yank).
+    /// assert_eq!(store.cycle_yank(), Some(RegisterValue::EANx(ean32)));
+    /// // Second cycle: wraps back to ring[0].
+    /// assert_eq!(store.cycle_yank(), Some(RegisterValue::EANx(ean36)));
+    /// ```
+    pub fn cycle_yank(&mut self) -> Option<RegisterValue> {
+        if self.yank_ring.len() < 2 {
+            return None;
+        }
+        self.ring_cursor = (self.ring_cursor + 1) % self.yank_ring.len();
+        self.yank_ring.get(self.ring_cursor).copied()
+    }
+
+    /// Resets the yank-ring cursor to 0 (the most recent yank).
+    ///
+    /// Components call this when a fresh paste or any non-cycle action breaks
+    /// the current paste-cycling chain.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::gas::EANx;
+    /// use dps::units::Percent;
+    ///
+    /// let mut store = RegisterStore::default();
+    /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// let ean36 = EANx::try_from(Percent::new(0.36).unwrap()).unwrap();
+    ///
+    /// store.push_yank(None, RegisterValue::EANx(ean32));
+    /// store.push_yank(None, RegisterValue::EANx(ean36));
+    /// store.cycle_yank(); // cursor = 1
+    ///
+    /// store.reset_ring_cursor();
+    /// // Next cycle_yank now starts from ring[0] again.
+    /// assert_eq!(store.cycle_yank(), Some(RegisterValue::EANx(ean32)));
+    /// ```
+    pub fn reset_ring_cursor(&mut self) {
+        self.ring_cursor = 0;
     }
 
     /// Records a delete operation.
@@ -287,8 +352,8 @@ mod tests {
     }
 
     mod push_yank {
-        use super::*;
         use super::super::YANK_RING_CAP;
+        use super::*;
 
         #[rstest]
         fn none_writes_to_unnamed_and_yank(ean32: Result<EANx, Report>) -> Result<(), Report> {
@@ -339,6 +404,99 @@ mod tests {
             }
 
             assert_eq!(store.yank_ring.len(), YANK_RING_CAP);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn resets_ring_cursor(
+            ean32: Result<EANx, Report>,
+            ean36: Result<EANx, Report>,
+        ) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+            let v1 = RegisterValue::EANx(ean32?);
+            let v2 = RegisterValue::EANx(ean36?);
+
+            store.push_yank(None, v1);
+            store.push_yank(None, v2);
+            store.cycle_yank(); // cursor = 1
+            store.push_yank(None, v1);
+
+            assert_eq!(store.ring_cursor, 0);
+
+            Ok(())
+        }
+    }
+
+    mod cycle_yank {
+        use super::*;
+
+        #[rstest]
+        fn returns_none_for_empty_ring() {
+            let mut store = RegisterStore::default();
+            assert!(store.cycle_yank().is_none());
+        }
+
+        #[rstest]
+        fn returns_none_for_single_entry(ean32: Result<EANx, Report>) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+            store.push_yank(None, RegisterValue::EANx(ean32?));
+
+            assert!(store.cycle_yank().is_none());
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn advances_to_older_yank(
+            ean32: Result<EANx, Report>,
+            ean36: Result<EANx, Report>,
+        ) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+            let older = RegisterValue::EANx(ean32?);
+            let newer = RegisterValue::EANx(ean36?);
+
+            store.push_yank(None, older); // ring = [older]
+            store.push_yank(None, newer); // ring = [newer, older], cursor = 0
+
+            assert_eq!(store.cycle_yank(), Some(older)); // cursor = 1
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn wraps_back_to_newest(
+            ean32: Result<EANx, Report>,
+            ean36: Result<EANx, Report>,
+        ) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+            let older = RegisterValue::EANx(ean32?);
+            let newer = RegisterValue::EANx(ean36?);
+
+            store.push_yank(None, older);
+            store.push_yank(None, newer);
+            store.cycle_yank(); // cursor = 1 → older
+
+            assert_eq!(store.cycle_yank(), Some(newer)); // wraps to cursor = 0 → newer
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn reset_restarts_cycle(
+            ean32: Result<EANx, Report>,
+            ean36: Result<EANx, Report>,
+        ) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+            let older = RegisterValue::EANx(ean32?);
+            let newer = RegisterValue::EANx(ean36?);
+
+            store.push_yank(None, older);
+            store.push_yank(None, newer);
+            store.cycle_yank(); // cursor = 1
+            store.reset_ring_cursor(); // back to 0
+
+            assert_eq!(store.cycle_yank(), Some(older)); // cursor = 1 again
 
             Ok(())
         }

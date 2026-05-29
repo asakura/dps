@@ -17,9 +17,10 @@
 //!
 //! [`RegisterStore`] maintains an internal [`VecDeque`](std::collections::VecDeque)
 //! yank ring (capacity 9). Every [`push_yank`](RegisterStore::push_yank) call
-//! prepends to the ring; `'0'` always reads from the head. Older entries are
-//! preserved in insertion order but are not yet addressable via a register
-//! character — they exist to support a future paste-cycling operation.
+//! prepends to the ring and resets the ring cursor to 0; `'0'` always reads
+//! from the head. [`cycle_yank`](RegisterStore::cycle_yank) advances the
+//! cursor so components can walk older entries in response to
+//! [`EditOp::CyclePaste`](crate::action::EditOp).
 //!
 //! ## Future work: multi-value yank sequences (Design C)
 //!
