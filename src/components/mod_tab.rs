@@ -26,7 +26,7 @@ const PPO2_COUNT: usize = PPO2_MAX_IDX + 1;
 
 const O2_PCT_MIN: u8 = 10;
 const O2_PCT_MAX: u8 = 100;
-const DEFAULT_MIX: Percent = Percent::new(0.32).expect("valid fraction literal");
+const DEFAULT_MIX: Percent = Percent::literal(0.32);
 
 const COL_NAME_W: u16 = 12;
 const COL_O2_W: u16 = 6;

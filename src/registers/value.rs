@@ -95,7 +95,7 @@ impl FromStr for RegisterValue {
 
 #[cfg(test)]
 mod tests {
-    use color_eyre::eyre::{Report, eyre};
+    use color_eyre::eyre::Report;
     use rstest::rstest;
 
     use super::{RegisterError, RegisterValue};
@@ -109,7 +109,7 @@ mod tests {
         #[rstest]
         fn eanx_uses_gas_name() -> Result<(), Report> {
             let ean32 = EANx::try_from(
-                Percent::new(0.32).ok_or_else(|| eyre!("0.32 is a valid percent"))?,
+                Percent::new(0.32)?,
             )?;
 
             assert_eq!(RegisterValue::EANx(ean32).to_string(), "EANx 32");

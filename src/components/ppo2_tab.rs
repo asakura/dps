@@ -19,20 +19,20 @@ use crate::{
 use super::{Component, KeyBinding};
 
 const PPO2_TABLE_MIX_PERCENTS: &[Percent] = [
-    Percent::new(0.10).expect("valid fraction literal"),
-    Percent::new(0.12).expect("valid fraction literal"),
-    Percent::new(0.14).expect("valid fraction literal"),
-    Percent::new(0.16).expect("valid fraction literal"),
-    Percent::new(0.18).expect("valid fraction literal"),
-    Percent::new(0.21).expect("valid fraction literal"),
-    Percent::new(0.28).expect("valid fraction literal"),
-    Percent::new(0.30).expect("valid fraction literal"),
-    Percent::new(0.32).expect("valid fraction literal"),
-    Percent::new(0.36).expect("valid fraction literal"),
-    Percent::new(0.40).expect("valid fraction literal"),
-    Percent::new(0.50).expect("valid fraction literal"),
-    Percent::new(0.80).expect("valid fraction literal"),
-    Percent::new(1.00).expect("valid fraction literal"),
+    Percent::literal(0.10),
+    Percent::literal(0.12),
+    Percent::literal(0.14),
+    Percent::literal(0.16),
+    Percent::literal(0.18),
+    Percent::literal(0.21),
+    Percent::literal(0.28),
+    Percent::literal(0.30),
+    Percent::literal(0.32),
+    Percent::literal(0.36),
+    Percent::literal(0.40),
+    Percent::literal(0.50),
+    Percent::literal(0.80),
+    Percent::literal(1.00),
 ]
 .as_slice();
 
@@ -366,15 +366,15 @@ mod tests {
 
             assert_eq!(
                 cols[0].fo2(),
-                Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
+                Percent::new(0.21)?
             ); // [5]
             assert_eq!(
                 cols[1].fo2(),
-                Percent::new(0.28).ok_or_else(|| eyre!("invalid"))?
+                Percent::new(0.28)?
             ); // [6]
             assert_eq!(
                 cols[2].fo2(),
-                Percent::new(0.30).ok_or_else(|| eyre!("invalid"))?
+                Percent::new(0.30)?
             ); // [7]
 
             Ok(())
