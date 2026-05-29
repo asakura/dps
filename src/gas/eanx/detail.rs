@@ -59,25 +59,25 @@ mod tests {
     use super::*;
     use crate::gas::{EANx, EANxBlend, Membrane, Psa};
     use crate::units::Percent;
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::Result;
 
     fn ean(fraction: f64) -> Result<EANx> {
         let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
 
     fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>> {
         let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            Percent::new(fraction)?;
 
         Ok(EANxBlend::new(pct, Psa)?)
     }
 
     fn ean_membrane(fraction: f64) -> Result<EANxBlend<Membrane>> {
         let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            Percent::new(fraction)?;
 
         Ok(EANxBlend::new(pct, Membrane::typical())?)
     }

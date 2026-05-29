@@ -1,6 +1,6 @@
 use crate::units::Percent;
 
-pub(super) const EAN_MIN_O2: Percent = Percent::new(0.10).unwrap();
+pub(super) const EAN_MIN_O2: Percent = Percent::literal(0.10);
 
 // Dry air mole fractions (NOAA standard atmosphere)
 //
@@ -29,12 +29,12 @@ const AIR_N2_RAW: f64 = 1.0 - AIR_O2_RAW - AIR_AR_RAW - AIR_CO2_RAW - AIR_OTHER_
         reason = "derived constants use AIR_O2_RAW for const arithmetic until const_trait_impl stabilises; AIR_O2 replaces it once f64::from(Percent) is usable in const context"
     )
 )]
-pub(super) const AIR_O2: Percent = Percent::new(AIR_O2_RAW).unwrap();
-pub(super) const AIR_AR: Percent = Percent::new(AIR_AR_RAW).unwrap();
-pub(super) const AIR_CO2: Percent = Percent::new(AIR_CO2_RAW).unwrap(); // NOAA GML 2017 annual mean (≈ 406.6 ppm); fixed for model consistency
-pub(super) const AIR_OTHER: Percent = Percent::new(AIR_OTHER_RAW).unwrap(); // Ne, He, CH₄, Kr, H₂, N₂O, Xe, …
-pub(super) const AIR_N2: Percent = Percent::new(AIR_N2_RAW).unwrap();
-pub(super) const AIR_DILUENT: Percent = Percent::new(1.0 - AIR_O2_RAW).unwrap(); // non-O₂ total
+pub(super) const AIR_O2: Percent = Percent::literal(AIR_O2_RAW);
+pub(super) const AIR_AR: Percent = Percent::literal(AIR_AR_RAW);
+pub(super) const AIR_CO2: Percent = Percent::literal(AIR_CO2_RAW); // NOAA GML 2017 annual mean (≈ 406.6 ppm); fixed for model consistency
+pub(super) const AIR_OTHER: Percent = Percent::literal(AIR_OTHER_RAW); // Ne, He, CH₄, Kr, H₂, N₂O, Xe, …
+pub(super) const AIR_N2: Percent = Percent::literal(AIR_N2_RAW);
+pub(super) const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW); // non-O₂ total
 
 // Narcosis
 //
@@ -44,7 +44,7 @@ pub(super) const AIR_DILUENT: Percent = Percent::new(1.0 - AIR_O2_RAW).unwrap();
 
 pub(super) const AR_NARCOTIC_POTENCY: f64 = 1.5;
 pub(super) const AIR_NARCOTIC: Percent =
-    Percent::new(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW).unwrap();
+    Percent::literal(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW);
 
 // Gas density
 //

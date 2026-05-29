@@ -184,11 +184,11 @@ mod tests {
     use crate::gas::constants::AIR_O2;
     use crate::units::{Meters, Percent};
     use approx::assert_relative_eq;
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::Result;
 
     fn ean(fraction: f64) -> Result<EANx> {
         let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
@@ -217,7 +217,7 @@ mod tests {
 
         #[test]
         fn fo2_is_preserved() -> Result<()> {
-            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.32)?;
             let m = ean(0.32)?.mnd_at(Meters::new(30.0));
 
             assert_eq!(m.fo2(), fo2);

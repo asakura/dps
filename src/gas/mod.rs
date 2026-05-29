@@ -54,18 +54,18 @@ pub use error::Error as GasError;
 mod tests {
     use super::*;
     use crate::units::{Meters, Percent};
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::Result;
 
     fn ean(fraction: f64) -> Result<EANx> {
         let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
 
     fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>> {
         let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            Percent::new(fraction)?;
 
         Ok(EANxBlend::new(pct, Psa)?)
     }
@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn membrane_typical_has_higher_ar_than_pp() -> Result<()> {
-        let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is in [0.0, 1.0]"))?;
+        let fo2 = Percent::new(0.32)?;
         let mem_mix = EANxBlend::new(fo2, Membrane::typical())?;
 
         assert!(

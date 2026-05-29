@@ -212,7 +212,6 @@ mod tests {
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Percent};
     use color_eyre::Result;
-    use color_eyre::eyre::eyre;
 
     mod minimum_operating_depth {
         use super::*;
@@ -220,7 +219,7 @@ mod tests {
         #[test]
         fn display_shows_depth() -> Result<()> {
             let m = MiniMOD::try_from((
-                Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.10)?,
                 Bar::new(0.16),
             ))?;
 
@@ -231,7 +230,7 @@ mod tests {
 
         #[test]
         fn try_from_rejects_fo2_below_minimum() -> Result<()> {
-            let fo2 = Percent::new(0.09).ok_or_else(|| eyre!("0.09 is in [0.0, 1.0]"))?;
+            let fo2 = Percent::new(0.09)?;
 
             assert!(matches!(
                 MiniMOD::try_from((fo2, Bar::new(0.16))),
@@ -246,7 +245,7 @@ mod tests {
             // Bar displays with one decimal: 0.16 → "0.2 bar". Use 0.2 for a clean round-trip.
             // minimod depth = (0.2 / 0.10 − 1.013) × 9.948 ≈ 9.82 m → "9.8 m"
             let m = MiniMOD::try_from((
-                Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.10)?,
                 Bar::new(0.2),
             ))?;
 
@@ -265,7 +264,7 @@ mod tests {
         #[test]
         fn summary_formats_full_detail() -> Result<()> {
             let m = MiniMOD::try_from((
-                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.32)?,
                 Bar::new(1.4),
             ))?;
 
@@ -280,7 +279,7 @@ mod tests {
         #[test]
         fn into_inner_recovers_original_minimod() -> Result<()> {
             let m = MiniMOD::try_from((
-                Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.10)?,
                 Bar::new(0.16),
             ))?;
 
@@ -292,7 +291,7 @@ mod tests {
         #[test]
         fn from_impl_matches_summary_method() -> Result<()> {
             let m = MiniMOD::try_from((
-                Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.10)?,
                 Bar::new(0.16),
             ))?;
 

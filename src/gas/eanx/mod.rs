@@ -514,10 +514,11 @@ impl EANxBlend<PartialPressure> {
     /// assert_relative_eq!(best.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(1.4), epsilon = 1e-9);
     /// ```
     #[must_use]
+    // TODO: next candidate for refactoring: Option -> Result<Self, crate::errors::Error>
     pub fn best_mix(target_depth: Meters, ppo2_max: Bar, env: DiveEnvironment) -> Option<Self> {
         let fo2 =
             (ppo2_max / (target_depth / env.water_density() + env.surface_pressure())).min(1.0);
-        let pct = Percent::new(fo2)?;
+        let pct = Percent::new(fo2).ok()?;
 
         Self::new(pct, PartialPressure)
             .ok()
@@ -616,20 +617,25 @@ impl FromStr for EANx {
             1.0
         } else if let Some(n_str) = s.strip_prefix("EANx ") {
             let n: u8 = n_str.parse().map_err(|_| ParseEANxError)?;
+
             f64::from(n) / 100.0
         } else if let Some(n_str) = s.strip_prefix("Hypoxic ") {
             let n: u8 = n_str.parse().map_err(|_| ParseEANxError)?;
+
             f64::from(n) / 100.0
         } else if let Some(inner) = s.strip_prefix("O₂ ").and_then(|t| t.strip_suffix('%')) {
             let n: u8 = inner.parse().map_err(|_| ParseEANxError)?;
+
             f64::from(n) / 100.0
         } else {
             let pct: Percent = s.parse().map_err(|_| ParseEANxError)?;
-            return Self::try_from(pct).map_err(|_| ParseEANxError.into());
+
+            return Self::try_from(pct);
         };
 
-        let pct = Percent::new(fo2_frac).ok_or(ParseEANxError)?;
-        Self::try_from(pct).map_err(|_| ParseEANxError.into())
+        let pct = Percent::new(fo2_frac).map_err(|_| ParseEANxError)?;
+
+        Self::try_from(pct)
     }
 }
 
@@ -665,29 +671,19 @@ mod tests {
     use crate::gas::constants::AIR_O2;
     use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
     use approx::assert_relative_eq;
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::Result;
     use rstest::*;
 
     fn ean(fraction: f64) -> Result<EANx> {
-        let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+        let pct = Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
 
     fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>> {
-        let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+        let pct = Percent::new(fraction)?;
 
         Ok(EANxBlend::new(pct, Psa)?)
-    }
-
-    fn bad_ean(fo2: f64) -> EANx {
-        EANxBlend {
-            fo2: Percent::new(fo2).unwrap_or_else(|| unreachable!("fo2 is in [0.0, 1.0]")),
-            method: PartialPressure,
-            env: DiveEnvironment::standard(),
-        }
     }
 
     mod fo2 {
@@ -695,18 +691,9 @@ mod tests {
 
         #[rstest]
         fn fo2_matches_fraction() -> Result<()> {
-            assert_relative_eq!(
-                ean(0.21)?.fo2(),
-                Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
-            );
-            assert_relative_eq!(
-                ean(0.32)?.fo2(),
-                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?
-            );
-            assert_relative_eq!(
-                ean(1.0)?.fo2(),
-                Percent::new(1.0).ok_or_else(|| eyre!("invalid"))?
-            );
+            assert_relative_eq!(ean(0.21)?.fo2(), Percent::new(0.21)?);
+            assert_relative_eq!(ean(0.32)?.fo2(), Percent::new(0.32)?);
+            assert_relative_eq!(ean(1.0)?.fo2(), Percent::new(1.0)?);
 
             Ok(())
         }
@@ -718,7 +705,7 @@ mod tests {
         #[test]
         fn mod_at_eanx32_1_4_bar() -> Result<()> {
             let env = DiveEnvironment::standard();
-            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.32)?;
             let expected = (Bar::new(1.4) / fo2 - env.surface_pressure()) * env.water_density();
 
             assert_relative_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).depth(), expected);
@@ -729,7 +716,7 @@ mod tests {
         #[test]
         fn mod_at_eanx40_1_4_bar() -> Result<()> {
             let env = DiveEnvironment::standard();
-            let fo2 = Percent::new(0.40).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.40)?;
             let expected = (Bar::new(1.4) / fo2 - env.surface_pressure()) * env.water_density();
 
             assert_relative_eq!(ean(0.40)?.mod_at(Bar::new(1.4)).depth(), expected);
@@ -740,7 +727,7 @@ mod tests {
         #[test]
         fn mod_at_pure_o2_1_6_bar() -> Result<()> {
             let env = DiveEnvironment::standard();
-            let fo2 = Percent::new(1.0).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(1.0)?;
             let expected = (Bar::new(1.6) / fo2 - env.surface_pressure()) * env.water_density();
 
             assert_relative_eq!(ean(1.0)?.mod_at(Bar::new(1.6)).depth(), expected);
@@ -761,7 +748,7 @@ mod tests {
 
         #[test]
         fn fo2_is_preserved() -> Result<()> {
-            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("0.32 is in [0.0, 1.0]"))?;
+            let fo2 = Percent::new(0.32)?;
             assert_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).fo2(), fo2);
 
             Ok(())
@@ -773,12 +760,6 @@ mod tests {
             assert_eq!(ean(0.32)?.mod_at(ppo2).ppo2_max(), ppo2);
 
             Ok(())
-        }
-
-        #[test]
-        #[should_panic(expected = "fo2 guaranteed >= 10 %")]
-        fn panics_if_fo2_invariant_violated() {
-            let _ = bad_ean(0.05).mod_at(Bar::new(1.4));
         }
     }
 
@@ -799,7 +780,7 @@ mod tests {
         #[test]
         fn hypoxic_10_percent_at_0_16_bar() -> Result<()> {
             let env = DiveEnvironment::standard();
-            let fo2 = Percent::new(0.10).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.10)?;
             let expected = (Bar::new(0.16) / fo2 - env.surface_pressure()).max(Bar::new(0.0))
                 * env.water_density();
 
@@ -814,7 +795,7 @@ mod tests {
 
         #[test]
         fn fo2_is_preserved() -> Result<()> {
-            let fo2 = Percent::new(0.10).ok_or_else(|| eyre!("0.10 is in [0.0, 1.0]"))?;
+            let fo2 = Percent::new(0.10)?;
             assert_eq!(ean(0.10)?.minimod_at(Bar::new(0.16)).fo2(), fo2);
 
             Ok(())
@@ -834,12 +815,6 @@ mod tests {
             assert_eq!(Meters::from(m), m.depth());
 
             Ok(())
-        }
-
-        #[test]
-        #[should_panic(expected = "fo2 guaranteed >= 10 %")]
-        fn panics_if_fo2_invariant_violated() {
-            let _ = bad_ean(0.05).minimod_at(Bar::new(0.16));
         }
     }
 
@@ -924,7 +899,7 @@ mod tests {
         fn follows_noaa_formula() -> Result<()> {
             let env = DiveEnvironment::standard();
             let depth = Meters::new(40.0);
-            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.32)?;
             let ppo2 = f64::from((depth / env.water_density() + env.surface_pressure()) * fo2);
             let expected = OTUPerMinute::new((ppo2 - 0.5_f64).powf(0.83));
 
@@ -1064,8 +1039,7 @@ mod tests {
         #[case(0.40)]
         #[case(1.0)]
         fn try_from_percent_preserves_fraction(#[case] fraction: f64) -> Result<()> {
-            let pct = Percent::new(fraction)
-                .ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            let pct = Percent::new(fraction)?;
 
             assert_eq!(EANx::try_from(pct)?.fo2(), pct);
 
@@ -1074,14 +1048,14 @@ mod tests {
 
         #[test]
         fn try_from_percent_rejects_below_minimum() -> Result<()> {
-            assert!(EANx::try_from(Percent::new(0.09).ok_or_else(|| eyre!("invalid"))?).is_err());
+            assert!(EANx::try_from(Percent::new(0.09)?).is_err());
 
             Ok(())
         }
 
         #[test]
         fn try_from_percent_accepts_fraction_that_rounds_into_valid_range() -> Result<()> {
-            assert!(EANx::try_from(Percent::new(0.316).ok_or_else(|| eyre!("invalid"))?).is_ok());
+            assert!(EANx::try_from(Percent::new(0.316)?).is_ok());
 
             Ok(())
         }

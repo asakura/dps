@@ -188,12 +188,12 @@ mod tests {
     use crate::gas::EANx;
     use crate::units::Percent;
     use approx::assert_relative_eq;
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::Result;
 
     fn air() -> Result<GasComponents> {
         Ok(
             EANx::try_from(
-                Percent::new(0.20946).ok_or_else(|| eyre!("0.20946 is in [0.0, 1.0]"))?,
+                Percent::new(0.20946)?,
             )?
             .components(),
         )
@@ -201,7 +201,7 @@ mod tests {
 
     fn ean32() -> Result<GasComponents> {
         Ok(
-            EANx::try_from(Percent::new(0.32).ok_or_else(|| eyre!("0.32 is in [0.0, 1.0]"))?)?
+            EANx::try_from(Percent::new(0.32)?)?
                 .components(),
         )
     }

@@ -164,11 +164,11 @@ mod tests {
     use crate::gas::EANx;
     use crate::units::{Bar, Meters, Percent};
     use approx::assert_relative_eq;
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::Result;
 
     fn ean(fraction: f64) -> Result<EANx> {
         let pct =
-            Percent::new(fraction).ok_or_else(|| eyre!("fraction {fraction} out of [0.0, 1.0]"))?;
+            Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
@@ -190,7 +190,7 @@ mod tests {
         fn ppo2_accessor_returns_bar() -> Result<()> {
             // Use the MOD depth so ppO₂ = 1.4 bar exactly by construction
             let env = DiveEnvironment::standard();
-            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.32)?;
             let ppo2_target = Bar::new(1.4);
             let mod_depth = env.depth(ppo2_target / fo2);
             let p = ean(0.32)?.ppo2_at(mod_depth);
@@ -202,7 +202,7 @@ mod tests {
 
         #[test]
         fn fo2_is_preserved() -> Result<()> {
-            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.32)?;
             let p = ean(0.32)?.ppo2_at(Meters::new(30.0));
 
             assert_eq!(p.fo2(), fo2);
@@ -232,7 +232,7 @@ mod tests {
         #[test]
         fn ppo2_at_surface_equals_surface_pressure_times_fo2() -> Result<()> {
             let env = DiveEnvironment::standard();
-            let fo2 = Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?;
+            let fo2 = Percent::new(0.32)?;
 
             assert_relative_eq!(
                 ean(0.32)?.ppo2_at(Meters::new(0.0)).pressure(),
@@ -246,7 +246,7 @@ mod tests {
         fn ppo2_at_air_30m() -> Result<()> {
             let env = DiveEnvironment::standard();
             let expected = env.absolute_pressure(Meters::new(30.0))
-                * Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?;
+                * Percent::new(0.21)?;
 
             assert_relative_eq!(ean(0.21)?.ppo2_at(Meters::new(30.0)).pressure(), expected);
 
@@ -257,7 +257,7 @@ mod tests {
         fn ppo2_at_eanx40_10m() -> Result<()> {
             let env = DiveEnvironment::standard();
             let expected = env.absolute_pressure(Meters::new(10.0))
-                * Percent::new(0.40).ok_or_else(|| eyre!("invalid"))?;
+                * Percent::new(0.40)?;
 
             assert_relative_eq!(ean(0.40)?.ppo2_at(Meters::new(10.0)).pressure(), expected);
 

@@ -211,7 +211,7 @@ mod tests {
     use super::*;
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Meters, Percent};
-    use color_eyre::{Result, eyre::eyre};
+    use color_eyre::Result;
 
     mod operating_depth {
         use super::*;
@@ -219,7 +219,7 @@ mod tests {
         #[test]
         fn display_shows_depth() -> Result<()> {
             let m = MOD::try_from((
-                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.32)?,
                 Bar::new(1.4),
             ))?;
 
@@ -231,7 +231,7 @@ mod tests {
         #[test]
         fn into_meters_gives_depth() -> Result<()> {
             let m = MOD::try_from((
-                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.32)?,
                 Bar::new(1.4),
             ))?;
             assert_eq!(Meters::from(m), m.depth());
@@ -241,7 +241,7 @@ mod tests {
 
         #[test]
         fn try_from_rejects_fo2_below_minimum() -> Result<()> {
-            let fo2 = Percent::new(0.09).ok_or_else(|| eyre!("0.09 is in [0.0, 1.0]"))?;
+            let fo2 = Percent::new(0.09)?;
 
             assert!(matches!(
                 MOD::try_from((fo2, Bar::new(1.4))),
@@ -258,7 +258,7 @@ mod tests {
         #[test]
         fn summary_formats_full_detail() -> Result<()> {
             let m = MOD::try_from((
-                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.32)?,
                 Bar::new(1.4),
             ))?;
 
@@ -273,7 +273,7 @@ mod tests {
         #[test]
         fn into_inner_recovers_original_mod() -> Result<()> {
             let m = MOD::try_from((
-                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.32)?,
                 Bar::new(1.4),
             ))?;
 
@@ -285,7 +285,7 @@ mod tests {
         #[test]
         fn from_impl_matches_summary_method() -> Result<()> {
             let m = MOD::try_from((
-                Percent::new(0.32).ok_or_else(|| eyre!("invalid"))?,
+                Percent::new(0.32)?,
                 Bar::new(1.4),
             ))?;
 

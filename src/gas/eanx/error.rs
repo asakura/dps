@@ -60,7 +60,7 @@ mod tests {
 
     #[test]
     fn o2_too_low_display_contains_fraction() -> Result<(), Box<dyn std::error::Error>> {
-        let p = Percent::new(0.05).ok_or("invalid")?;
+        let p = Percent::new(0.05)?;
         let msg = InvalidEANxError::O2TooLow(p).to_string();
 
         assert!(msg.contains('5') || msg.contains("0.05"));
@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn blend_ceiling_exceeded_display() -> Result<(), Box<dyn std::error::Error>> {
-        let p = Percent::new(0.99).ok_or("invalid")?;
+        let p = Percent::new(0.99)?;
         let msg = InvalidEANxError::BlendCeilingExceeded(p).to_string();
 
         assert!(msg.contains("ceiling"));
