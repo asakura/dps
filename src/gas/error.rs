@@ -1,7 +1,7 @@
 //! Gas domain error type.
 
 /// Error from a gas-domain operation.
-#[derive(Debug, Clone, Copy, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum Error {
     /// `EANx` blend validation failed.
     #[error(transparent)]
