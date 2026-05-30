@@ -335,7 +335,8 @@ impl Default for Theme {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::style::Modifier;
+
+    use ratatui::style::{Color, Modifier};
 
     #[test]
     fn header_cell_has_bold_modifier() {
@@ -366,7 +367,6 @@ mod tests {
 
     mod style_accessors {
         use super::*;
-        use ratatui::style::Color;
 
         // Frappé palette constants mirrored from Default; keep in sync if colours change.
         const TEXT: Color = Color::Rgb(198, 208, 245);

@@ -1,14 +1,15 @@
 //! Entry point for the dps application.
 
-use std::path::Path;
-
-use clap::Parser;
-use color_eyre::Result;
 use dps::app::App;
 use dps::cli::Cli;
 use dps::config::get_data_dir;
 use dps::errors;
 use dps::logging;
+
+use clap::Parser;
+use color_eyre::Result;
+
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<()> {

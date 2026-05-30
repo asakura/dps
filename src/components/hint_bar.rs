@@ -1,14 +1,14 @@
 //! One-line hint bar showing component bindings followed by global bindings.
 
+use super::KeyBinding;
+
+use crate::theme::Theme;
+
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
     widgets::{Paragraph, Widget},
 };
-
-use crate::theme::Theme;
-
-use super::KeyBinding;
 
 /// One-line bar that renders component-specific bindings followed by global bindings.
 #[derive(Debug)]
@@ -48,6 +48,7 @@ impl Widget for HintBar<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::components::test_utils::widget_text;
 
     #[derive(Debug, thiserror::Error)]

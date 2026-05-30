@@ -1,7 +1,7 @@
 //! OS clipboard integration for the register system.
 
-use super::RegisterValue;
 use super::store::RegisterStore;
+use super::value::RegisterValue;
 
 impl RegisterStore {
     /// Writes `value` to the OS clipboard; errors are silently discarded.

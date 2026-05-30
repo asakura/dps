@@ -5,9 +5,9 @@
 //! assert_eq!(DiveEnvironment::standard().to_string(), "standard");
 //! ```
 
-use std::fmt;
-
 use super::DiveEnvironment;
+
+use std::fmt;
 
 /// Serialises a [`DiveEnvironment`] as a human-readable string.
 ///
@@ -40,8 +40,10 @@ impl fmt::Display for DiveEnvironment {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::environment::{DiveEnvironmentError, Ocean};
     use crate::units::{Bar, MetersPerBar};
+
     use rstest::rstest;
 
     #[rstest]

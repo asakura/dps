@@ -6,9 +6,9 @@
 //! assert_eq!(DiveEnvironment::from(Ocean::Caribbean), DiveEnvironment::ocean(Ocean::Caribbean));
 //! ```
 
-use crate::environment::{Lake, Ocean};
-
 use super::DiveEnvironment;
+
+use crate::environment::{Lake, Ocean};
 
 /// Converts a named [`Ocean`] into a sea-level [`DiveEnvironment`].
 ///

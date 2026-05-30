@@ -1,11 +1,11 @@
-use std::fmt;
-
-use crate::units::{Bar, Meters, Percent};
-
 use super::error::InvalidEANxError;
 use super::gas_name;
+
 use crate::environment::DiveEnvironment;
 use crate::gas::constants::EAN_MIN_O2;
+use crate::units::{Bar, Meters, Percent};
+
+use std::fmt;
 
 /// Minimum Operating Depth for a hypoxic gas mix at a ppO₂ floor.
 ///
@@ -209,6 +209,7 @@ impl approx::RelativeEq for MiniMOD {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Percent};
 

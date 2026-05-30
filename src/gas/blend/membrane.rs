@@ -1,4 +1,5 @@
 use super::{BlendMethod, sealed};
+
 use crate::gas::components::GasComponents;
 use crate::gas::constants::{AIR_DILUENT, AIR_OTHER};
 
@@ -164,6 +165,7 @@ pub struct InvalidMembraneFractionsError;
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use approx::assert_relative_eq;
 
     #[test]

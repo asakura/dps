@@ -185,9 +185,10 @@ impl GasComponents {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gas::EANx;
-    use crate::gas::eanx::InvalidEANxError;
+
+    use crate::gas::{EANx, eanx::InvalidEANxError};
     use crate::units::Percent;
+
     use approx::assert_relative_eq;
 
     fn air() -> Result<GasComponents, InvalidEANxError> {

@@ -1,10 +1,10 @@
-use std::fmt;
-
-use crate::units::{Meters, Percent};
-
 use super::gas_name;
+
 use crate::environment::DiveEnvironment;
 use crate::gas::constants::AIR_NARCOTIC;
+use crate::units::{Meters, Percent};
+
+use std::fmt;
 
 /// Equivalent Narcotic Depth at a given actual depth.
 ///
@@ -170,11 +170,13 @@ impl approx::RelativeEq for END {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
     use crate::gas::constants::{AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Meters, Percent};
+
     use approx::assert_relative_eq;
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {

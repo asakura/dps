@@ -24,15 +24,15 @@
 //! }).unwrap();
 //! ```
 
+use super::KeyBinding;
+
+use crate::theme::Theme;
+
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
     widgets::{Clear, Paragraph, Widget},
 };
-
-use crate::theme::Theme;
-
-use super::KeyBinding;
 
 /// Key column width.
 const KEY_W: u16 = 7;
@@ -157,7 +157,9 @@ fn bottom_rect(height: u16, area: Rect) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use ratatui::{Terminal, backend::TestBackend, buffer::Cell, layout::Position};
+
     use rstest::rstest;
 
     mod bottom_rect {

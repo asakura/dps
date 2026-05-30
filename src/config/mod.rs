@@ -3,13 +3,11 @@
 pub mod error;
 mod theme;
 
-pub use error::Error as ConfigError;
+pub use self::error::Error as ConfigError;
 
-use std::{
-    collections::HashMap,
-    env,
-    path::{Path, PathBuf},
-    sync::LazyLock,
+use crate::{
+    keymap::{KeyBindings, KeyBindingsBuilder},
+    theme::Theme,
 };
 
 use color_eyre::Result;
@@ -17,9 +15,11 @@ use directories::ProjectDirs;
 use serde::{Deserialize, de::Deserializer};
 use tracing::error;
 
-use crate::{
-    keymap::{KeyBindings, KeyBindingsBuilder},
-    theme::Theme,
+use std::{
+    collections::HashMap,
+    env,
+    path::{Path, PathBuf},
+    sync::LazyLock,
 };
 
 const CONFIG: &str = include_str!("../../.config/config.json5");
@@ -355,6 +355,11 @@ impl<'de> Deserialize<'de> for Styles {
 mod tests {
     use super::*;
 
+    use crate::action::{Action, Movement};
+    use crate::keymap::{Mode, keys::parse_key_sequence};
+
+    use color_eyre::eyre::eyre;
+
     mod get_config_dir_fn {
         use super::*;
 
@@ -393,9 +398,6 @@ mod tests {
 
     mod keybindings {
         use super::*;
-        use crate::action::{Action, Movement};
-        use crate::keymap::{Mode, keys::parse_key_sequence};
-        use color_eyre::eyre::eyre;
 
         #[test]
         fn default_keybindings_loaded_from_embedded_config() -> Result<()> {

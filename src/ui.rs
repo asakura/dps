@@ -1,12 +1,12 @@
 //! Shared rendering utilities used by all components.
 
+use crate::theme::Theme;
+
 use ratatui::{
     layout::Constraint,
     text::Span,
     widgets::{Block, Borders, Cell, Row, Table},
 };
-
-use crate::theme::Theme;
 
 /// First visible index that keeps `idx` centred in the window without scrolling past either end.
 pub(crate) fn window_start(idx: usize, total: usize, window_size: usize) -> usize {
@@ -83,6 +83,13 @@ pub(crate) fn build_header_row(
 mod tests {
     use super::*;
 
+    use ratatui::{
+        buffer::Buffer,
+        layout::{Position, Rect},
+        style::Modifier,
+        widgets::Widget,
+    };
+
     #[derive(Debug, thiserror::Error)]
     enum TestError {
         #[error("{0}")]
@@ -123,12 +130,6 @@ mod tests {
 
     mod build_header_row_fn {
         use super::*;
-        use ratatui::{
-            buffer::Buffer,
-            layout::{Position, Rect},
-            style::Modifier,
-            widgets::Widget,
-        };
 
         #[test]
         fn highlighted_column_is_underlined_others_are_not() -> Result<()> {

@@ -1,15 +1,17 @@
 //! Mode-indexed keybinding registry and its builder.
 
-use std::collections::HashMap;
-
-use serde::{Deserialize, Deserializer};
+use super::{
+    keys::parse_key_sequence,
+    map::{ModeMap, ModeMapBuilder},
+    mode::Mode,
+    seq::KeySeq,
+};
 
 use crate::action::Action;
 
-use super::keys::parse_key_sequence;
-use super::map::{ModeMap, ModeMapBuilder};
-use super::mode::Mode;
-use super::seq::KeySeq;
+use serde::{Deserialize, Deserializer};
+
+use std::collections::HashMap;
 
 /// Read-only mode-indexed keybinding registry.
 ///
@@ -181,12 +183,13 @@ impl<'de> Deserialize<'de> for KeyBindingsBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::action::{Action, Movement, TabDir};
+    use crate::keymap::testutil::{press, single};
+
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use rstest::fixture;
     use rstest::rstest;
-
-    use crate::keymap::testutil::{press, single};
 
     fn lookup<'a>(b: &'a KeyBindings, mode: Mode, keys: &[KeyEvent]) -> Option<&'a Action> {
         b.get(&mode).and_then(|m| m.get(keys))

@@ -1,15 +1,16 @@
 //! Command-line interface: argument parsing and version string construction.
 
-use std::{path::PathBuf, sync::OnceLock};
+use crate::config::{get_config_dir, get_data_dir};
 
 use clap::{CommandFactory, Parser};
 
-use crate::config::{get_config_dir, get_data_dir};
+use std::{path::PathBuf, sync::OnceLock};
 
 fn parse_positive_hz(s: &str) -> Result<f64, String> {
     let v: f64 = s
         .parse()
         .map_err(|_| format!("`{s}` is not a valid number"))?;
+
     if v > 0.0 && v.is_finite() {
         Ok(v)
     } else {
@@ -92,6 +93,7 @@ Data directory: {data_dir_path}"
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use approx::assert_relative_eq;
     use clap::Parser;
 

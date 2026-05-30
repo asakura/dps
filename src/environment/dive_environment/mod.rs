@@ -40,8 +40,14 @@
 //! - **Altitude pressure** — the ICAO ISA barometric formula, valid for altitudes up to
 //!   $\pu{8849 m}$ (Mt Everest summit).
 
-use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
+mod default;
+mod display;
+mod error;
+mod from_impls;
+mod from_str;
 
+pub use self::error::DiveEnvironmentError;
+pub use self::from_str::ParseDiveEnvironmentError;
 use super::physics::{
     DENSITY_BASE, DENSITY_SALINITY_COEFF, DENSITY_TEMP_COEFF, FRESHWATER_TEMP_C,
     ICAO_PRESSURE_EXPONENT, ICAO_SEA_LEVEL_PA, ICAO_TEMP_GRADIENT, ISO_SEAWATER_DENSITY,
@@ -49,15 +55,8 @@ use super::physics::{
     STANDARD_GRAVITY,
 };
 use super::{Lake, Ocean};
-pub use error::DiveEnvironmentError;
 
-mod default;
-mod display;
-mod error;
-mod from_impls;
-mod from_str;
-
-pub use from_str::ParseDiveEnvironmentError;
+use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
 /// Dive environment parameters for depth↔pressure conversion.
 ///
@@ -647,8 +646,10 @@ fn altitude_to_pressure_bar(altitude: Meters) -> Bar {
 #[cfg(test)]
 mod tests {
     use super::DiveEnvironment;
+
     use crate::environment::{DiveEnvironmentError, Lake, Ocean};
     use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
+
     use approx::assert_relative_eq;
     use rstest::rstest;
 

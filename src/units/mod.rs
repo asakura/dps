@@ -11,16 +11,16 @@ mod otu_per_minute;
 mod parts_per_thousand;
 mod percent;
 
-pub use bar::Bar;
-pub use celsius::Celsius;
-pub use cns_rate_per_minute::CnsRatePerMinute;
-pub use error::Error as UnitError;
-pub use grams_per_litre::GramsPerLitre;
-pub use meters::Meters;
-pub use meters_per_bar::MetersPerBar;
-pub use otu_per_minute::OTUPerMinute;
-pub use parts_per_thousand::PartsPerThousand;
-pub use percent::Percent;
+pub use self::bar::Bar;
+pub use self::celsius::Celsius;
+pub use self::cns_rate_per_minute::CnsRatePerMinute;
+pub use self::error::Error as UnitError;
+pub use self::grams_per_litre::GramsPerLitre;
+pub use self::meters::Meters;
+pub use self::meters_per_bar::MetersPerBar;
+pub use self::otu_per_minute::OTUPerMinute;
+pub use self::parts_per_thousand::PartsPerThousand;
+pub use self::percent::Percent;
 
 use std::ops::{Div, Mul};
 

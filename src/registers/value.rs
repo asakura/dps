@@ -8,13 +8,12 @@
 //! assert_eq!(env, RegisterValue::DiveEnvironment(DiveEnvironment::standard()));
 //! ```
 
-use std::fmt;
-use std::str::FromStr;
+use super::{RegisterError, error::ParseError};
 
-use super::RegisterError;
-use super::error::ParseError;
 use crate::environment::DiveEnvironment;
 use crate::gas::EANx;
+
+use std::{fmt, str::FromStr};
 
 /// A value that can be stored in a named register.
 ///
@@ -95,13 +94,14 @@ impl FromStr for RegisterValue {
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
-
     use super::{RegisterError, RegisterValue};
+
     use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
     use crate::gas::InvalidEANxError;
     use crate::units::Percent;
+
+    use rstest::rstest;
 
     mod display {
         use super::*;

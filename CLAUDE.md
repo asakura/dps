@@ -37,3 +37,37 @@
 is the right signal. Unit tests (`#[cfg(test)]`) must use
 `?`or explicit
 `assert!(result.is_ok())`/`assert_eq!(result, Err(...))`— never `.unwrap()`.
+
+## `mod` and `use` organisation
+
+**Module declarations** (`mod foo;`, `pub mod foo;`) come first, before all
+`use` statements.
+
+**Re-exports** (`pub use self::…`) follow module declarations, before private
+imports.
+
+**Import groups** — separate each group with one blank line, in this order:
+
+1. `use super::…` — parent-module items
+2. `use crate::…` — crate-internal items
+3. Third-party crates
+4. `use std::…` — standard library
+
+**Compaction** — multiple `use` statements sharing the same leading path are
+merged into one braced form:
+
+```rust
+// good
+use super::{ActionError, error::ParseError};
+use std::{fmt, str::FromStr};
+
+// bad — unmerged
+use super::ActionError;
+use super::error::ParseError;
+```
+
+Use `self::` on every `pub use` re-export (`pub use self::foo::Bar`).
+
+**Inside `mod tests`** — follow the same four-group order. Place group-level
+imports at the top of `mod tests` rather than repeating them in every
+submodule. Each submodule only re-imports via `use super::*;`.

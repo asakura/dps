@@ -1,9 +1,9 @@
 //! Configuration error type.
 
-use std::num::ParseIntError;
-
 /// Key-sequence parse error.
 pub use crate::keymap::KeyMapError as KeyResolutionError;
+
+use std::num::ParseIntError;
 
 /// Error from a theme-resolution operation.
 #[derive(Debug, thiserror::Error)]

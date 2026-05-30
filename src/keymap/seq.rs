@@ -1,10 +1,10 @@
 //! Key-sequence newtype: a boxed slice of key events forming a binding key.
 
-use std::{borrow::Borrow, fmt, ops::Deref};
+use super::keys::key_event_to_string;
 
 use crossterm::event::KeyEvent;
 
-use super::keys::key_event_to_string;
+use std::{borrow::Borrow, fmt, ops::Deref};
 
 /// A parsed key sequence: one or more [`KeyEvent`]s that together form a binding key.
 ///
@@ -63,10 +63,14 @@ impl fmt::Display for KeySeq {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossterm::event::KeyCode;
-    use rstest::rstest;
 
     use crate::keymap::testutil::press;
+
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use rstest::rstest;
+
+    use std::borrow::Borrow;
+    use std::collections::HashMap;
 
     mod from_vec {
         use super::*;
@@ -99,7 +103,6 @@ mod tests {
 
     mod deref_and_borrow {
         use super::*;
-        use std::borrow::Borrow;
 
         #[test]
         fn deref_yields_key_slice() {
@@ -122,7 +125,6 @@ mod tests {
 
     mod equality_and_hash {
         use super::*;
-        use std::collections::HashMap;
 
         #[test]
         fn equal_seqs_compare_equal() {
@@ -163,8 +165,6 @@ mod tests {
 
     mod display {
         use super::*;
-        use crossterm::event::{KeyCode, KeyModifiers};
-        use rstest::rstest;
 
         #[rstest]
         #[case(vec![press(KeyCode::Char('j'))], "j")]

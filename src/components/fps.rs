@@ -1,6 +1,9 @@
 //! Frames-per-second and ticks-per-second overlay component.
 
-use std::time::Instant;
+use super::{ComponentNew, Result};
+
+use crate::action::Action;
+use crate::registers::RegisterStore;
 
 use ratatui::{
     Frame,
@@ -9,11 +12,7 @@ use ratatui::{
     text::Span,
     widgets::Paragraph,
 };
-
-use super::{ComponentNew, Result};
-
-use crate::action::Action;
-use crate::registers::RegisterStore;
+use std::time::Instant;
 
 /// Overlay that displays the current tick rate and frame rate.
 #[derive(Debug, Clone, Copy, PartialEq)]

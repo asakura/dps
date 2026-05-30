@@ -10,6 +10,7 @@
 //! which N₂ → 0.
 
 use super::{BlendMethod, sealed};
+
 use crate::gas::components::GasComponents;
 use crate::gas::constants::{AIR_AR_RAW, AIR_O2_RAW, AIR_OTHER_RAW};
 
@@ -71,7 +72,9 @@ impl BlendMethod for Psa {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::gas::constants::{AIR_AR, AIR_O2};
+
     use approx::assert_relative_eq;
 
     #[test]

@@ -1,7 +1,9 @@
-use std::collections::{HashMap, VecDeque};
+//! TODO: module level docs
 
 use super::name::RegIndex;
 use super::{RegisterError, RegisterName, RegisterValue, YankRingTooSmall};
+
+use std::collections::{HashMap, VecDeque};
 
 /// Maximum number of entries retained in the yank ring.
 const YANK_RING_CAP: usize = 9;
@@ -306,10 +308,11 @@ impl RegisterStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::gas::{EANx, InvalidEANxError};
-    use crate::registers::name::RegIndex;
-    use crate::registers::{RegisterError, RegisterName};
+    use crate::registers::{RegisterError, RegisterName, name::RegIndex};
     use crate::units::Percent;
+
     use rstest::{fixture, rstest};
 
     #[derive(Debug, thiserror::Error)]
@@ -428,7 +431,6 @@ mod tests {
     }
 
     mod push_yank {
-        use super::super::YANK_RING_CAP;
         use super::*;
 
         #[rstest]

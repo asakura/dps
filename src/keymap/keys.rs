@@ -1,9 +1,9 @@
 //! Vim-style key sequence parsing and serialization.
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKeyCode};
-
 use super::KeyMapError;
 use super::error::ParseError;
+
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKeyCode};
 
 /// Parses a Vim-style key sequence into a [`Vec<KeyEvent>`].
 ///
@@ -369,7 +369,8 @@ fn parse_key_code_with_modifiers(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKeyCode};
     use rstest::rstest;
 
     mod parse_key_event {
@@ -632,7 +633,6 @@ mod tests {
 
     mod rare_key_names {
         use super::*;
-        use crossterm::event::{MediaKeyCode, ModifierKeyCode};
 
         // Every entry corresponds to a match arm in parse_key_code_with_modifiers.
         // Arms that accept two spellings (e.g. "bs"/"backspace") list both so that

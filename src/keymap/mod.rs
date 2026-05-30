@@ -86,19 +86,19 @@ pub mod map;
 pub mod mode;
 pub mod seq;
 
-pub use bindings::{KeyBindings, KeyBindingsBuilder};
-pub use chord::{ChordEngine, ChordResult, SequenceEngine};
-pub use error::Error as KeyMapError;
-pub use keys::{key_event_to_string, parse_key_sequence};
-pub use map::{ModeMap, ModeMapBuilder};
-pub use mode::Mode;
-pub use seq::KeySeq;
+pub use self::bindings::{KeyBindings, KeyBindingsBuilder};
+pub use self::chord::{ChordEngine, ChordResult, SequenceEngine};
+pub use self::error::Error as KeyMapError;
+pub use self::keys::{key_event_to_string, parse_key_sequence};
+pub use self::map::{ModeMap, ModeMapBuilder};
+pub use self::mode::Mode;
+pub use self::seq::KeySeq;
 
 #[cfg(test)]
 pub(crate) mod testutil {
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-
     use super::seq::KeySeq;
+
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     pub fn press(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)

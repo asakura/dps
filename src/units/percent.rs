@@ -1,8 +1,6 @@
-use std::fmt;
-use std::str::FromStr;
+use super::{UnitError, error::ParseError};
 
-use super::UnitError;
-use super::error::ParseError;
+use std::{fmt, str::FromStr};
 
 /// Fractional proportion in [0.0, 1.0], displayed as a percentage.
 ///
@@ -178,12 +176,13 @@ impl approx::RelativeEq for Percent {
 
 #[cfg(test)]
 mod tests {
-    use approx::assert_relative_eq;
-    use rstest::rstest;
-
     use super::*;
+
     use crate::units::UnitError;
     use crate::units::error::ParseError;
+
+    use approx::assert_relative_eq;
+    use rstest::rstest;
 
     mod new {
         use super::*;

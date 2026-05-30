@@ -11,6 +11,7 @@
 //! ```
 
 use crate::{action::Action, components::ComponentError};
+
 use tokio::sync::mpsc::error::SendError;
 
 /// Errors produced by the [`App`](super::App) event loop.

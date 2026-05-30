@@ -1,11 +1,6 @@
 //! MOD-by-ppO₂ table component.
 
-use ratatui::{
-    buffer::Buffer,
-    layout::{Constraint, Rect},
-    style::Style,
-    widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
-};
+use super::{Component, KeyBinding};
 
 use crate::{
     action::{Action, EditOp, Movement},
@@ -16,7 +11,12 @@ use crate::{
     units::{Bar, Meters, Percent},
 };
 
-use super::{Component, KeyBinding};
+use ratatui::{
+    buffer::Buffer,
+    layout::{Constraint, Rect},
+    style::Style,
+    widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
+};
 
 const PPO2_MIN: Bar = Bar::new(0.8);
 const PPO2_STEP: Bar = Bar::new(0.1);
@@ -368,9 +368,12 @@ impl Component for ModTab {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::action::EditOp;
     use crate::components::test_utils::widget_text;
-    use crate::registers::RegisterError;
-    use crate::registers::RegisterName;
+    use crate::components::{PAGE_DELTA, SCROLL_DELTA};
+    use crate::registers::{RegisterError, RegisterName};
+
     use approx::assert_relative_eq;
     use rstest::{fixture, rstest};
 
@@ -508,7 +511,6 @@ mod tests {
 
     mod yank_row {
         use super::*;
-        use crate::action::EditOp;
 
         #[rstest]
         fn unnamed_reg_writes_mix_to_unnamed_and_yank_register(
@@ -551,7 +553,6 @@ mod tests {
 
     mod delete {
         use super::*;
-        use crate::action::EditOp;
 
         #[rstest]
         fn removes_focused_row_from_mixes() {
@@ -670,7 +671,6 @@ mod tests {
 
     mod paste {
         use super::*;
-        use crate::action::EditOp;
 
         #[rstest]
         fn inserts_below_focused_row(mut regs: RegisterStore) {
@@ -719,7 +719,6 @@ mod tests {
 
     mod paste_above {
         use super::*;
-        use crate::action::EditOp;
 
         #[rstest]
         fn inserts_at_focused_row(mut regs: RegisterStore) {
@@ -737,7 +736,6 @@ mod tests {
 
     mod cycle_paste {
         use super::*;
-        use crate::action::EditOp;
 
         #[rstest]
         fn replaces_pasted_row_with_older_yank(mut regs: RegisterStore) {
@@ -901,7 +899,6 @@ mod tests {
 
     mod action_dispatch {
         use super::*;
-        use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
         #[rstest]
         fn down_advances_row() {

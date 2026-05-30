@@ -19,18 +19,16 @@ mod error;
 mod movement;
 mod tab;
 
-pub use edit::EditOp;
-pub use error::Error as ActionError;
-pub use movement::Movement;
-pub use tab::TabDir;
-
-use std::fmt;
-use std::str::FromStr;
+pub use self::edit::EditOp;
+pub use self::error::Error as ActionError;
+use self::error::ParseError;
+pub use self::movement::Movement;
+pub use self::tab::TabDir;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use strum::VariantNames;
 
-use error::ParseError;
+use std::{fmt, str::FromStr};
 
 /// The unified message type flowing through the application event loop.
 ///
@@ -376,8 +374,11 @@ impl<'de> Deserialize<'de> for Action {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::registers::RegisterName;
+
     use rstest::rstest;
+
     use std::str::FromStr;
 
     mod display {

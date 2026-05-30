@@ -59,7 +59,9 @@ pub enum InvalidEANxError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::units::{Percent, UnitError};
+
     use rstest::rstest;
 
     mod display {

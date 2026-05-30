@@ -1,9 +1,9 @@
 //! File-based tracing initialisation.
 
+use crate::config;
+
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{EnvFilter, Layer, fmt, layer::SubscriberExt, util::SubscriberInitExt};
-
-use crate::config;
 
 /// Environment variable name used to set the log level (e.g. `DPS_LOG_LEVEL`).
 pub static LOG_ENV: std::sync::LazyLock<String> =

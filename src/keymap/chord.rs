@@ -38,12 +38,11 @@
 //! ));
 //! ```
 
-use crossterm::event::{KeyCode, KeyEvent};
-
-use crate::action::Action;
-use crate::registers::RegisterName;
-
 use super::ModeMap;
+
+use crate::{action::Action, registers::RegisterName};
+
+use crossterm::event::{KeyCode, KeyEvent};
 
 /// Result of advancing the chord engine by one key event.
 ///
@@ -306,20 +305,23 @@ impl ChordEngine for SequenceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::action::Movement;
-    use crate::keymap::testutil::press;
-    use crate::keymap::{KeySeq, ModeMapBuilder};
+
+    use crate::action::{EditOp, Movement};
+    use crate::keymap::{KeySeq, ModeMapBuilder, testutil::press};
+
     use crossterm::event::KeyCode;
     use rstest::{fixture, rstest};
 
     fn bindings(pairs: &[(&[KeyCode], Action)]) -> ModeMap {
         let mut builder = ModeMapBuilder::new();
+
         for (codes, action) in pairs {
             builder.bind(
                 KeySeq::from(codes.iter().map(|&c| press(c)).collect::<Vec<_>>()),
                 action.clone(),
             );
         }
+
         builder.build()
     }
 
@@ -657,7 +659,6 @@ mod tests {
 
     mod register {
         use super::*;
-        use crate::action::EditOp;
 
         /// `dd → Edit(Delete)` binding used for register tests.
         #[fixture]

@@ -82,11 +82,11 @@ mod name;
 mod store;
 mod value;
 
-pub use error::{InvalidRegisterIndex, InvalidRegisterLetter, RegisterError, YankRingTooSmall};
+pub use self::error::{
+    InvalidRegisterIndex, InvalidRegisterLetter, RegisterError, YankRingTooSmall,
+};
+pub use self::name::RegisterName;
 #[doc(hidden)]
-pub use name::RegIndex;
-#[doc(hidden)]
-pub use name::RegLetter;
-pub use name::RegisterName;
-pub use store::RegisterStore;
-pub use value::RegisterValue;
+pub use self::name::{RegIndex, RegLetter};
+pub use self::store::RegisterStore;
+pub use self::value::RegisterValue;

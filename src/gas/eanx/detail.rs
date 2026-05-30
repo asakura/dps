@@ -1,8 +1,8 @@
-use std::fmt;
+use super::EANxBlend;
 
 use crate::gas::blend::BlendMethod;
 
-use super::EANxBlend;
+use std::fmt;
 
 /// Display wrapper that prints extended information about a gas mix.
 ///
@@ -57,6 +57,7 @@ impl<M: BlendMethod> fmt::Display for EANxDetail<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::gas::eanx::InvalidEANxError;
     use crate::gas::{EANx, EANxBlend, Membrane, Psa};
     use crate::units::Percent;

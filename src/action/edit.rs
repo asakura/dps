@@ -1,12 +1,10 @@
 //! Edit operations dispatched through the event loop.
 
-use std::fmt;
-use std::str::FromStr;
+use super::{ActionError, error::ParseError};
 
 use crate::registers::RegisterName;
 
-use super::ActionError;
-use super::error::ParseError;
+use std::{fmt, str::FromStr};
 
 /// Edit operations produced by yank, paste, and delete key bindings.
 ///
@@ -204,6 +202,7 @@ fn split_name_reg(s: &str) -> (&str, Option<RegisterName>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use rstest::rstest;
 
     mod display {

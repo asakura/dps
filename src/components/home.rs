@@ -1,10 +1,11 @@
 //! Home screen component — placeholder for the main application view.
 
+use super::{ComponentNew, Result};
+
+use crate::{action::Action, config::Config, registers::RegisterStore};
+
 use ratatui::{prelude::*, widgets::Paragraph};
 use tokio::sync::mpsc::UnboundedSender;
-
-use super::{ComponentNew, Result};
-use crate::{action::Action, config::Config, registers::RegisterStore};
 
 /// Main home screen.
 #[derive(Debug, Default)]

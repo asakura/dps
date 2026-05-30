@@ -131,7 +131,9 @@ impl Lake {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::units::Meters;
+
     use approx::assert_relative_eq;
     use rstest::rstest;
 

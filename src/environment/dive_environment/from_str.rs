@@ -6,11 +6,11 @@
 //! assert_eq!("standard".parse::<DiveEnvironment>().unwrap(), DiveEnvironment::standard());
 //! ```
 
-use std::str::FromStr;
+use super::{DiveEnvironment, DiveEnvironmentError};
 
 use crate::units::{Bar, MetersPerBar};
 
-use super::{DiveEnvironment, DiveEnvironmentError};
+use std::str::FromStr;
 
 /// Error returned when a string cannot be parsed as a [`DiveEnvironment`].
 ///
@@ -73,6 +73,7 @@ impl FromStr for DiveEnvironment {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use rstest::rstest;
 
     #[rstest]

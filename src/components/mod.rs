@@ -1,17 +1,5 @@
 //! Component trait and per-screen implementations.
 
-use crossterm::event::{KeyEvent, MouseEvent};
-use ratatui::{
-    Frame,
-    layout::{Rect, Size},
-};
-use ratatui::{buffer::Buffer, widgets::TableState};
-use tokio::sync::mpsc::UnboundedSender;
-
-use crate::{action::Action, config::Config, registers::RegisterStore, tui::Event};
-
-use crate::theme::Theme;
-
 pub mod fps;
 pub mod hint_bar;
 pub mod home;
@@ -19,8 +7,13 @@ pub mod mod_tab;
 pub mod ppo2_tab;
 pub mod which_key;
 
-pub use fps::FpsCounter;
-pub use home::Home;
+pub use self::fps::FpsCounter;
+pub use self::home::Home;
+use crate::{action::Action, config::Config, registers::RegisterStore, theme::Theme, tui::Event};
+
+use crossterm::event::{KeyEvent, MouseEvent};
+use ratatui::{Frame, buffer::Buffer, layout::{Rect, Size}, widgets::TableState};
+use tokio::sync::mpsc::UnboundedSender;
 
 /// Error produced by [`ComponentNew`] implementors.
 ///

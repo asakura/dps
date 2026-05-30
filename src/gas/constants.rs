@@ -111,6 +111,7 @@ pub(super) fn cns_limit_minutes(ppo2: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use approx::assert_relative_eq;
     use rstest::rstest;
 

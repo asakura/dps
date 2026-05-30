@@ -1,12 +1,13 @@
 //! Theme and palette configuration types, and the [`resolve_theme`] resolver.
 
-use std::collections::HashMap;
+use super::error::{Error, ThemeResolutionError};
+
+use crate::theme::Theme;
 
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, Serialize};
 
-use super::error::{Error, ThemeResolutionError};
-use crate::theme::Theme;
+use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -182,10 +183,11 @@ fn parse_hex(s: &str) -> Result<Color, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::config::Config;
+
     use ratatui::style::{Color, Modifier, Style};
-    use rstest::fixture;
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
 
     #[derive(Debug, thiserror::Error)]
     enum TestError {

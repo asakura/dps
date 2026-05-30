@@ -1,8 +1,11 @@
 //! Per-mode key-sequence-to-action map and its builder.
 
 use super::seq::KeySeq;
+
 use crate::action::Action;
+
 use crossterm::event::KeyEvent;
+
 use std::collections::HashMap;
 
 /// Read-only key-sequence-to-action map for a single application [`Mode`](super::Mode).
@@ -74,12 +77,12 @@ impl ModeMapBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::action::{Action, Movement};
-    use crossterm::event::KeyCode;
-    use rstest::fixture;
-    use rstest::rstest;
 
+    use crate::action::{Action, Movement};
     use crate::keymap::testutil::{press, single};
+
+    use crossterm::event::KeyCode;
+    use rstest::{fixture, rstest};
 
     #[fixture]
     #[once]

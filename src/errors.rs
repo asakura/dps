@@ -1,9 +1,9 @@
 //! Error types, panic hook setup, and debug utilities for DPS.
 
-use std::env;
-
 use color_eyre::Result;
 use tracing::error;
+
+use std::env;
 
 /// Application-level error, wrapping all domain and configuration errors.
 ///
@@ -68,10 +68,13 @@ pub fn init() -> Result<()> {
         #[cfg(not(debug_assertions))]
         {
             use human_panic::{handle_dump, metadata, print_msg};
+
             let metadata = metadata!();
             let file_path = handle_dump(&metadata, panic_info);
+
             print_msg(file_path, &metadata)
                 .expect("human-panic: printing error message to console failed");
+
             eprintln!("{}", panic_hook.panic_report(panic_info)); // prints color-eyre stack trace to stderr
         }
 

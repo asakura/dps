@@ -107,7 +107,8 @@ mod lake;
 mod ocean;
 mod physics;
 
-pub use dive_environment::DiveEnvironmentError;
-pub use dive_environment::{DiveEnvironment, ParseDiveEnvironmentError};
-pub use lake::Lake;
-pub use ocean::Ocean;
+pub use self::dive_environment::{
+    DiveEnvironment, DiveEnvironmentError, ParseDiveEnvironmentError,
+};
+pub use self::lake::Lake;
+pub use self::ocean::Ocean;

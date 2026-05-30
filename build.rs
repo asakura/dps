@@ -10,6 +10,7 @@ fn main() -> Result<()> {
         .describe(true, true, None)
         .sha(true)
         .build()?;
+
     Emitter::default()
         .add_instructions(&build)?
         .add_instructions(&gix)?

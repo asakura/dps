@@ -1,10 +1,3 @@
-use std::{
-    fmt,
-    io::{Stdout, stdout},
-    ops::{Deref, DerefMut},
-    time::Duration,
-};
-
 use crossterm::{
     cursor,
     event::{
@@ -27,6 +20,13 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 use tracing::{error, warn};
+
+use std::{
+    fmt,
+    io::{Stdout, stdout},
+    ops::{Deref, DerefMut},
+    time::Duration,
+};
 
 /// Events produced by the terminal input stream and the tick/render timers.
 ///
@@ -566,6 +566,7 @@ impl Drop for Tui {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use approx::assert_relative_eq;
     use crossterm::event::{KeyCode, KeyEventState, KeyModifiers, MouseEventKind};
 

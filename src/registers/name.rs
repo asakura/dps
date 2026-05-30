@@ -18,10 +18,9 @@
 //! assert_eq!(char::from(RegisterName::Unnamed), '"');
 //! ```
 
-use std::fmt;
+use super::{RegisterError, error::{InvalidRegisterIndex, InvalidRegisterLetter}};
 
-use super::RegisterError;
-use super::error::{InvalidRegisterIndex, InvalidRegisterLetter};
+use std::fmt;
 
 /// Private-field wrapper that prevents `Named(RegLetter(c))` from being written
 /// outside this module. Obtain one through [`TryFrom<char>`] on [`RegisterName`].
@@ -236,7 +235,9 @@ impl From<RegLetter> for char {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::registers::RegisterError;
+
     use rstest::rstest;
 
     mod display {

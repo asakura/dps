@@ -1,37 +1,30 @@
-use std::fmt;
-use std::str::FromStr;
+mod detail;
+mod equivalent_air_depth;
+mod equivalent_narcotic_depth;
+mod error;
+mod maximum_narcotic_depth;
+mod minimum_operating_depth;
+mod operating_depth;
+mod ppo2;
 
-use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
+pub use self::detail::EANxDetail;
+pub use self::equivalent_air_depth::{EAD, EADSummary};
+pub use self::equivalent_narcotic_depth::{END, ENDSummary};
+pub use self::error::{InvalidEANxError, ParseEANxError};
+pub use self::maximum_narcotic_depth::{MND, MNDSummary};
+pub use self::minimum_operating_depth::{MiniMOD, MiniMODSummary};
+pub use self::operating_depth::{MOD, MODSummary};
+pub use self::ppo2::{PPO2, Ppo2Summary};
+use super::{
+    blend::{BlendMethod, PartialPressure},
+    components::GasComponents,
+    constants::{EAN_MIN_O2, GAS_CONSTANT, STANDARD_TEMP_K},
+};
 
 use crate::environment::DiveEnvironment;
+use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
-use super::blend::{BlendMethod, PartialPressure};
-use super::components::GasComponents;
-use super::constants::{EAN_MIN_O2, GAS_CONSTANT, STANDARD_TEMP_K};
-
-mod detail;
-pub use detail::EANxDetail;
-
-mod equivalent_air_depth;
-pub use equivalent_air_depth::{EAD, EADSummary};
-
-mod equivalent_narcotic_depth;
-pub use equivalent_narcotic_depth::{END, ENDSummary};
-
-mod error;
-pub use error::{InvalidEANxError, ParseEANxError};
-
-mod maximum_narcotic_depth;
-pub use maximum_narcotic_depth::{MND, MNDSummary};
-
-mod minimum_operating_depth;
-pub use minimum_operating_depth::{MiniMOD, MiniMODSummary};
-
-mod operating_depth;
-pub use operating_depth::{MOD, MODSummary};
-
-mod ppo2;
-pub use ppo2::{PPO2, Ppo2Summary};
+use std::{fmt, str::FromStr};
 
 /// Enriched Air Nitrox, modelled by O₂ fraction and blending method.
 ///
@@ -669,10 +662,12 @@ impl<M: BlendMethod + PartialEq> approx::RelativeEq for EANxBlend<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::environment::DiveEnvironment;
     use crate::gas::blend::Psa;
     use crate::gas::constants::AIR_O2;
     use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
+
     use approx::assert_relative_eq;
     use rstest::*;
 
@@ -1031,7 +1026,6 @@ mod tests {
 
     mod try_from_percent {
         use super::*;
-        use rstest::rstest;
 
         #[rstest]
         #[case(0.21)]

@@ -14,9 +14,9 @@
 //! ));
 //! ```
 
-use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
-
 use super::from_str::ParseDiveEnvironmentError;
+
+use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
 /// Error returned by fallible [`DiveEnvironment`](super::DiveEnvironment) constructors and [`FromStr`](std::str::FromStr).
 #[derive(Debug, Clone, Copy, thiserror::Error)]
@@ -45,7 +45,9 @@ pub enum DiveEnvironmentError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
+
     use rstest::rstest;
 
     mod display {

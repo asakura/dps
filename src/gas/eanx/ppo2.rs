@@ -1,9 +1,9 @@
-use std::fmt;
+use super::gas_name;
 
+use crate::environment::DiveEnvironment;
 use crate::units::{Bar, Meters, Percent};
 
-use super::gas_name;
-use crate::environment::DiveEnvironment;
+use std::fmt;
 
 /// Partial pressure of O₂ at a given depth.
 ///
@@ -160,10 +160,11 @@ impl approx::RelativeEq for PPO2 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::environment::DiveEnvironment;
-    use crate::gas::EANx;
-    use crate::gas::eanx::InvalidEANxError;
+    use crate::gas::{EANx, eanx::InvalidEANxError};
     use crate::units::{Bar, Meters, Percent};
+
     use approx::assert_relative_eq;
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {

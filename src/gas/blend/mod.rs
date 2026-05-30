@@ -1,18 +1,17 @@
-use std::fmt;
-
-use super::components::GasComponents;
+mod membrane;
+mod partial_pressure;
+mod psa;
 
 mod sealed {
     pub trait Sealed {}
 }
 
-mod membrane;
-mod partial_pressure;
-mod psa;
+pub use self::membrane::{InvalidMembraneFractionsError, Membrane};
+pub use self::partial_pressure::PartialPressure;
+pub use self::psa::Psa;
+use super::components::GasComponents;
 
-pub use membrane::{InvalidMembraneFractionsError, Membrane};
-pub use partial_pressure::PartialPressure;
-pub use psa::Psa;
+use std::fmt;
 
 /// Describes how a nitrox mix was blended, determining the full gas composition
 /// from the O₂ fraction.

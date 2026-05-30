@@ -1,10 +1,10 @@
-use std::fmt;
-
-use crate::units::{Meters, Percent};
-
 use super::gas_name;
+
 use crate::environment::DiveEnvironment;
 use crate::gas::constants::AIR_NARCOTIC;
+use crate::units::{Meters, Percent};
+
+use std::fmt;
 
 /// Maximum Narcotic Depth for a given END limit.
 ///
@@ -180,10 +180,12 @@ impl approx::RelativeEq for MND {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::gas::EANx;
     use crate::gas::constants::AIR_O2;
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Meters, Percent};
+
     use approx::assert_relative_eq;
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {

@@ -1,10 +1,8 @@
 //! Tab-navigation direction dispatched through the event loop.
 
-use std::fmt;
-use std::str::FromStr;
+use super::{ActionError, error::ParseError};
 
-use super::ActionError;
-use super::error::ParseError;
+use std::{fmt, str::FromStr};
 
 /// Direction or destination for a tab-switch action.
 ///
@@ -91,6 +89,7 @@ impl FromStr for TabDir {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use rstest::rstest;
 
     mod display {

@@ -1,10 +1,11 @@
+//! TODO: module doc
+
+use super::{ActionError, error::ParseError};
+
 use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use strum::{Display, VariantNames};
-
-use super::ActionError;
-use super::error::ParseError;
 
 /// Directional and positional navigation commands.
 ///
@@ -125,7 +126,9 @@ impl FromStr for Movement {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use rstest::rstest;
+
     use std::str::FromStr;
 
     mod display {

@@ -1,14 +1,8 @@
 //! Top-level application coordinator: owns components, drives the event loop.
 
 pub mod error;
-pub use error::AppError;
 
-use std::{fmt, path::Path};
-
-use crossterm::event::KeyEvent;
-use ratatui::layout::Rect;
-use tokio::sync::mpsc;
-use tracing::{debug, info};
+pub use self::error::AppError;
 
 use crate::{
     action::Action,
@@ -18,6 +12,13 @@ use crate::{
     registers::RegisterStore,
     tui::{Event, Tui},
 };
+
+use crossterm::event::KeyEvent;
+use ratatui::layout::Rect;
+use tokio::sync::mpsc;
+use tracing::{debug, info};
+
+use std::{fmt, path::Path};
 
 /// Event-loop coordinator that owns a set of [`ComponentNew`] instances.
 ///
@@ -383,14 +384,8 @@ impl App {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use approx::assert_relative_eq;
-    use crossterm::event::{KeyCode, KeyModifiers};
-    use ratatui::Frame;
-    use rstest::rstest;
-
     use super::*;
+
     use crate::{
         action::Movement,
         config::{AppConfig, Styles},
@@ -398,6 +393,13 @@ mod tests {
         theme::Theme,
         tui::Tui,
     };
+
+    use approx::assert_relative_eq;
+    use crossterm::event::{KeyCode, KeyModifiers};
+    use ratatui::Frame;
+    use rstest::rstest;
+
+    use std::collections::HashMap;
 
     fn press(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)

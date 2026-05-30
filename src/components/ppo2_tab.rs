@@ -1,11 +1,6 @@
 //! ppO₂-by-depth table component.
 
-use ratatui::{
-    buffer::Buffer,
-    layout::{Constraint, Rect},
-    style::Style,
-    widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
-};
+use super::{Component, KeyBinding};
 
 use crate::{
     action::{Action, Movement},
@@ -16,7 +11,12 @@ use crate::{
     units::{Bar, Meters, Percent},
 };
 
-use super::{Component, KeyBinding};
+use ratatui::{
+    buffer::Buffer,
+    layout::{Constraint, Rect},
+    style::Style,
+    widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
+};
 
 const PPO2_TABLE_MIX_PERCENTS: &[Percent] = [
     Percent::literal(0.10),
@@ -330,9 +330,11 @@ impl Component for PpO2Tab {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::action::{Action, Movement};
     use crate::components::test_utils::widget_text;
     use crate::components::{PAGE_DELTA, SCROLL_DELTA};
+
     use rstest::rstest;
 
     mod constants {
