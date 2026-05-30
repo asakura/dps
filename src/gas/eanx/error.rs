@@ -36,7 +36,7 @@ pub struct ParseEANxError;
 ///     Err(InvalidEANxError::BlendCeilingExceeded(_))
 /// ));
 /// ```
-#[derive(Debug, Clone, Copy, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 #[non_exhaustive]
 pub enum InvalidEANxError {
     /// FO₂ is below the 10 % minimum for a breathable EAN mix.
@@ -51,30 +51,36 @@ pub enum InvalidEANxError {
     /// The input string is not a recognised [`EANx`](crate::gas::EANx) blend name.
     #[error(transparent)]
     ParseFailed(#[from] ParseEANxError),
+    /// A unit value was outside the valid range during blend construction.
+    #[error(transparent)]
+    Unit(#[from] crate::units::UnitError),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::units::Percent;
+    use crate::units::{Percent, UnitError};
+    use rstest::rstest;
 
-    #[test]
-    fn o2_too_low_display_contains_fraction() -> Result<(), Box<dyn std::error::Error>> {
-        let p = Percent::new(0.05)?;
-        let msg = InvalidEANxError::O2TooLow(p).to_string();
+    mod display {
+        use super::*;
 
-        assert!(msg.contains('5') || msg.contains("0.05"));
+        #[rstest]
+        fn o2_too_low_contains_fraction() -> Result<(), UnitError> {
+            let p = Percent::new(0.05)?;
 
-        Ok(())
-    }
+            assert!(InvalidEANxError::O2TooLow(p).to_string().contains(&p.to_string()));
 
-    #[test]
-    fn blend_ceiling_exceeded_display() -> Result<(), Box<dyn std::error::Error>> {
-        let p = Percent::new(0.99)?;
-        let msg = InvalidEANxError::BlendCeilingExceeded(p).to_string();
+            Ok(())
+        }
 
-        assert!(msg.contains("ceiling"));
+        #[rstest]
+        fn blend_ceiling_exceeded_contains_ceiling() -> Result<(), UnitError> {
+            let p = Percent::new(0.99)?;
 
-        Ok(())
+            assert!(InvalidEANxError::BlendCeilingExceeded(p).to_string().contains("ceiling"));
+
+            Ok(())
+        }
     }
 }
