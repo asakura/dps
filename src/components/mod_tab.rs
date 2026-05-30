@@ -10,7 +10,7 @@ use ratatui::{
 use crate::{
     action::{Action, EditOp, Movement},
     gas::{EANx, MOD},
-    registers::{RegisterStore, RegisterValue},
+    registers::{RegisterName, RegisterStore, RegisterValue},
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::{Bar, Meters, Percent},
@@ -58,7 +58,7 @@ impl ModTab {
     #[must_use]
     pub fn new() -> Self {
         let mixes: Vec<EANx> = (O2_PCT_MIN..=O2_PCT_MAX)
-            .filter_map(|p| Percent::new(f64::from(p) / 100.0))
+            .filter_map(|p| Percent::new(f64::from(p) / 100.0).ok())
             .filter_map(|pct| EANx::try_from(pct).ok())
             .collect();
         let start_idx = mixes
@@ -245,12 +245,15 @@ impl Component for ModTab {
             }
             Action::Edit(EditOp::YankRow(reg)) => {
                 if let Some(row) = self.table_state.selected() {
-                    registers.push_yank(reg, RegisterValue::EANx(self.mixes[row]));
+                    registers.push_yank(
+                        reg.unwrap_or(RegisterName::Unnamed),
+                        RegisterValue::EANx(self.mixes[row]),
+                    );
                 }
             }
             Action::Edit(EditOp::Paste(reg)) => {
-                let reg_char = reg.unwrap_or('"');
-                if let Some(RegisterValue::EANx(mix)) = registers.read(reg_char) {
+                let r = reg.unwrap_or(RegisterName::Unnamed);
+                if let Some(RegisterValue::EANx(mix)) = registers.read(r) {
                     let insert_at = self.table_state.selected().map_or(0, |r| r + 1);
                     self.mixes.insert(insert_at, mix);
                     self.table_state.select(Some(insert_at));
@@ -258,8 +261,8 @@ impl Component for ModTab {
                 }
             }
             Action::Edit(EditOp::PasteAbove(reg)) => {
-                let reg_char = reg.unwrap_or('"');
-                if let Some(RegisterValue::EANx(mix)) = registers.read(reg_char) {
+                let r = reg.unwrap_or(RegisterName::Unnamed);
+                if let Some(RegisterValue::EANx(mix)) = registers.read(r) {
                     let insert_at = self.table_state.selected().unwrap_or(0);
                     self.mixes.insert(insert_at, mix);
                     self.table_state.select(Some(insert_at));
@@ -267,10 +270,10 @@ impl Component for ModTab {
                 }
             }
             Action::Edit(EditOp::CyclePaste) => {
-                if let Some(row) = self.last_paste_row {
-                    if let Some(RegisterValue::EANx(mix)) = registers.cycle_yank() {
-                        self.mixes[row] = mix;
-                    }
+                if let Some(row) = self.last_paste_row
+                    && let Ok(RegisterValue::EANx(mix)) = registers.cycle_yank()
+                {
+                    self.mixes[row] = mix;
                 }
             }
             Action::Edit(EditOp::Delete(reg)) => {
@@ -279,10 +282,17 @@ impl Component for ModTab {
                     let new_sel = (!self.mixes.is_empty()).then(|| row.min(self.mixes.len() - 1));
                     self.table_state.select(new_sel);
                     match reg {
-                        Some(r @ ('a'..='z' | 'A'..='Z' | '+' | '*' | '_')) => {
+                        Some(
+                            r @ (RegisterName::Named(_)
+                            | RegisterName::Clipboard
+                            | RegisterName::Selection
+                            | RegisterName::BlackHole),
+                        ) => {
                             registers.write(r, value);
                         }
-                        _ => registers.push_delete(value),
+                        _ => {
+                            registers.push_delete(value);
+                        }
                     }
                 }
             }
@@ -359,7 +369,12 @@ impl Component for ModTab {
 mod tests {
     use super::*;
     use crate::components::test_utils::widget_text;
+    use crate::registers::RegisterName;
     use color_eyre::{Result, eyre::eyre};
+
+    fn reg(c: char) -> Result<RegisterName> {
+        RegisterName::try_from(c).map_err(|_| eyre!("{c:?} is not a valid register character"))
+    }
 
     mod constants {
         use super::*;
@@ -530,8 +545,9 @@ mod tests {
 
             tab.handle_action(Action::Edit(EditOp::YankRow(None)), &mut regs);
 
-            assert_eq!(regs.read('"'), Some(expected));
-            assert_eq!(regs.read('0'), Some(expected));
+            assert_eq!(regs.read(RegisterName::Unnamed), Some(expected));
+            assert_eq!(regs.read(reg('0')?), Some(expected));
+
             Ok(())
         }
 
@@ -545,10 +561,13 @@ mod tests {
             let expected = RegisterValue::EANx(tab.mixes[row]);
             let mut regs = RegisterStore::default();
 
-            tab.handle_action(Action::Edit(EditOp::YankRow(Some('a'))), &mut regs);
+            tab.handle_action(
+                Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())),
+                &mut regs,
+            );
 
-            assert_eq!(regs.read('a'), Some(expected));
-            assert_eq!(regs.read('0'), Some(expected));
+            assert_eq!(regs.read(reg('a')?), Some(expected));
+            assert_eq!(regs.read(reg('0')?), Some(expected));
             Ok(())
         }
     }
@@ -559,7 +578,7 @@ mod tests {
         use rstest::rstest;
 
         #[rstest]
-        fn removes_focused_row_from_mixes() -> Result<()> {
+        fn removes_focused_row_from_mixes() {
             let mut tab = ModTab::new();
             let before_len = tab.mixes.len();
 
@@ -569,23 +588,6 @@ mod tests {
             );
 
             assert_eq!(tab.mixes.len(), before_len - 1);
-            Ok(())
-        }
-
-        #[rstest]
-        fn deleted_value_is_stored_in_register() -> Result<()> {
-            let mut tab = ModTab::new();
-            let row = tab
-                .table_state
-                .selected()
-                .ok_or_else(|| eyre!("no row selected"))?;
-            let expected = RegisterValue::EANx(tab.mixes[row]);
-            let mut regs = RegisterStore::default();
-
-            tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut regs);
-
-            assert_eq!(regs.read('1'), Some(expected));
-            Ok(())
         }
 
         #[rstest]
@@ -600,9 +602,9 @@ mod tests {
 
             tab.handle_action(Action::Edit(EditOp::Delete(None)), &mut regs);
 
-            assert_eq!(regs.read('1'), Some(expected));
-            assert_eq!(regs.read('"'), Some(expected));
-            assert!(regs.read('a').is_none());
+            assert_eq!(regs.read(reg('1')?), Some(expected));
+            assert_eq!(regs.read(RegisterName::Unnamed), Some(expected));
+            assert!(regs.read(reg('a')?).is_none());
             Ok(())
         }
 
@@ -616,11 +618,14 @@ mod tests {
             let expected = RegisterValue::EANx(tab.mixes[row]);
             let mut regs = RegisterStore::default();
 
-            tab.handle_action(Action::Edit(EditOp::Delete(Some('a'))), &mut regs);
+            tab.handle_action(
+                Action::Edit(EditOp::Delete(RegisterName::try_from('a').ok())),
+                &mut regs,
+            );
 
-            assert_eq!(regs.read('a'), Some(expected));
-            assert_eq!(regs.read('"'), Some(expected));
-            assert!(regs.read('1').is_none());
+            assert_eq!(regs.read(reg('a')?), Some(expected));
+            assert_eq!(regs.read(RegisterName::Unnamed), Some(expected));
+            assert!(regs.read(reg('1')?).is_none());
             Ok(())
         }
 
@@ -629,11 +634,14 @@ mod tests {
             let mut tab = ModTab::new();
             let mut regs = RegisterStore::default();
 
-            tab.handle_action(Action::Edit(EditOp::Delete(Some('_'))), &mut regs);
+            tab.handle_action(
+                Action::Edit(EditOp::Delete(RegisterName::try_from('_').ok())),
+                &mut regs,
+            );
 
-            assert!(regs.read('_').is_none());
-            assert!(regs.read('"').is_none());
-            assert!(regs.read('1').is_none());
+            assert!(regs.read(reg('_')?).is_none());
+            assert!(regs.read(RegisterName::Unnamed).is_none());
+            assert!(regs.read(reg('1')?).is_none());
             Ok(())
         }
 
@@ -647,10 +655,13 @@ mod tests {
             let expected = RegisterValue::EANx(tab.mixes[row]);
             let mut regs = RegisterStore::default();
 
-            tab.handle_action(Action::Edit(EditOp::Delete(Some('3'))), &mut regs);
+            tab.handle_action(
+                Action::Edit(EditOp::Delete(RegisterName::try_from('3').ok())),
+                &mut regs,
+            );
 
-            assert_eq!(regs.read('1'), Some(expected));
-            assert!(regs.read('3').is_none());
+            assert_eq!(regs.read(reg('1')?), Some(expected));
+            assert!(regs.read(reg('3')?).is_none());
             Ok(())
         }
 
@@ -737,16 +748,22 @@ mod tests {
                 .ok_or_else(|| eyre!("no row selected"))?;
             let yanked = tab.mixes[cursor];
             let mut regs = RegisterStore::default();
-            tab.handle_action(Action::Edit(EditOp::YankRow(Some('a'))), &mut regs);
+            tab.handle_action(
+                Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())),
+                &mut regs,
+            );
 
-            tab.handle_action(Action::Edit(EditOp::Paste(Some('a'))), &mut regs);
+            tab.handle_action(
+                Action::Edit(EditOp::Paste(RegisterName::try_from('a').ok())),
+                &mut regs,
+            );
 
             assert_eq!(tab.mixes[cursor + 1], yanked);
             Ok(())
         }
 
         #[rstest]
-        fn no_op_when_register_empty() -> Result<()> {
+        fn no_op_when_register_empty() {
             let mut tab = ModTab::new();
             let before_len = tab.mixes.len();
 
@@ -756,7 +773,6 @@ mod tests {
             );
 
             assert_eq!(tab.mixes.len(), before_len);
-            Ok(())
         }
     }
 
@@ -826,7 +842,7 @@ mod tests {
         }
 
         #[rstest]
-        fn no_op_without_prior_paste() -> Result<()> {
+        fn no_op_without_prior_paste() {
             let mut tab = ModTab::new();
             let before_len = tab.mixes.len();
             let mut regs = RegisterStore::default();
@@ -836,7 +852,6 @@ mod tests {
             tab.handle_action(Action::Edit(EditOp::CyclePaste), &mut regs);
 
             assert_eq!(tab.mixes.len(), before_len);
-            Ok(())
         }
 
         #[rstest]
