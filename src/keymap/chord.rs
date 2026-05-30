@@ -41,6 +41,7 @@
 use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::action::Action;
+use crate::registers::RegisterName;
 
 use super::ModeMap;
 
@@ -186,7 +187,7 @@ pub trait ChordEngine {
 pub struct SequenceEngine {
     buffer: Vec<KeyEvent>,
     count: u32,
-    pending_register: Option<char>,
+    pending_register: Option<RegisterName>,
     awaiting_register: bool,
 }
 
@@ -222,6 +223,7 @@ impl SequenceEngine {
             other => other,
         }
     }
+
 }
 
 impl ChordEngine for SequenceEngine {
@@ -230,7 +232,7 @@ impl ChordEngine for SequenceEngine {
             // Register-select: consume the char typed after `"`
             if self.awaiting_register {
                 if let KeyCode::Char(c) = key.code {
-                    self.pending_register = Some(c);
+                    self.pending_register = RegisterName::try_from(c).ok();
                 }
                 self.awaiting_register = false;
                 return ChordResult::Prefix;
@@ -680,10 +682,14 @@ mod tests {
             engine.advance(press(KeyCode::Char('a')), dd_bindings); // register = 'a'
             engine.advance(press(KeyCode::Char('d')), dd_bindings); // prefix
 
+            let result = engine.advance(press(KeyCode::Char('d')), dd_bindings);
             assert!(matches!(
-                engine.advance(press(KeyCode::Char('d')), dd_bindings),
-                ChordResult::Exact(Action::Edit(EditOp::Delete(Some('a'))), 1)
+                result,
+                ChordResult::Exact(Action::Edit(EditOp::Delete(Some(_))), 1)
             ));
+            if let ChordResult::Exact(Action::Edit(EditOp::Delete(reg)), _) = result {
+                assert_eq!(reg, RegisterName::try_from('a').ok());
+            }
         }
 
         #[rstest]
@@ -696,10 +702,14 @@ mod tests {
             engine.advance(press(KeyCode::Char('a')), dd_bindings); // register = 'a'
             engine.advance(press(KeyCode::Char('d')), dd_bindings); // prefix
 
+            let result = engine.advance(press(KeyCode::Char('d')), dd_bindings);
             assert!(matches!(
-                engine.advance(press(KeyCode::Char('d')), dd_bindings),
-                ChordResult::Exact(Action::Edit(EditOp::Delete(Some('a'))), 3)
+                result,
+                ChordResult::Exact(Action::Edit(EditOp::Delete(Some(_))), 3)
             ));
+            if let ChordResult::Exact(Action::Edit(EditOp::Delete(reg)), _) = result {
+                assert_eq!(reg, RegisterName::try_from('a').ok());
+            }
         }
 
         #[rstest]
