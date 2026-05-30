@@ -1,13 +1,13 @@
 //! Vim-style register store for yank, paste, and delete operations.
 //!
 //! The central type is [`RegisterStore`], which holds a named register map
-//! keyed by a single `char`. Special registers follow Vim semantics:
+//! keyed by [`RegisterName`]. Special registers follow Vim semantics:
 //!
 //! | Register | Behaviour |
 //! |---|---|
 //! | `'"'` | Unnamed — always receives the most recent yank or delete |
 //! | `'0'` | Yank register — head of the internal yank ring (most recent yank) |
-//! | `'1'`–`'9'` | Delete history stack (oldest entry falls off `'9'`) |
+//! | `'1'`–`'9'` (`Numbered`) | Delete history stack (oldest entry falls off `'9'`) |
 //! | `'a'`–`'z'` | Named registers (persist until overwritten) |
 //! | `'A'`–`'Z'` | Append to lowercase partner (last-write wins for typed values) |
 //! | `'_'` | Black hole — writes discarded, reads always `None` |
@@ -36,7 +36,7 @@
 //!    (since `Box<[_]>` is not `Copy`), requiring all `self.slots.insert` /
 //!    `.copied()` call sites in [`RegisterStore`] to switch to `clone()`.
 //!
-//! 2. **`EditOp::YankRows { reg: Option<char>, count: usize }`** — a separate
+//! 2. **`EditOp::YankRows { reg: Option<RegisterName>, count: usize }`** — a separate
 //!    action variant that carries the count directly. The current dispatch
 //!    architecture implements count by repeating an action N times, which only
 //!    works when each repetition has a distinct side-effect (e.g. `Delete`
@@ -55,30 +55,40 @@
 //! # Examples
 //!
 //! ```
-//! use dps::registers::{RegisterStore, RegisterValue};
+//! use dps::registers::{RegisterName, RegisterStore, RegisterValue};
 //! use dps::gas::EANx;
 //! use dps::units::Percent;
 //!
 //! let mut store = RegisterStore::default();
 //! let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+//! let reg_0 = RegisterName::Yank;
+//! let reg_a = RegisterName::try_from('a').unwrap();
 //!
 //! // Yank into the unnamed register; '0' also receives a copy.
-//! store.push_yank(None, RegisterValue::EANx(ean32));
-//! assert_eq!(store.read('"'), Some(RegisterValue::EANx(ean32)));
-//! assert_eq!(store.read('0'), Some(RegisterValue::EANx(ean32)));
+//! store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32));
+//! assert_eq!(store.read(RegisterName::Unnamed), Some(RegisterValue::EANx(ean32)));
+//! assert_eq!(store.read(reg_0), Some(RegisterValue::EANx(ean32)));
 //!
 //! // Paste from '0' into a named register.
-//! if let Some(val) = store.read('0') {
-//!     store.write('a', val);
+//! if let Some(val) = store.read(reg_0) {
+//!     store.write(reg_a, val);
 //! }
-//! assert_eq!(store.read('a'), Some(RegisterValue::EANx(ean32)));
+//! assert_eq!(store.read(reg_a), Some(RegisterValue::EANx(ean32)));
 //! ```
 
 mod clipboard;
 mod error;
+mod name;
 mod store;
 mod value;
 
-pub use error::Error as RegisterError;
+pub use error::{
+    InvalidRegisterIndex, InvalidRegisterLetter, RegisterError, YankRingTooSmall,
+};
+#[doc(hidden)]
+pub use name::RegIndex;
+#[doc(hidden)]
+pub use name::RegLetter;
+pub use name::RegisterName;
 pub use store::RegisterStore;
 pub use value::RegisterValue;
