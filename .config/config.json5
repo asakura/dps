@@ -199,6 +199,10 @@
     },
   },
 
+  // Leader key: substituted for every `<leader>` token in keybinding sequences.
+  // Accepts any key sequence string, e.g. "<Space>", ",", "<C-a>".
+  leader: "<Space>",
+
   keybindings: {
     Normal: {
       // select
@@ -269,19 +273,14 @@
       //   optional register field added to their payload.
 
       // tab switching
-      // "<Tab>":   "NextTab",
-      // "<S-Tab>": "PrevTab",
-      // gt:        "NextTab",
-      // gT:        "PrevTab",
-      // "1":       "GotoTab(1)",
-      // "2":       "GotoTab(2)",
-      // "3":       "GotoTab(3)",
-      // "4":       "GotoTab(4)",
-      // "5":       "GotoTab(5)",
-      // "6":       "GotoTab(6)",
-      // "7":       "GotoTab(7)",
-      // "8":       "GotoTab(8)",
-      // "9":       "GotoTab(9)",
+      gt:                 "Tab(Next)",
+      "g<S-t>":           "Tab(Prev)",
+      "<Tab>":            "Tab(Next)",
+      "<S-Tab>":          "Tab(Prev)",
+      "<S-l>":            "Tab(Next)",
+      "<S-h>":            "Tab(Prev)",
+      "<leader><Tab>]":   "Tab(Next)",
+      "<leader><Tab>[":   "Tab(Prev)",
 
       // add / delete rows (dive segments, gas entries)
       // o:  "AddBelow",

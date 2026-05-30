@@ -36,6 +36,10 @@ pub struct AppConfig {
     pub config_dir: PathBuf,
 }
 
+fn default_leader() -> String {
+    "<Space>".to_string()
+}
+
 /// Intermediate deserialization view of the config file.
 ///
 /// Holds raw theme and palette maps long enough for [`theme::resolve_theme`]
@@ -44,6 +48,11 @@ pub struct AppConfig {
 struct RawConfig {
     #[serde(default, flatten)]
     config: AppConfig,
+    /// Leader key used to resolve `<leader>` tokens in keybinding sequences.
+    /// Accepts any key sequence string understood by `parse_key_sequence`,
+    /// e.g. `"<Space>"`, `","`, `"<C-a>"`. Defaults to `"<Space>"`.
+    #[serde(default = "default_leader")]
+    leader: String,
     #[serde(default)]
     keybindings: KeyBindingsBuilder,
     #[serde(default)]
@@ -235,7 +244,7 @@ impl Config {
 
         Ok(Self {
             config: raw.config,
-            keybindings: raw.keybindings.build(),
+            keybindings: raw.keybindings.build_with_leader(&raw.leader),
             styles: raw.styles,
             themes,
             default_theme: raw.default_theme,
@@ -495,6 +504,30 @@ mod tests {
                 home.get(&parse_key_sequence("j")?)
                     .ok_or_else(|| eyre!("no binding for 'j'"))?,
                 &Action::Move(Movement::Down),
+            );
+
+            Ok(())
+        }
+
+        #[test]
+        fn leader_key_substitutes_in_bindings() -> Result<()> {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.json5"),
+                r#"{ leader: "<C-a>", keybindings: { Normal: { "<leader>j": "Quit" } } }"#,
+            )?;
+
+            let c = Config::from_dirs(Some(dir.path()), None)?;
+            let home = c
+                .keybindings
+                .get(&Mode::Normal)
+                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+
+            assert_eq!(
+                home.get(&parse_key_sequence("<C-a>j")?)
+                    .ok_or_else(|| eyre!("no binding for <C-a>j"))?,
+                &Action::Quit,
             );
 
             Ok(())

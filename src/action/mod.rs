@@ -17,10 +17,12 @@
 mod edit;
 mod error;
 mod movement;
+mod tab;
 
 pub use edit::EditOp;
 pub use error::Error as ActionError;
 pub use movement::Movement;
+pub use tab::TabDir;
 
 use std::fmt;
 use std::str::FromStr;
@@ -152,6 +154,15 @@ pub enum Action {
     /// [`ComponentNew::update`](crate::components::ComponentNew::update),
     /// which records the selection and may produce a follow-up action.
     Select,
+    /// Switch the active tab.
+    ///
+    /// Consumed by the tab-pane component; forwarded to every
+    /// [`ComponentNew::update`](crate::components::ComponentNew::update) so
+    /// components other than the tab pane can react if needed.
+    /// [`Next`](TabDir::Next) and [`Prev`](TabDir::Prev) accept a count
+    /// (e.g. `3gt` cycles three tabs forward).
+    /// [`GoTo`](TabDir::GoTo) does not — the count *is* the destination.
+    Tab(TabDir),
     /// Affirmative answer to a confirmation prompt.
     ///
     /// Produced in [`Mode::Confirm`](crate::keymap::Mode) when the user
@@ -220,6 +231,7 @@ impl Action {
             self,
             Self::Move(_)
                 | Self::Edit(EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_))
+                | Self::Tab(TabDir::Next | TabDir::Prev)
         )
     }
 }
@@ -249,6 +261,7 @@ impl fmt::Display for Action {
             Self::ClearScreen => f.write_str("ClearScreen"),
             Self::Move(mv) => write!(f, "Move({mv})"),
             Self::Edit(op) => write!(f, "Edit({op})"),
+            Self::Tab(dir) => write!(f, "Tab({dir})"),
             Self::Select => f.write_str("Select"),
             Self::Help => f.write_str("Help"),
             Self::Confirm => f.write_str("Confirm"),
@@ -319,6 +332,10 @@ impl FromStr for Action {
 
         if let Some(inner) = s.strip_prefix("Edit(").and_then(|s| s.strip_suffix(")")) {
             return EditOp::from_str(inner).map(Self::Edit);
+        }
+
+        if let Some(inner) = s.strip_prefix("Tab(").and_then(|s| s.strip_suffix(")")) {
+            return TabDir::from_str(inner).map(Self::Tab);
         }
 
         if let Some(inner) = s.strip_prefix("Error(").and_then(|s| s.strip_suffix(")")) {
@@ -415,6 +432,14 @@ mod tests {
         fn move_wraps_movement_in_parens(#[case] mv: Movement, #[case] expected: &str) {
             assert_eq!(Action::Move(mv).to_string(), expected);
         }
+
+        #[rstest]
+        #[case(TabDir::Next, "Tab(Next)")]
+        #[case(TabDir::Prev, "Tab(Prev)")]
+        #[case(TabDir::GoTo(3), "Tab(GoTo(3))")]
+        fn tab_wraps_dir_in_parens(#[case] dir: TabDir, #[case] expected: &str) {
+            assert_eq!(Action::Tab(dir).to_string(), expected);
+        }
     }
 
     mod from_str {
@@ -474,6 +499,19 @@ mod tests {
         #[case("Error(()", Action::Error("(".to_owned()))]
         #[case("Error((nested))", Action::Error("(nested)".to_owned()))]
         fn error_with_parens_in_payload_parses(
+            #[case] input: &str,
+            #[case] expected: Action,
+        ) -> Result<(), ActionError> {
+            assert_eq!(Action::from_str(input)?, expected);
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case("Tab(Next)", Action::Tab(TabDir::Next))]
+        #[case("Tab(Prev)", Action::Tab(TabDir::Prev))]
+        #[case("Tab(GoTo(3))", Action::Tab(TabDir::GoTo(3)))]
+        fn tab_variants_parse(
             #[case] input: &str,
             #[case] expected: Action,
         ) -> Result<(), ActionError> {
@@ -608,6 +646,16 @@ mod tests {
         }
 
         #[rstest]
+        #[case(Action::Tab(TabDir::Next))]
+        #[case(Action::Tab(TabDir::Prev))]
+        #[case(Action::Tab(TabDir::GoTo(3)))]
+        fn tab_variants_roundtrip(#[case] action: Action) -> Result<(), serde_json::Error> {
+            assert_eq!(roundtrip(&action)?, action);
+
+            Ok(())
+        }
+
+        #[rstest]
         fn unknown_variant_returns_error() {
             assert!(serde_json::from_str::<Action>("\"NotAnAction\"").is_err());
         }
@@ -669,6 +717,18 @@ mod tests {
         #[rstest]
         fn error_rejects_count() {
             assert!(!Action::Error("oops".to_owned()).accepts_count());
+        }
+
+        #[rstest]
+        #[case(TabDir::Next)]
+        #[case(TabDir::Prev)]
+        fn tab_next_prev_accept_count(#[case] dir: TabDir) {
+            assert!(Action::Tab(dir).accepts_count());
+        }
+
+        #[rstest]
+        fn tab_goto_rejects_count() {
+            assert!(!Action::Tab(TabDir::GoTo(3)).accepts_count());
         }
     }
 }
