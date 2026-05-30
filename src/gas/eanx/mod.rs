@@ -498,10 +498,13 @@ impl EANxBlend<PartialPressure> {
     /// Returns the highest FO₂ (as a partial-pressure nitrox mix) that keeps
     /// ppO₂ at or below `ppo2_max` at `target_depth`, clamped to 100 % O₂.
     ///
-    /// Returns `None` if the required FO₂ would be below the 10 % minimum
-    /// (the target depth is beyond any breathable mix for that ppO₂ limit).
+    /// # Errors
     ///
-    /// ```no_run
+    /// Returns `Err(InvalidEANxError::O2TooLow)` if the required FO₂ would be
+    /// below the 10 % minimum (the target depth is beyond any breathable mix
+    /// for that ppO₂ limit).
+    ///
+    /// ```
     /// use dps::gas::EANx;
     /// use dps::environment::DiveEnvironment;
     /// use dps::units::{Bar, Meters};
@@ -513,16 +516,16 @@ impl EANxBlend<PartialPressure> {
     /// // Verify that ppO₂ at target depth equals the limit
     /// assert_relative_eq!(best.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(1.4), epsilon = 1e-9);
     /// ```
-    #[must_use]
-    // TODO: next candidate for refactoring: Option -> Result<Self, crate::errors::Error>
-    pub fn best_mix(target_depth: Meters, ppo2_max: Bar, env: DiveEnvironment) -> Option<Self> {
+    pub fn best_mix(
+        target_depth: Meters,
+        ppo2_max: Bar,
+        env: DiveEnvironment,
+    ) -> Result<Self, InvalidEANxError> {
         let fo2 =
             (ppo2_max / (target_depth / env.water_density() + env.surface_pressure())).min(1.0);
-        let pct = Percent::new(fo2).ok()?;
+        let pct = Percent::new(fo2)?;
 
-        Self::new(pct, PartialPressure)
-            .ok()
-            .map(|blend| blend.with_environment(env))
+        Self::new(pct, PartialPressure).map(|blend| blend.with_environment(env))
     }
 }
 
@@ -918,8 +921,7 @@ mod tests {
             let depth = Meters::new(30.0);
             let ppo2_max = Bar::new(1.4);
             let expected_fo2 = ppo2_max / (depth / env.water_density() + env.surface_pressure());
-            let best = EANx::best_mix(depth, ppo2_max, env)
-                .ok_or_else(|| eyre!("fo2 is above the 10 % minimum"))?;
+            let best = EANx::best_mix(depth, ppo2_max, env)?;
 
             assert_relative_eq!(f64::from(best.fo2()), expected_fo2.min(1.0), epsilon = 1e-9);
 
@@ -931,8 +933,7 @@ mod tests {
             let env = DiveEnvironment::standard();
             let depth = Meters::new(40.0);
             let ppo2_max = Bar::new(1.4);
-            let best = EANx::best_mix(depth, ppo2_max, env)
-                .ok_or_else(|| eyre!("fo2 = 0.28 is above the 10 % minimum"))?;
+            let best = EANx::best_mix(depth, ppo2_max, env)?;
 
             assert_relative_eq!(best.ppo2_at(depth).pressure(), ppo2_max, epsilon = 1e-9);
 
@@ -942,8 +943,8 @@ mod tests {
         #[test]
         fn shallow_depth_clamps_to_pure_o2() -> Result<()> {
             // fo2 = 1.4 / (3/9.948 + 1.013) ≈ 1.065 > 1.0 → clamps to 1.0
-            let best = EANx::best_mix(Meters::new(3.0), Bar::new(1.4), DiveEnvironment::standard())
-                .ok_or_else(|| eyre!("fo2 is above the 10 % minimum"))?;
+            let best =
+                EANx::best_mix(Meters::new(3.0), Bar::new(1.4), DiveEnvironment::standard())?;
 
             assert_relative_eq!(f64::from(best.fo2()), 1.0, epsilon = 1e-9);
 
@@ -951,7 +952,7 @@ mod tests {
         }
 
         #[test]
-        fn very_deep_returns_none() {
+        fn very_deep_returns_err() {
             // At extreme depth, required fo2 would be below 10 % minimum
             assert!(
                 EANx::best_mix(
@@ -959,7 +960,7 @@ mod tests {
                     Bar::new(1.4),
                     DiveEnvironment::standard()
                 )
-                .is_none()
+                .is_err()
             );
         }
     }
