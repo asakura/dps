@@ -436,7 +436,7 @@ mod tests {
 
             assert_eq!(
                 tab.selected_mix().fo2(),
-                Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
+                Percent::new(0.21)?
             );
 
             Ok(())
@@ -462,7 +462,7 @@ mod tests {
             assert_eq!(depth, Meters::new(0.0));
             assert_eq!(
                 mix.fo2(),
-                Percent::new(0.21).ok_or_else(|| eyre!("invalid"))?
+                Percent::new(0.21)?
             );
 
             Ok(())
