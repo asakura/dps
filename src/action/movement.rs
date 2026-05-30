@@ -190,7 +190,7 @@ mod tests {
         fn roundtrip(mv: Movement) -> Result<Movement, serde_json::Error> {
             let json = serde_json::to_string(&mv)?;
 
-            Ok(serde_json::from_str(&json)?)
+            serde_json::from_str(&json)
         }
 
         #[rstest]
