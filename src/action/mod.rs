@@ -216,16 +216,10 @@ impl Action {
     /// ```
     #[must_use]
     pub const fn accepts_count(&self) -> bool {
-        match self {
-            Self::Move(_) => true,
-            Self::Edit(op) => {
-                matches!(
-                    op,
-                    EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_)
-                )
-            }
-            _ => false,
-        }
+        matches!(
+            self,
+            Self::Move(_) | Self::Edit(EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_))
+        )
     }
 }
 
@@ -364,6 +358,7 @@ impl<'de> Deserialize<'de> for Action {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::registers::RegisterName;
     use rstest::rstest;
     use std::str::FromStr;
 
@@ -383,10 +378,10 @@ mod tests {
         #[case(Action::None, "None")]
         #[case(Action::Select, "Select")]
         #[case(Action::Edit(EditOp::YankRow(None)), "Edit(YankRow)")]
-        #[case(Action::Edit(EditOp::YankRow(Some('a'))), "Edit(YankRow(a))")]
+        #[case(Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())), "Edit(YankRow(a))")]
         #[case(Action::Edit(EditOp::Paste(None)), "Edit(Paste)")]
         #[case(Action::Edit(EditOp::PasteAbove(None)), "Edit(PasteAbove)")]
-        #[case(Action::Edit(EditOp::Delete(Some('_'))), "Edit(Delete(_))")]
+        #[case(Action::Edit(EditOp::Delete(RegisterName::try_from('_').ok())), "Edit(Delete(_))")]
         fn simple_variants_display(#[case] action: Action, #[case] expected: &str) {
             assert_eq!(action.to_string(), expected);
         }
@@ -440,13 +435,13 @@ mod tests {
         #[case("Move(Down)", Action::Move(Movement::Down))]
         #[case("Move(GotoBottom)", Action::Move(Movement::GotoBottom))]
         #[case("Edit(YankRow)", Action::Edit(EditOp::YankRow(None)))]
-        #[case("Edit(YankRow(a))", Action::Edit(EditOp::YankRow(Some('a'))))]
+        #[case("Edit(YankRow(a))", Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())))]
         #[case("Edit(Paste)", Action::Edit(EditOp::Paste(None)))]
-        #[case("Edit(Paste(+))", Action::Edit(EditOp::Paste(Some('+'))))]
+        #[case("Edit(Paste(+))", Action::Edit(EditOp::Paste(RegisterName::try_from('+').ok())))]
         #[case("Edit(PasteAbove)", Action::Edit(EditOp::PasteAbove(None)))]
-        #[case("Edit(PasteAbove(+))", Action::Edit(EditOp::PasteAbove(Some('+'))))]
+        #[case("Edit(PasteAbove(+))", Action::Edit(EditOp::PasteAbove(RegisterName::try_from('+').ok())))]
         #[case("Edit(Delete)", Action::Edit(EditOp::Delete(None)))]
-        #[case("Edit(Delete(_))", Action::Edit(EditOp::Delete(Some('_'))))]
+        #[case("Edit(Delete(_))", Action::Edit(EditOp::Delete(RegisterName::try_from('_').ok())))]
         fn known_variants_parse(
             #[case] input: &str,
             #[case] expected: Action,
@@ -502,7 +497,7 @@ mod tests {
         fn roundtrip(action: &Action) -> Result<Action, serde_json::Error> {
             let json = serde_json::to_string(action)?;
 
-            Ok(serde_json::from_str(&json)?)
+            serde_json::from_str(&json)
         }
 
         #[rstest]
@@ -583,12 +578,12 @@ mod tests {
 
         #[rstest]
         #[case(Action::Edit(EditOp::YankRow(None)))]
-        #[case(Action::Edit(EditOp::YankRow(Some('a'))))]
+        #[case(Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())))]
         #[case(Action::Edit(EditOp::Paste(None)))]
-        #[case(Action::Edit(EditOp::Paste(Some('+'))))]
+        #[case(Action::Edit(EditOp::Paste(RegisterName::try_from('+').ok())))]
         #[case(Action::Edit(EditOp::PasteAbove(None)))]
         #[case(Action::Edit(EditOp::Delete(None)))]
-        #[case(Action::Edit(EditOp::Delete(Some('_'))))]
+        #[case(Action::Edit(EditOp::Delete(RegisterName::try_from('_').ok())))]
         fn edit_variants_roundtrip(#[case] action: Action) -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(&action)?, action);
 
@@ -602,7 +597,9 @@ mod tests {
                 "\"Edit(YankRow)\""
             );
             assert_eq!(
-                serde_json::to_string(&Action::Edit(EditOp::YankRow(Some('a'))))?,
+                serde_json::to_string(&Action::Edit(EditOp::YankRow(
+                    RegisterName::try_from('a').ok()
+                )))?,
                 "\"Edit(YankRow(a))\""
             );
 
@@ -639,7 +636,7 @@ mod tests {
         #[case(Action::Edit(EditOp::Paste(None)))]
         #[case(Action::Edit(EditOp::PasteAbove(None)))]
         #[case(Action::Edit(EditOp::Delete(None)))]
-        #[case(Action::Edit(EditOp::Delete(Some('_'))))]
+        #[case(Action::Edit(EditOp::Delete(RegisterName::try_from('_').ok())))]
         fn edit_variants_accept_count(#[case] action: Action) {
             assert!(action.accepts_count());
         }
@@ -657,7 +654,7 @@ mod tests {
         #[case(Action::Help)]
         #[case(Action::None)]
         #[case(Action::Edit(EditOp::YankRow(None)))]
-        #[case(Action::Edit(EditOp::YankRow(Some('a'))))]
+        #[case(Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())))]
         #[case(Action::Edit(EditOp::CyclePaste))]
         fn non_movement_actions_reject_count(#[case] action: Action) {
             assert!(!action.accepts_count());
