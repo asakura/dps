@@ -45,27 +45,34 @@ impl Percent {
     /// Constructs a `Percent` from a compile-time-known fraction, panicking if
     /// out of range.
     ///
-    /// Intended for `const` contexts where the value is a literal guaranteed to
-    /// lie in `[0.0, 1.0]`. For runtime use, prefer [`Percent::new`].
+    /// Intended exclusively for `const` items where the value is a literal
+    /// guaranteed to lie in `[0.0, 1.0]`. For runtime construction, prefer
+    /// [`Percent::new`].
     ///
     /// # Panics
     ///
-    /// Panics if `val` is outside `[0.0, 1.0]`. When used in a `const` item
-    /// this becomes a compile-time error.
+    /// Panics if `val` is outside `[0.0, 1.0]`. When the call site is a
+    /// `const` item the compiler evaluates this at compile time, turning an
+    /// out-of-range value into a **compile-time error**. Calling this function
+    /// at runtime with an out-of-range value still panics at runtime, which is
+    /// why this function should only appear in `const` item initialisers.
     ///
     /// # Examples
     ///
     /// ```no_run
     /// use dps::units::Percent;
-    /// let p = Percent::literal(0.32);
-    /// assert_eq!(p.to_string(), "32%");
+    /// const P: Percent = Percent::literal(0.32);
+    /// assert_eq!(P.to_string(), "32%");
     /// ```
+    #[expect(
+        clippy::panic,
+        reason = "only called from `const` item initialisers; out-of-range values there become compile-time errors rather than runtime panics"
+    )]
     #[must_use]
     pub const fn literal(val: f64) -> Self {
         if val >= 0.0 && val <= 1.0 {
             Self(val)
         } else {
-            // TODO: validate that panic can occur only during build time
             panic!("Percent value is outside [0.0, 1.0]")
         }
     }
@@ -144,6 +151,7 @@ impl FromStr for Percent {
             .map_err(|_| UnitError::Parse(ParseError::Percent(num_str.to_owned())))?;
 
         Self::new(pct / 100.0)
+            .map_err(|_| UnitError::Parse(ParseError::Percent(s.to_owned())))
     }
 }
 
