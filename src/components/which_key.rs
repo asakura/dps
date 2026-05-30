@@ -157,7 +157,6 @@ fn bottom_rect(height: u16, area: Rect) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use color_eyre::{Result, eyre::eyre};
     use ratatui::{Terminal, backend::TestBackend, layout::Position};
 
     mod bottom_rect {
@@ -201,74 +200,56 @@ mod tests {
             desc: "d",
         };
 
-        fn render_entry(b: &'static KeyBinding, width: u16) -> Result<ratatui::buffer::Buffer> {
+        fn render_entry(b: &'static KeyBinding, width: u16) -> ratatui::buffer::Buffer {
             let backend = TestBackend::new(width, 1);
-            let mut terminal = Terminal::new(backend)?;
+            let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-            terminal.draw(|f| f.render_widget(Entry(b, Theme::default()), f.area()))?;
+            terminal
+                .draw(|f| f.render_widget(Entry(b, Theme::default()), f.area()))
+                .unwrap_or_else(|e| match e {});
 
-            Ok(terminal.backend().buffer().clone())
+            terminal.backend().buffer().clone()
         }
 
         #[test]
-        fn key_placed_after_lead() -> Result<()> {
-            let buf = render_entry(&BINDING, 30)?;
+        fn key_placed_after_lead() {
+            let buf = render_entry(&BINDING, 30);
             assert_eq!(
-                buf.cell(Position::new(LEAD, 0))
-                    .ok_or_else(|| eyre!("cell out of bounds"))?
-                    .symbol(),
-                "?"
+                buf.cell(Position::new(LEAD, 0)).map(|c| c.symbol()),
+                Some("?")
             );
-
-            Ok(())
         }
 
         #[test]
-        fn desc_placed_after_lead_key_gap() -> Result<()> {
-            let buf = render_entry(&BINDING, 30)?;
+        fn desc_placed_after_lead_key_gap() {
+            let buf = render_entry(&BINDING, 30);
             let x = LEAD + KEY_W + ENTRY_GAP;
 
+            assert_eq!(buf.cell(Position::new(x, 0)).map(|c| c.symbol()), Some("z"));
             assert_eq!(
-                buf.cell(Position::new(x, 0))
-                    .ok_or_else(|| eyre!("cell out of bounds"))?
-                    .symbol(),
-                "z"
+                buf.cell(Position::new(x + 1, 0)).map(|c| c.symbol()),
+                Some("i")
             );
             assert_eq!(
-                buf.cell(Position::new(x + 1, 0))
-                    .ok_or_else(|| eyre!("cell out of bounds"))?
-                    .symbol(),
-                "i"
+                buf.cell(Position::new(x + 2, 0)).map(|c| c.symbol()),
+                Some("g")
             );
-            assert_eq!(
-                buf.cell(Position::new(x + 2, 0))
-                    .ok_or_else(|| eyre!("cell out of bounds"))?
-                    .symbol(),
-                "g"
-            );
-
-            Ok(())
         }
 
         #[test]
-        fn long_key_clipped_to_key_width() -> Result<()> {
+        fn long_key_clipped_to_key_width() {
             // Key longer than KEY_W is clipped by the layout rect; desc starts at the correct offset.
-            let buf = render_entry(&LONG_KEY, 30)?;
+            let buf = render_entry(&LONG_KEY, 30);
 
             assert_eq!(
-                buf.cell(Position::new(LEAD, 0))
-                    .ok_or_else(|| eyre!("cell out of bounds"))?
-                    .symbol(),
-                "t"
+                buf.cell(Position::new(LEAD, 0)).map(|c| c.symbol()),
+                Some("t")
             );
             assert_eq!(
                 buf.cell(Position::new(LEAD + KEY_W + ENTRY_GAP, 0))
-                    .ok_or_else(|| eyre!("cell out of bounds"))?
-                    .symbol(),
-                "d"
+                    .map(|c| c.symbol()),
+                Some("d")
             );
-
-            Ok(())
         }
     }
 
@@ -279,21 +260,21 @@ mod tests {
             use super::*;
 
             #[test]
-            fn bindings_is_noop() -> Result<()> {
+            fn bindings_is_noop() {
                 let backend = TestBackend::new(40, 5);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(
-                        WhichKey::new([].as_slice(), [].as_slice(), Theme::default()),
-                        f.area(),
-                    );
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(
+                            WhichKey::new([].as_slice(), [].as_slice(), Theme::default()),
+                            f.area(),
+                        );
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer().clone();
                 assert!(buf.content.iter().all(|c| c.symbol() == " "));
-
-                Ok(())
             }
         }
 
@@ -347,139 +328,121 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn one_column_at_width_43() -> Result<()> {
+            fn one_column_at_width_43() {
                 // min_col_w = LEAD+KEY_W+ENTRY_GAP+MIN_DESC_W = 20; COL_GAP = 4.
                 // At width 43: cols = (43+4)/(20+4) = 1 → 2 bindings stack into 1 column,
                 // 2-row popup, first key at y=3.
                 let backend = TestBackend::new(43, 5);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(
-                        WhichKey::new(PAIR, [].as_slice(), Theme::default()),
-                        f.area(),
-                    );
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(
+                            WhichKey::new(PAIR, [].as_slice(), Theme::default()),
+                            f.area(),
+                        );
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer();
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 3))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "q"
+                    buf.cell(Position::new(LEAD, 3)).map(|c| c.symbol()),
+                    Some("q")
                 );
-
-                Ok(())
             }
 
             #[test]
-            fn two_bindings_stacked_in_one_column() -> Result<()> {
+            fn two_bindings_stacked_in_one_column() {
                 // area 30×5: 2 bindings, 1 col, 2 rows → popup at y=3..4.
                 let backend = TestBackend::new(30, 5);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(
-                        WhichKey::new(PAIR, [].as_slice(), Theme::default()),
-                        f.area(),
-                    );
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(
+                            WhichKey::new(PAIR, [].as_slice(), Theme::default()),
+                            f.area(),
+                        );
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer();
 
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 3))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "q"
+                    buf.cell(Position::new(LEAD, 3)).map(|c| c.symbol()),
+                    Some("q")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 4))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "j"
+                    buf.cell(Position::new(LEAD, 4)).map(|c| c.symbol()),
+                    Some("j")
                 );
-
-                Ok(())
             }
 
             #[test]
-            fn across_two_columns() -> Result<()> {
+            fn across_two_columns() {
                 // area 44×3: cols = ((44+4)/(min_col_w+4)).max(1) = 2, rows = 4/2 = 2.
                 // Each Fill(1) column = (44 - COL_GAP) / 2 = min_col_w; col 1 starts at min_col_w + COL_GAP.
                 let backend = TestBackend::new(44, 3);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(
-                        WhichKey::new(FOUR, [].as_slice(), Theme::default()),
-                        f.area(),
-                    );
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(
+                            WhichKey::new(FOUR, [].as_slice(), Theme::default()),
+                            f.area(),
+                        );
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer();
                 let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
                 let col1_key_x = min_col_w + COL_GAP + LEAD;
 
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 1))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "a"
+                    buf.cell(Position::new(LEAD, 1)).map(|c| c.symbol()),
+                    Some("a")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 2))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "b"
+                    buf.cell(Position::new(LEAD, 2)).map(|c| c.symbol()),
+                    Some("b")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 1))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "c"
+                    buf.cell(Position::new(col1_key_x, 1)).map(|c| c.symbol()),
+                    Some("c")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 2))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "d"
+                    buf.cell(Position::new(col1_key_x, 2)).map(|c| c.symbol()),
+                    Some("d")
                 );
-
-                Ok(())
             }
 
             #[test]
-            fn partial_last_column_leaves_row_empty() -> Result<()> {
+            fn partial_last_column_leaves_row_empty() {
                 // area 44×3: cols=2, rows=ceil(3/2)=2. col 1 has only 1 entry; its second row is empty.
                 let backend = TestBackend::new(44, 3);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(
-                        WhichKey::new(THREE, [].as_slice(), Theme::default()),
-                        f.area(),
-                    );
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(
+                            WhichKey::new(THREE, [].as_slice(), Theme::default()),
+                            f.area(),
+                        );
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer();
                 let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
                 let col1_key_x = min_col_w + COL_GAP + LEAD;
 
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 1))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "c"
+                    buf.cell(Position::new(col1_key_x, 1)).map(|c| c.symbol()),
+                    Some("c")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 2))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    " "
+                    buf.cell(Position::new(col1_key_x, 2)).map(|c| c.symbol()),
+                    Some(" ")
                 );
-
-                Ok(())
             }
         }
 
@@ -498,31 +461,27 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn global_and_component_bindings() -> Result<()> {
+            fn global_and_component_bindings() {
                 // area 30×5: 2 total bindings, 1 col, 2 rows → popup at y=3..4.
                 let backend = TestBackend::new(30, 5);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(WhichKey::new(GLOBAL, COMP, Theme::default()), f.area());
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(WhichKey::new(GLOBAL, COMP, Theme::default()), f.area());
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer();
 
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 3))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "g"
+                    buf.cell(Position::new(LEAD, 3)).map(|c| c.symbol()),
+                    Some("g")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 4))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "c"
+                    buf.cell(Position::new(LEAD, 4)).map(|c| c.symbol()),
+                    Some("c")
                 );
-
-                Ok(())
             }
         }
 
@@ -554,28 +513,26 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn bounded_by_area() -> Result<()> {
+            fn bounded_by_area() {
                 // 5 bindings in a 30×3 area: rows=5 would exceed area height=3,
                 // so popup_h is clamped to 3 and fills the whole terminal.
                 let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(
-                        WhichKey::new(FIVE, [].as_slice(), Theme::default()),
-                        f.area(),
-                    );
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(
+                            WhichKey::new(FIVE, [].as_slice(), Theme::default()),
+                            f.area(),
+                        );
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer();
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 0))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "a"
+                    buf.cell(Position::new(LEAD, 0)).map(|c| c.symbol()),
+                    Some("a")
                 );
-
-                Ok(())
             }
         }
 
@@ -589,29 +546,27 @@ mod tests {
             .as_slice();
 
             #[test]
-            fn long_desc_clipped_to_column_width() -> Result<()> {
+            fn long_desc_clipped_to_column_width() {
                 // Desc longer than the available Fill(1) width is clipped; nothing bleeds past the column.
                 let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend)?;
+                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
 
-                terminal.draw(|f| {
-                    f.render_widget(
-                        WhichKey::new(LONG_DESC, [].as_slice(), Theme::default()),
-                        f.area(),
-                    );
-                })?;
+                terminal
+                    .draw(|f| {
+                        f.render_widget(
+                            WhichKey::new(LONG_DESC, [].as_slice(), Theme::default()),
+                            f.area(),
+                        );
+                    })
+                    .unwrap_or_else(|e| match e {});
 
                 let buf = terminal.backend().buffer();
                 let desc_x = LEAD + KEY_W + ENTRY_GAP;
 
                 assert_eq!(
-                    buf.cell(Position::new(desc_x, 2))
-                        .ok_or_else(|| eyre!("cell out of bounds"))?
-                        .symbol(),
-                    "a"
+                    buf.cell(Position::new(desc_x, 2)).map(|c| c.symbol()),
+                    Some("a")
                 );
-
-                Ok(())
             }
         }
     }

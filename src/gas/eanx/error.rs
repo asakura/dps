@@ -69,7 +69,11 @@ mod tests {
         fn o2_too_low_contains_fraction() -> Result<(), UnitError> {
             let p = Percent::new(0.05)?;
 
-            assert!(InvalidEANxError::O2TooLow(p).to_string().contains(&p.to_string()));
+            assert!(
+                InvalidEANxError::O2TooLow(p)
+                    .to_string()
+                    .contains(&p.to_string())
+            );
 
             Ok(())
         }
@@ -78,7 +82,11 @@ mod tests {
         fn blend_ceiling_exceeded_contains_ceiling() -> Result<(), UnitError> {
             let p = Percent::new(0.99)?;
 
-            assert!(InvalidEANxError::BlendCeilingExceeded(p).to_string().contains("ceiling"));
+            assert!(
+                InvalidEANxError::BlendCeilingExceeded(p)
+                    .to_string()
+                    .contains("ceiling")
+            );
 
             Ok(())
         }

@@ -57,27 +57,24 @@ impl<M: BlendMethod> fmt::Display for EANxDetail<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gas::eanx::InvalidEANxError;
     use crate::gas::{EANx, EANxBlend, Membrane, Psa};
     use crate::units::Percent;
-    use color_eyre::Result;
 
-    fn ean(fraction: f64) -> Result<EANx> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
 
-    fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANxBlend::new(pct, Psa)?)
     }
 
-    fn ean_membrane(fraction: f64) -> Result<EANxBlend<Membrane>> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean_membrane(fraction: f64) -> Result<EANxBlend<Membrane>, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANxBlend::new(pct, Membrane::typical())?)
     }
@@ -86,7 +83,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn first_line_contains_gas_name_and_blend_method() -> Result<()> {
+        fn first_line_contains_gas_name_and_blend_method() -> Result<(), InvalidEANxError> {
             let first = ean(0.32)?
                 .detail()
                 .to_string()
@@ -101,7 +98,7 @@ mod tests {
         }
 
         #[test]
-        fn psa_blend_shows_psa_name() -> Result<()> {
+        fn psa_blend_shows_psa_name() -> Result<(), InvalidEANxError> {
             let first = ean_psa(0.32)?
                 .detail()
                 .to_string()
@@ -116,7 +113,7 @@ mod tests {
         }
 
         #[test]
-        fn membrane_blend_shows_membrane_name() -> Result<()> {
+        fn membrane_blend_shows_membrane_name() -> Result<(), InvalidEANxError> {
             let first = ean_membrane(0.32)?
                 .detail()
                 .to_string()
@@ -131,7 +128,7 @@ mod tests {
         }
 
         #[test]
-        fn air_shows_gas_name_and_blend_method() -> Result<()> {
+        fn air_shows_gas_name_and_blend_method() -> Result<(), InvalidEANxError> {
             let first = ean(0.21)?
                 .detail()
                 .to_string()
@@ -146,7 +143,7 @@ mod tests {
         }
 
         #[test]
-        fn pure_o2_shows_gas_name_and_blend_method() -> Result<()> {
+        fn pure_o2_shows_gas_name_and_blend_method() -> Result<(), InvalidEANxError> {
             let first = ean(1.0)?
                 .detail()
                 .to_string()
@@ -161,7 +158,7 @@ mod tests {
         }
 
         #[test]
-        fn all_component_labels_appear() -> Result<()> {
+        fn all_component_labels_appear() -> Result<(), InvalidEANxError> {
             let output = ean(0.32)?.detail().to_string();
 
             assert!(output.contains("O₂"), "missing O₂ in: {output}");
@@ -174,7 +171,7 @@ mod tests {
         }
 
         #[test]
-        fn o2_fraction_value_appears() -> Result<()> {
+        fn o2_fraction_value_appears() -> Result<(), InvalidEANxError> {
             let output = ean(0.32)?.detail().to_string();
             assert!(output.contains("32.000"), "expected 32.000 in: {output}");
 
@@ -182,7 +179,7 @@ mod tests {
         }
 
         #[test]
-        fn pure_o2_shows_100_percent_o2() -> Result<()> {
+        fn pure_o2_shows_100_percent_o2() -> Result<(), InvalidEANxError> {
             let output = ean(1.0)?.detail().to_string();
             assert!(output.contains("100.000"), "expected 100.000 in: {output}");
 
@@ -190,7 +187,7 @@ mod tests {
         }
 
         #[test]
-        fn has_five_component_lines() -> Result<()> {
+        fn has_five_component_lines() -> Result<(), InvalidEANxError> {
             let output = ean(0.32)?.detail().to_string();
             assert_eq!(output.lines().count(), 6);
 
@@ -198,7 +195,7 @@ mod tests {
         }
 
         #[test]
-        fn from_impl_matches_detail_method() -> Result<()> {
+        fn from_impl_matches_detail_method() -> Result<(), InvalidEANxError> {
             let mix = ean(0.32)?;
             assert_eq!(EANxDetail::from(mix).to_string(), mix.detail().to_string());
 
@@ -206,7 +203,7 @@ mod tests {
         }
 
         #[test]
-        fn into_inner_recovers_original_blend() -> Result<()> {
+        fn into_inner_recovers_original_blend() -> Result<(), InvalidEANxError> {
             let mix = ean(0.32)?;
             assert_eq!(mix.detail().into_inner(), mix);
 

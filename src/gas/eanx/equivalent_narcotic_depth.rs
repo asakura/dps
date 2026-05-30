@@ -173,13 +173,12 @@ mod tests {
     use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
     use crate::gas::constants::{AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
+    use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Meters, Percent};
     use approx::assert_relative_eq;
-    use color_eyre::Result;
 
-    fn ean(fraction: f64) -> Result<EANx> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
@@ -188,7 +187,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn display_shows_end_depth() -> Result<()> {
+        fn display_shows_end_depth() -> Result<(), InvalidEANxError> {
             // Air at 30 m: END == actual depth == 30.0 m
             let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
@@ -198,7 +197,7 @@ mod tests {
         }
 
         #[test]
-        fn end_accessor_returns_meters() -> Result<()> {
+        fn end_accessor_returns_meters() -> Result<(), InvalidEANxError> {
             let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
             assert_relative_eq!(e.end(), Meters::new(30.0), epsilon = 1e-9);
@@ -207,7 +206,7 @@ mod tests {
         }
 
         #[test]
-        fn fo2_is_preserved() -> Result<()> {
+        fn fo2_is_preserved() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.32)?;
             let e = ean(0.32)?.end_at(Meters::new(30.0));
 
@@ -217,7 +216,7 @@ mod tests {
         }
 
         #[test]
-        fn depth_is_preserved() -> Result<()> {
+        fn depth_is_preserved() -> Result<(), InvalidEANxError> {
             let depth = Meters::new(30.0);
             let e = ean(0.32)?.end_at(depth);
 
@@ -227,7 +226,7 @@ mod tests {
         }
 
         #[test]
-        fn from_gives_meters() -> Result<()> {
+        fn from_gives_meters() -> Result<(), InvalidEANxError> {
             let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
             assert_eq!(Meters::from(e), e.end());
@@ -236,7 +235,7 @@ mod tests {
         }
 
         #[test]
-        fn enriched_air_gives_shallower_end() -> Result<()> {
+        fn enriched_air_gives_shallower_end() -> Result<(), InvalidEANxError> {
             let depth = Meters::new(30.0);
             let e = ean(0.32)?.end_at(depth);
 
@@ -249,7 +248,7 @@ mod tests {
         }
 
         #[test]
-        fn surface_depth_clamps_to_zero() -> Result<()> {
+        fn surface_depth_clamps_to_zero() -> Result<(), InvalidEANxError> {
             // EANx 32 at surface: narcotic load < air narcotic → clamped to 0
             let e = ean(0.32)?.end_at(Meters::new(0.0));
 
@@ -259,7 +258,7 @@ mod tests {
         }
 
         #[test]
-        fn ean32_pp_formula_at_30m() -> Result<()> {
+        fn ean32_pp_formula_at_30m() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let mix = ean(0.32)?;
             let c = mix.components();
@@ -279,7 +278,7 @@ mod tests {
         }
 
         #[test]
-        fn higher_fo2_gives_lower_end() -> Result<()> {
+        fn higher_fo2_gives_lower_end() -> Result<(), InvalidEANxError> {
             let depth = Meters::new(40.0);
             assert!(ean(0.32)?.end_at(depth).end() < ean(0.21)?.end_at(depth).end());
 
@@ -291,7 +290,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summary_formats_full_detail() -> Result<()> {
+        fn summary_formats_full_detail() -> Result<(), InvalidEANxError> {
             // Air at 30 m: END == 30.0 m
             let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
@@ -301,7 +300,7 @@ mod tests {
         }
 
         #[test]
-        fn summary_shows_end_not_actual_depth() -> Result<()> {
+        fn summary_shows_end_not_actual_depth() -> Result<(), InvalidEANxError> {
             // EANx 32 at 30 m: END ≈ 24.4 m ≠ 30.0 m — verifies the two depth
             // fields are not interchangeable in the format string.
             let e = ean(0.32)?.end_at(Meters::new(30.0));
@@ -312,7 +311,7 @@ mod tests {
         }
 
         #[test]
-        fn into_inner_recovers_end() -> Result<()> {
+        fn into_inner_recovers_end() -> Result<(), InvalidEANxError> {
             let e = ean(0.32)?.end_at(Meters::new(30.0));
 
             assert_eq!(e.summary().into_inner(), e);
@@ -321,7 +320,7 @@ mod tests {
         }
 
         #[test]
-        fn from_impl_matches_summary_method() -> Result<()> {
+        fn from_impl_matches_summary_method() -> Result<(), InvalidEANxError> {
             let e = ean(0.32)?.end_at(Meters::new(30.0));
 
             assert_eq!(ENDSummary::from(e).to_string(), e.summary().to_string());

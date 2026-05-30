@@ -110,12 +110,15 @@ impl<'de> Deserialize<'de> for KeyBindingsBuilder {
 mod tests {
     use super::*;
     use crate::action::{Action, Movement};
-    use color_eyre::eyre::{Report, eyre};
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use rstest::fixture;
     use rstest::rstest;
 
     use crate::keymap::testutil::{press, single};
+
+    fn lookup<'a>(b: &'a KeyBindings, mode: Mode, keys: &[KeyEvent]) -> Option<&'a Action> {
+        b.get(&mode).and_then(|m| m.get(keys))
+    }
 
     #[fixture]
     #[once]
@@ -143,20 +146,11 @@ mod tests {
         }
 
         #[rstest]
-        fn binding_in_registered_mode_resolves(
-            simple_bindings: &KeyBindings,
-        ) -> Result<(), Report> {
-            let home = simple_bindings
-                .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal mode in bindings"))?;
-
+        fn binding_in_registered_mode_resolves(simple_bindings: &KeyBindings) {
             assert_eq!(
-                home.get([press(KeyCode::Char('j'))].as_slice())
-                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
-                &Action::Move(Movement::Down)
+                lookup(simple_bindings, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                Some(&Action::Move(Movement::Down))
             );
-
-            Ok(())
         }
 
         #[rstest]
@@ -242,38 +236,26 @@ mod tests {
         }
 
         #[rstest]
-        fn bind_overwrites_in_same_mode(overwritten_binding: &KeyBindings) -> Result<(), Report> {
+        fn bind_overwrites_in_same_mode(overwritten_binding: &KeyBindings) {
             assert_eq!(
-                overwritten_binding
-                    .get(&Mode::Normal)
-                    .ok_or_else(|| eyre!("no Normal mode in bindings"))?
-                    .get(&[press(KeyCode::Char('j'))])
-                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
-                &Action::Move(Movement::Up)
+                lookup(overwritten_binding, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                Some(&Action::Move(Movement::Up))
             );
-
-            Ok(())
         }
 
         #[rstest]
-        fn bind_default_does_not_overwrite(
-            default_not_overwritten: &KeyBindings,
-        ) -> Result<(), Report> {
+        fn bind_default_does_not_overwrite(default_not_overwritten: &KeyBindings) {
             assert_eq!(
-                default_not_overwritten
-                    .get(&Mode::Normal)
-                    .ok_or_else(|| eyre!("no Normal mode in bindings"))?
-                    .get(&[press(KeyCode::Char('j'))])
-                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
-                &Action::Move(Movement::Down)
+                lookup(default_not_overwritten, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                Some(&Action::Move(Movement::Down))
             );
-
-            Ok(())
         }
 
         #[rstest]
         fn build_produces_sorted_deterministic_order() {
-            let b1 = KeyBindingsBuilder::new()
+            // Insert Confirm before Normal — reverse of sorted order — to verify sort.
+            let bindings = KeyBindingsBuilder::new()
+                .bind(Mode::Confirm, single(KeyCode::Char('y')), Action::Quit)
                 .bind(
                     Mode::Normal,
                     single(KeyCode::Char('j')),
@@ -281,66 +263,41 @@ mod tests {
                 )
                 .build();
 
-            let b2 = KeyBindingsBuilder::new()
-                .bind(
-                    Mode::Normal,
-                    single(KeyCode::Char('j')),
-                    Action::Move(Movement::Down),
-                )
-                .build();
-
-            let modes1: Vec<Mode> = b1.iter().map(|(m, _)| *m).collect();
-            let modes2: Vec<Mode> = b2.iter().map(|(m, _)| *m).collect();
-
-            assert_eq!(modes1, modes2);
+            let modes: Vec<Mode> = bindings.iter().map(|(m, _)| *m).collect();
+            assert_eq!(modes, vec![Mode::Normal, Mode::Confirm]);
         }
 
         #[rstest]
-        fn merge_defaults_fills_missing_bindings(
-            merged_with_defaults: &KeyBindings,
-        ) -> Result<(), Report> {
-            let home = merged_with_defaults
-                .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal mode in bindings"))?;
-
+        fn merge_defaults_fills_missing_bindings(merged_with_defaults: &KeyBindings) {
             assert_eq!(
-                home.get(&[press(KeyCode::Char('j'))]),
+                lookup(merged_with_defaults, Mode::Normal, &[press(KeyCode::Char('j'))]),
                 Some(&Action::Move(Movement::Down))
             );
-            assert_eq!(home.get(&[press(KeyCode::Char('x'))]), Some(&Action::Quit));
-
-            Ok(())
+            assert_eq!(
+                lookup(merged_with_defaults, Mode::Normal, &[press(KeyCode::Char('x'))]),
+                Some(&Action::Quit)
+            );
         }
 
         #[rstest]
-        fn merge_defaults_does_not_overwrite_user_binding(
-            user_overrides_merged: &KeyBindings,
-        ) -> Result<(), Report> {
+        fn merge_defaults_does_not_overwrite_user_binding(user_overrides_merged: &KeyBindings) {
             assert_eq!(
-                user_overrides_merged
-                    .get(&Mode::Normal)
-                    .ok_or_else(|| eyre!("no Normal mode in bindings"))?
-                    .get(&[press(KeyCode::Char('j'))]),
+                lookup(user_overrides_merged, Mode::Normal, &[press(KeyCode::Char('j'))]),
                 Some(&Action::Move(Movement::Up))
             );
-
-            Ok(())
         }
     }
 
     mod deserialize {
         use super::*;
         #[rstest]
-        fn single_binding_deserializes() -> Result<(), Report> {
+        fn single_binding_deserializes() -> Result<(), serde_json::Error> {
             let json = r#"{ "Normal": { "j": "Move(Down)" } }"#;
             let mut builder: KeyBindingsBuilder = serde_json::from_str(json)?;
             let bindings = builder.build();
-            let home = bindings
-                .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal mode in bindings"))?;
 
             assert_eq!(
-                home.get(&[press(KeyCode::Char('j'))]),
+                lookup(&bindings, Mode::Normal, &[press(KeyCode::Char('j'))]),
                 Some(&Action::Move(Movement::Down))
             );
 
@@ -348,16 +305,17 @@ mod tests {
         }
 
         #[rstest]
-        fn multi_key_chord_deserializes() -> Result<(), Report> {
+        fn multi_key_chord_deserializes() -> Result<(), serde_json::Error> {
             let json = r#"{ "Normal": { "gg": "Move(GotoTop)" } }"#;
             let mut builder: KeyBindingsBuilder = serde_json::from_str(json)?;
             let bindings = builder.build();
-            let home = bindings
-                .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal mode in bindings"))?;
 
             assert_eq!(
-                home.get(&[press(KeyCode::Char('g')), press(KeyCode::Char('g'))]),
+                lookup(
+                    &bindings,
+                    Mode::Normal,
+                    &[press(KeyCode::Char('g')), press(KeyCode::Char('g'))]
+                ),
                 Some(&Action::Move(Movement::GotoTop))
             );
 
@@ -373,7 +331,7 @@ mod tests {
         fn binding_count_matches(
             #[case] json: &str,
             #[case] expected: usize,
-        ) -> Result<(), Report> {
+        ) -> Result<(), serde_json::Error> {
             let mut builder: KeyBindingsBuilder = serde_json::from_str(json)?;
             let bindings = builder.build();
             let count = bindings.get(&Mode::Normal).map_or(0, |m| m.iter().count());
@@ -396,15 +354,16 @@ mod tests {
         }
 
         #[rstest]
-        fn special_key_deserializes() -> Result<(), Report> {
+        fn special_key_deserializes() -> Result<(), serde_json::Error> {
             let json = r#"{ "Normal": { "<C-d>": "Move(ScrollDown)" } }"#;
             let bindings: KeyBindings = serde_json::from_str::<KeyBindingsBuilder>(json)?.build();
-            let home = bindings
-                .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal mode in bindings"))?;
 
             assert_eq!(
-                home.get(&[KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)]),
+                lookup(
+                    &bindings,
+                    Mode::Normal,
+                    &[KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)]
+                ),
                 Some(&Action::Move(Movement::ScrollDown))
             );
 

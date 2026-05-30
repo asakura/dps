@@ -211,17 +211,13 @@ mod tests {
     use super::*;
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Percent};
-    use color_eyre::Result;
 
     mod minimum_operating_depth {
         use super::*;
 
         #[test]
-        fn display_shows_depth() -> Result<()> {
-            let m = MiniMOD::try_from((
-                Percent::new(0.10)?,
-                Bar::new(0.16),
-            ))?;
+        fn display_shows_depth() -> Result<(), InvalidEANxError> {
+            let m = MiniMOD::try_from((Percent::new(0.10)?, Bar::new(0.16)))?;
 
             assert_eq!(m.to_string(), "5.8 m");
 
@@ -229,7 +225,7 @@ mod tests {
         }
 
         #[test]
-        fn try_from_rejects_fo2_below_minimum() -> Result<()> {
+        fn try_from_rejects_fo2_below_minimum() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.09)?;
 
             assert!(matches!(
@@ -241,13 +237,10 @@ mod tests {
         }
 
         #[test]
-        fn summary_formats_full_detail() -> Result<()> {
+        fn summary_formats_full_detail() -> Result<(), InvalidEANxError> {
             // Bar displays with one decimal: 0.16 → "0.2 bar". Use 0.2 for a clean round-trip.
             // minimod depth = (0.2 / 0.10 − 1.013) × 9.948 ≈ 9.82 m → "9.8 m"
-            let m = MiniMOD::try_from((
-                Percent::new(0.10)?,
-                Bar::new(0.2),
-            ))?;
+            let m = MiniMOD::try_from((Percent::new(0.10)?, Bar::new(0.2)))?;
 
             assert_eq!(
                 m.summary().to_string(),
@@ -262,11 +255,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summary_formats_full_detail() -> Result<()> {
-            let m = MiniMOD::try_from((
-                Percent::new(0.32)?,
-                Bar::new(1.4),
-            ))?;
+        fn summary_formats_full_detail() -> Result<(), InvalidEANxError> {
+            let m = MiniMOD::try_from((Percent::new(0.32)?, Bar::new(1.4)))?;
 
             assert_eq!(
                 m.summary().to_string(),
@@ -277,11 +267,8 @@ mod tests {
         }
 
         #[test]
-        fn into_inner_recovers_original_minimod() -> Result<()> {
-            let m = MiniMOD::try_from((
-                Percent::new(0.10)?,
-                Bar::new(0.16),
-            ))?;
+        fn into_inner_recovers_original_minimod() -> Result<(), InvalidEANxError> {
+            let m = MiniMOD::try_from((Percent::new(0.10)?, Bar::new(0.16)))?;
 
             assert_eq!(m.summary().into_inner(), m);
 
@@ -289,11 +276,8 @@ mod tests {
         }
 
         #[test]
-        fn from_impl_matches_summary_method() -> Result<()> {
-            let m = MiniMOD::try_from((
-                Percent::new(0.10)?,
-                Bar::new(0.16),
-            ))?;
+        fn from_impl_matches_summary_method() -> Result<(), InvalidEANxError> {
+            let m = MiniMOD::try_from((Percent::new(0.10)?, Bar::new(0.16)))?;
 
             assert_eq!(MiniMODSummary::from(m).to_string(), m.summary().to_string());
 

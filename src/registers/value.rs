@@ -95,22 +95,20 @@ impl FromStr for RegisterValue {
 
 #[cfg(test)]
 mod tests {
-    use color_eyre::eyre::Report;
     use rstest::rstest;
 
     use super::{RegisterError, RegisterValue};
     use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
+    use crate::gas::InvalidEANxError;
     use crate::units::Percent;
 
     mod display {
         use super::*;
 
         #[rstest]
-        fn eanx_uses_gas_name() -> Result<(), Report> {
-            let ean32 = EANx::try_from(
-                Percent::new(0.32)?,
-            )?;
+        fn eanx_uses_gas_name() -> Result<(), InvalidEANxError> {
+            let ean32 = EANx::try_from(Percent::new(0.32)?)?;
 
             assert_eq!(RegisterValue::EANx(ean32).to_string(), "EANx 32");
 

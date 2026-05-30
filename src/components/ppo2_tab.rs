@@ -364,18 +364,9 @@ mod tests {
             // window_start(6, 14, 3) = 5; percents at indices [5],[6],[7]
             let cols = tab.visible_cols(3);
 
-            assert_eq!(
-                cols[0].fo2(),
-                Percent::new(0.21)?
-            ); // [5]
-            assert_eq!(
-                cols[1].fo2(),
-                Percent::new(0.28)?
-            ); // [6]
-            assert_eq!(
-                cols[2].fo2(),
-                Percent::new(0.30)?
-            ); // [7]
+            assert_eq!(cols[0].fo2(), Percent::new(0.21)?); // [5]
+            assert_eq!(cols[1].fo2(), Percent::new(0.28)?); // [6]
+            assert_eq!(cols[2].fo2(), Percent::new(0.30)?); // [7]
 
             Ok(())
         }
@@ -434,10 +425,7 @@ mod tests {
         fn selected_mix_is_air() -> Result<()> {
             let tab = PpO2Tab::new();
 
-            assert_eq!(
-                tab.selected_mix().fo2(),
-                Percent::new(0.21)?
-            );
+            assert_eq!(tab.selected_mix().fo2(), Percent::new(0.21)?);
 
             Ok(())
         }
@@ -460,10 +448,7 @@ mod tests {
             let (depth, mix) = tab.selection.ok_or_else(|| eyre!("no selection"))?;
 
             assert_eq!(depth, Meters::new(0.0));
-            assert_eq!(
-                mix.fo2(),
-                Percent::new(0.21)?
-            );
+            assert_eq!(mix.fo2(), Percent::new(0.21)?);
 
             Ok(())
         }

@@ -54,24 +54,21 @@ pub use error::Error as GasError;
 mod tests {
     use super::*;
     use crate::units::{Meters, Percent};
-    use color_eyre::Result;
 
-    fn ean(fraction: f64) -> Result<EANx> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
 
-    fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANxBlend::new(pct, Psa)?)
     }
 
     #[test]
-    fn pp_and_psa_have_different_ar_at_ean32() -> Result<()> {
+    fn pp_and_psa_have_different_ar_at_ean32() -> Result<(), InvalidEANxError> {
         assert!(
             ean_psa(0.32)?.far() > ean(0.32)?.far(),
             "PSA should have more Ar than PP at fo2 = 0.32"
@@ -81,7 +78,7 @@ mod tests {
     }
 
     #[test]
-    fn membrane_typical_has_higher_ar_than_pp() -> Result<()> {
+    fn membrane_typical_has_higher_ar_than_pp() -> Result<(), InvalidEANxError> {
         let fo2 = Percent::new(0.32)?;
         let mem_mix = EANxBlend::new(fo2, Membrane::typical())?;
 
@@ -94,7 +91,7 @@ mod tests {
     }
 
     #[test]
-    fn psa_is_denser_than_pp_at_same_fo2() -> Result<()> {
+    fn psa_is_denser_than_pp_at_same_fo2() -> Result<(), InvalidEANxError> {
         let pp = ean(0.32)?.gas_density_at(Meters::new(0.0));
         let psa = ean_psa(0.32)?.gas_density_at(Meters::new(0.0));
 

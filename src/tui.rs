@@ -567,6 +567,7 @@ impl Drop for Tui {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use crossterm::event::{KeyCode, KeyEventState, KeyModifiers, MouseEventKind};
 
     #[derive(Debug, thiserror::Error)]
     enum TestError {
@@ -783,7 +784,6 @@ mod tests {
 
     mod event {
         use super::*;
-        use crossterm::event::{KeyCode, KeyEventState, KeyModifiers, MouseEventKind};
 
         #[test]
         fn unit_variants_serialize_as_strings() -> Result<()> {

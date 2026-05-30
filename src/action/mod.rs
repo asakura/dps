@@ -218,7 +218,8 @@ impl Action {
     pub const fn accepts_count(&self) -> bool {
         matches!(
             self,
-            Self::Move(_) | Self::Edit(EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_))
+            Self::Move(_)
+                | Self::Edit(EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_))
         )
     }
 }

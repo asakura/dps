@@ -49,8 +49,6 @@ impl Widget for HintBar<'_> {
 mod tests {
     use super::*;
     use crate::components::test_utils::widget_text;
-    use color_eyre::Result;
-    use color_eyre::eyre::eyre;
 
     static COMP: &[KeyBinding] = [KeyBinding {
         key: "j/k",
@@ -64,18 +62,16 @@ mod tests {
     .as_slice();
 
     #[test]
-    fn renders_component_bindings_first() -> Result<()> {
+    fn renders_component_bindings_first() {
         let text = widget_text(HintBar::new(COMP, GLOB, Theme::default()), 60);
-        let j_pos = text
-            .find("j/k")
-            .ok_or_else(|| eyre!("'j/k' not found in hint bar text"))?;
-        let q_pos = text
-            .find("q quit")
-            .ok_or_else(|| eyre!("'q quit' not found in hint bar text"))?;
+        let Some(j_pos) = text.find("j/k") else {
+            panic!("'j/k' not found in hint bar text")
+        };
+        let Some(q_pos) = text.find("q quit") else {
+            panic!("'q quit' not found in hint bar text")
+        };
 
         assert!(j_pos < q_pos);
-
-        Ok(())
     }
 
     #[test]

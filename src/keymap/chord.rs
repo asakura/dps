@@ -223,7 +223,6 @@ impl SequenceEngine {
             other => other,
         }
     }
-
 }
 
 impl ChordEngine for SequenceEngine {

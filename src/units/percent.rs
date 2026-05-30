@@ -150,8 +150,7 @@ impl FromStr for Percent {
             .parse()
             .map_err(|_| UnitError::Parse(ParseError::Percent(num_str.to_owned())))?;
 
-        Self::new(pct / 100.0)
-            .map_err(|_| UnitError::Parse(ParseError::Percent(s.to_owned())))
+        Self::new(pct / 100.0).map_err(|_| UnitError::Parse(ParseError::Percent(s.to_owned())))
     }
 }
 
@@ -180,7 +179,6 @@ impl approx::RelativeEq for Percent {
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
-    use color_eyre::eyre::Report;
     use rstest::rstest;
 
     use super::*;
@@ -205,7 +203,7 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn gives_inner_value() -> Result<(), Report> {
+        fn gives_inner_value() -> Result<(), UnitError> {
             let p = Percent::new(0.40)?;
             assert_relative_eq!(f64::from(p), 0.40);
             Ok(())
@@ -216,7 +214,7 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn gives_dimensionless_ratio() -> Result<(), Report> {
+        fn gives_dimensionless_ratio() -> Result<(), UnitError> {
             let a = Percent::new(0.32)?;
             let b = Percent::new(0.68)?;
 
@@ -233,7 +231,7 @@ mod tests {
         #[case(0.32, "32%")]
         #[case(0.999, "99.9%")]
         #[case(1.0, "100%")]
-        fn formats_correctly(#[case] val: f64, #[case] expected: &str) -> Result<(), Report> {
+        fn formats_correctly(#[case] val: f64, #[case] expected: &str) -> Result<(), UnitError> {
             let p = Percent::new(val)?;
 
             assert_eq!(p.to_string(), expected);
@@ -246,7 +244,7 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn roundtrip() -> Result<(), Report> {
+        fn roundtrip() -> Result<(), UnitError> {
             let v = Percent::new(0.32)?;
 
             assert_eq!(v.to_string().parse::<Percent>()?, v);

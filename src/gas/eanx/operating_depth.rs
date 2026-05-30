@@ -211,17 +211,13 @@ mod tests {
     use super::*;
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Meters, Percent};
-    use color_eyre::Result;
 
     mod operating_depth {
         use super::*;
 
         #[test]
-        fn display_shows_depth() -> Result<()> {
-            let m = MOD::try_from((
-                Percent::new(0.32)?,
-                Bar::new(1.4),
-            ))?;
+        fn display_shows_depth() -> Result<(), InvalidEANxError> {
+            let m = MOD::try_from((Percent::new(0.32)?, Bar::new(1.4)))?;
 
             assert_eq!(m.to_string(), "33.4 m");
 
@@ -229,18 +225,15 @@ mod tests {
         }
 
         #[test]
-        fn into_meters_gives_depth() -> Result<()> {
-            let m = MOD::try_from((
-                Percent::new(0.32)?,
-                Bar::new(1.4),
-            ))?;
+        fn into_meters_gives_depth() -> Result<(), InvalidEANxError> {
+            let m = MOD::try_from((Percent::new(0.32)?, Bar::new(1.4)))?;
             assert_eq!(Meters::from(m), m.depth());
 
             Ok(())
         }
 
         #[test]
-        fn try_from_rejects_fo2_below_minimum() -> Result<()> {
+        fn try_from_rejects_fo2_below_minimum() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.09)?;
 
             assert!(matches!(
@@ -256,11 +249,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summary_formats_full_detail() -> Result<()> {
-            let m = MOD::try_from((
-                Percent::new(0.32)?,
-                Bar::new(1.4),
-            ))?;
+        fn summary_formats_full_detail() -> Result<(), InvalidEANxError> {
+            let m = MOD::try_from((Percent::new(0.32)?, Bar::new(1.4)))?;
 
             assert_eq!(
                 m.summary().to_string(),
@@ -271,11 +261,8 @@ mod tests {
         }
 
         #[test]
-        fn into_inner_recovers_original_mod() -> Result<()> {
-            let m = MOD::try_from((
-                Percent::new(0.32)?,
-                Bar::new(1.4),
-            ))?;
+        fn into_inner_recovers_original_mod() -> Result<(), InvalidEANxError> {
+            let m = MOD::try_from((Percent::new(0.32)?, Bar::new(1.4)))?;
 
             assert_eq!(m.summary().into_inner(), m);
 
@@ -283,11 +270,8 @@ mod tests {
         }
 
         #[test]
-        fn from_impl_matches_summary_method() -> Result<()> {
-            let m = MOD::try_from((
-                Percent::new(0.32)?,
-                Bar::new(1.4),
-            ))?;
+        fn from_impl_matches_summary_method() -> Result<(), InvalidEANxError> {
+            let m = MOD::try_from((Percent::new(0.32)?, Bar::new(1.4)))?;
 
             assert_eq!(MODSummary::from(m).to_string(), m.summary().to_string());
 

@@ -186,78 +186,70 @@ impl GasComponents {
 mod tests {
     use super::*;
     use crate::gas::EANx;
+    use crate::gas::eanx::InvalidEANxError;
     use crate::units::Percent;
     use approx::assert_relative_eq;
-    use color_eyre::Result;
 
-    fn air() -> Result<GasComponents> {
-        Ok(
-            EANx::try_from(
-                Percent::new(0.20946)?,
-            )?
-            .components(),
-        )
+    fn air() -> Result<GasComponents, InvalidEANxError> {
+        Ok(EANx::try_from(Percent::new(0.20946)?)?.components())
     }
 
-    fn ean32() -> Result<GasComponents> {
-        Ok(
-            EANx::try_from(Percent::new(0.32)?)?
-                .components(),
-        )
+    fn ean32() -> Result<GasComponents, InvalidEANxError> {
+        Ok(EANx::try_from(Percent::new(0.32)?)?.components())
     }
 
     mod accessors {
         use super::*;
 
         #[test]
-        fn o2_returns_oxygen_fraction() -> Result<()> {
+        fn o2_returns_oxygen_fraction() -> Result<(), InvalidEANxError> {
             assert_relative_eq!(air()?.o2(), 0.20946, epsilon = 1e-9);
             Ok(())
         }
 
         #[test]
-        fn n2_is_dominant_diluent_in_air() -> Result<()> {
+        fn n2_is_dominant_diluent_in_air() -> Result<(), InvalidEANxError> {
             let c = air()?;
             assert!(c.n2() > 0.78 && c.n2() < 0.79);
             Ok(())
         }
 
         #[test]
-        fn ar_matches_noaa_air_composition() -> Result<()> {
+        fn ar_matches_noaa_air_composition() -> Result<(), InvalidEANxError> {
             assert_relative_eq!(air()?.ar(), 0.00934, epsilon = 1e-4);
             Ok(())
         }
 
         #[test]
-        fn co2_is_sub_ppt_trace() -> Result<()> {
+        fn co2_is_sub_ppt_trace() -> Result<(), InvalidEANxError> {
             let c = air()?;
             assert!(c.co2() > 0.0 && c.co2() < 0.001);
             Ok(())
         }
 
         #[test]
-        fn other_is_smaller_than_co2() -> Result<()> {
+        fn other_is_smaller_than_co2() -> Result<(), InvalidEANxError> {
             let c = air()?;
             assert!(c.other() >= 0.0 && c.other() < c.co2());
             Ok(())
         }
 
         #[test]
-        fn sum_equals_one_for_air() -> Result<()> {
+        fn sum_equals_one_for_air() -> Result<(), InvalidEANxError> {
             assert_relative_eq!(air()?.sum(), 1.0, epsilon = 1e-12);
             Ok(())
         }
     }
 
     #[test]
-    fn molar_mass_of_air_is_approximately_28_97() -> Result<()> {
+    fn molar_mass_of_air_is_approximately_28_97() -> Result<(), InvalidEANxError> {
         assert_relative_eq!(air()?.molar_mass(), 28.97, epsilon = 0.01);
 
         Ok(())
     }
 
     #[test]
-    fn molar_mass_increases_with_fo2() -> Result<()> {
+    fn molar_mass_increases_with_fo2() -> Result<(), InvalidEANxError> {
         // Pure O₂ (MW 32) raises the mean molar mass above air (MW ≈ 28.97)
         assert!(ean32()?.molar_mass() > air()?.molar_mass());
 
@@ -265,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn narcotic_fraction_equals_n2_plus_1_5_ar() -> Result<()> {
+    fn narcotic_fraction_equals_n2_plus_1_5_ar() -> Result<(), InvalidEANxError> {
         let air = air()?;
 
         assert_relative_eq!(
@@ -278,7 +270,7 @@ mod tests {
     }
 
     #[test]
-    fn narcotic_fraction_of_ean32_is_less_than_air() -> Result<()> {
+    fn narcotic_fraction_of_ean32_is_less_than_air() -> Result<(), InvalidEANxError> {
         // Higher FO₂ → less N₂/Ar → lower narcotic load
         assert!(ean32()?.narcotic() < air()?.narcotic());
 

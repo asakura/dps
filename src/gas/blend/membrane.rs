@@ -165,14 +165,13 @@ pub struct InvalidMembraneFractionsError;
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use color_eyre::Result;
 
     #[test]
     #[expect(
         clippy::similar_names,
         reason = "fo2/fn2/fco2 are standard gas-fraction notation; the 'f' prefix and gas suffix make each distinct in context"
     )]
-    fn from_analysis_roundtrips_components() -> Result<()> {
+    fn from_analysis_roundtrips_components() -> Result<(), InvalidMembraneFractionsError> {
         let fo2 = 0.32_f64;
         let fn2 = 0.65_f64;
         let far = 0.025_f64;
@@ -210,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn diluent_ratios_are_fo2_independent() -> Result<()> {
+    fn diluent_ratios_are_fo2_independent() -> Result<(), InvalidMembraneFractionsError> {
         // A membrane is characterised at one FO₂ but the diluent N₂/Ar ratio must
         // hold at any target FO₂ for the same equipment settings.
         let fo2_analysis = 0.32_f64;

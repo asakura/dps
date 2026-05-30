@@ -94,4 +94,3 @@ pub struct InvalidRegisterLetter(pub(super) char);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[error("yank ring has fewer than two entries; nothing to cycle")]
 pub struct YankRingTooSmall;
-

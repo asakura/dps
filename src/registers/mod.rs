@@ -82,9 +82,7 @@ mod name;
 mod store;
 mod value;
 
-pub use error::{
-    InvalidRegisterIndex, InvalidRegisterLetter, RegisterError, YankRingTooSmall,
-};
+pub use error::{InvalidRegisterIndex, InvalidRegisterLetter, RegisterError, YankRingTooSmall};
 #[doc(hidden)]
 pub use name::RegIndex;
 #[doc(hidden)]

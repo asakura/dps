@@ -189,7 +189,10 @@ fn split_name_reg(s: &str) -> (&str, Option<RegisterName>) {
         let inner = &without_close[open + 1..];
         let name = &without_close[..open];
         let reg = if inner.chars().count() == 1 {
-            inner.chars().next().and_then(|c| RegisterName::try_from(c).ok())
+            inner
+                .chars()
+                .next()
+                .and_then(|c| RegisterName::try_from(c).ok())
         } else {
             None
         };
@@ -322,12 +325,12 @@ mod tests {
         #[rstest]
         #[case(EditOp::YankRow(RegisterName::try_from('a').ok()), RegisterName::try_from('a').ok())]
         #[case(EditOp::YankRow(None), None)]
-        #[case(EditOp::Delete(Some(RegisterName::BlackHole)), Some(RegisterName::BlackHole))]
+        #[case(
+            EditOp::Delete(Some(RegisterName::BlackHole)),
+            Some(RegisterName::BlackHole)
+        )]
         #[case(EditOp::CyclePaste, None)]
-        fn returns_inner_register(
-            #[case] op: EditOp,
-            #[case] expected: Option<RegisterName>,
-        ) {
+        fn returns_inner_register(#[case] op: EditOp, #[case] expected: Option<RegisterName>) {
             assert_eq!(op.register(), expected);
         }
     }

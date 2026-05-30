@@ -182,13 +182,12 @@ mod tests {
     use super::*;
     use crate::gas::EANx;
     use crate::gas::constants::AIR_O2;
+    use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Meters, Percent};
     use approx::assert_relative_eq;
-    use color_eyre::Result;
 
-    fn ean(fraction: f64) -> Result<EANx> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
@@ -197,7 +196,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn display_shows_mnd_depth() -> Result<()> {
+        fn display_shows_mnd_depth() -> Result<(), InvalidEANxError> {
             // Air: MND == END limit == 30.0 m
             let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
@@ -207,7 +206,7 @@ mod tests {
         }
 
         #[test]
-        fn mnd_accessor_returns_meters() -> Result<()> {
+        fn mnd_accessor_returns_meters() -> Result<(), InvalidEANxError> {
             let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
             assert_relative_eq!(m.mnd(), Meters::new(30.0), epsilon = 1e-9);
@@ -216,7 +215,7 @@ mod tests {
         }
 
         #[test]
-        fn fo2_is_preserved() -> Result<()> {
+        fn fo2_is_preserved() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.32)?;
             let m = ean(0.32)?.mnd_at(Meters::new(30.0));
 
@@ -226,7 +225,7 @@ mod tests {
         }
 
         #[test]
-        fn end_limit_is_preserved() -> Result<()> {
+        fn end_limit_is_preserved() -> Result<(), InvalidEANxError> {
             let limit = Meters::new(30.0);
             let m = ean(0.32)?.mnd_at(limit);
 
@@ -236,7 +235,7 @@ mod tests {
         }
 
         #[test]
-        fn from_gives_meters() -> Result<()> {
+        fn from_gives_meters() -> Result<(), InvalidEANxError> {
             let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
             assert_eq!(Meters::from(m), m.mnd());
@@ -245,7 +244,7 @@ mod tests {
         }
 
         #[test]
-        fn enriched_air_gives_deeper_mnd() -> Result<()> {
+        fn enriched_air_gives_deeper_mnd() -> Result<(), InvalidEANxError> {
             let limit = Meters::new(30.0);
             let m = ean(0.32)?.mnd_at(limit);
 
@@ -258,7 +257,7 @@ mod tests {
         }
 
         #[test]
-        fn mnd_is_inverse_of_end() -> Result<()> {
+        fn mnd_is_inverse_of_end() -> Result<(), InvalidEANxError> {
             let mix = ean(0.32)?;
             let end_limit = Meters::new(30.0);
             let mnd = mix.mnd_at(end_limit);
@@ -277,7 +276,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summary_formats_full_detail() -> Result<()> {
+        fn summary_formats_full_detail() -> Result<(), InvalidEANxError> {
             // Air: MND == 30.0 m at END limit 30.0 m
             let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
@@ -287,7 +286,7 @@ mod tests {
         }
 
         #[test]
-        fn summary_shows_mnd_not_end_limit() -> Result<()> {
+        fn summary_shows_mnd_not_end_limit() -> Result<(), InvalidEANxError> {
             // EANx 32 at END limit 30 m: MND ≈ 36.5 m ≠ 30.0 m — verifies the two
             // depth fields are not interchangeable in the format string.
             let m = ean(0.32)?.mnd_at(Meters::new(30.0));
@@ -298,7 +297,7 @@ mod tests {
         }
 
         #[test]
-        fn into_inner_recovers_mnd() -> Result<()> {
+        fn into_inner_recovers_mnd() -> Result<(), InvalidEANxError> {
             let m = ean(0.32)?.mnd_at(Meters::new(30.0));
 
             assert_eq!(m.summary().into_inner(), m);
@@ -307,7 +306,7 @@ mod tests {
         }
 
         #[test]
-        fn from_impl_matches_summary_method() -> Result<()> {
+        fn from_impl_matches_summary_method() -> Result<(), InvalidEANxError> {
             let m = ean(0.32)?.mnd_at(Meters::new(30.0));
 
             assert_eq!(MNDSummary::from(m).to_string(), m.summary().to_string());

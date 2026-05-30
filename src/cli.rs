@@ -136,7 +136,8 @@ mod tests {
                 PathBuf::from("/tmp/mydata")
             );
             assert_eq!(
-                cli.config_dir.ok_or(TestError::Assert("config_dir not set"))?,
+                cli.config_dir
+                    .ok_or(TestError::Assert("config_dir not set"))?,
                 PathBuf::from("/tmp/myconfig")
             );
 

@@ -162,13 +162,12 @@ mod tests {
     use super::*;
     use crate::environment::DiveEnvironment;
     use crate::gas::EANx;
+    use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Meters, Percent};
     use approx::assert_relative_eq;
-    use color_eyre::Result;
 
-    fn ean(fraction: f64) -> Result<EANx> {
-        let pct =
-            Percent::new(fraction)?;
+    fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
+        let pct = Percent::new(fraction)?;
 
         Ok(EANx::try_from(pct)?)
     }
@@ -177,7 +176,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn display_shows_ppo2_bar_value() -> Result<()> {
+        fn display_shows_ppo2_bar_value() -> Result<(), InvalidEANxError> {
             // EANx 32 at 33.75 m: (33.75/9.948 + 1.013) × 0.32 ≈ 1.410 bar → displays as "1.4 bar"
             let p = ean(0.32)?.ppo2_at(Meters::new(33.75));
 
@@ -187,7 +186,7 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_accessor_returns_bar() -> Result<()> {
+        fn ppo2_accessor_returns_bar() -> Result<(), InvalidEANxError> {
             // Use the MOD depth so ppO₂ = 1.4 bar exactly by construction
             let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.32)?;
@@ -201,7 +200,7 @@ mod tests {
         }
 
         #[test]
-        fn fo2_is_preserved() -> Result<()> {
+        fn fo2_is_preserved() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.32)?;
             let p = ean(0.32)?.ppo2_at(Meters::new(30.0));
 
@@ -211,7 +210,7 @@ mod tests {
         }
 
         #[test]
-        fn depth_is_preserved() -> Result<()> {
+        fn depth_is_preserved() -> Result<(), InvalidEANxError> {
             let depth = Meters::new(30.0);
             let p = ean(0.32)?.ppo2_at(depth);
 
@@ -221,7 +220,7 @@ mod tests {
         }
 
         #[test]
-        fn from_gives_bar() -> Result<()> {
+        fn from_gives_bar() -> Result<(), InvalidEANxError> {
             let p = ean(0.32)?.ppo2_at(Meters::new(30.0));
 
             assert_eq!(Bar::from(p), p.pressure());
@@ -230,7 +229,7 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_at_surface_equals_surface_pressure_times_fo2() -> Result<()> {
+        fn ppo2_at_surface_equals_surface_pressure_times_fo2() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.32)?;
 
@@ -243,10 +242,9 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_at_air_30m() -> Result<()> {
+        fn ppo2_at_air_30m() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
-            let expected = env.absolute_pressure(Meters::new(30.0))
-                * Percent::new(0.21)?;
+            let expected = env.absolute_pressure(Meters::new(30.0)) * Percent::new(0.21)?;
 
             assert_relative_eq!(ean(0.21)?.ppo2_at(Meters::new(30.0)).pressure(), expected);
 
@@ -254,10 +252,9 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_at_eanx40_10m() -> Result<()> {
+        fn ppo2_at_eanx40_10m() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
-            let expected = env.absolute_pressure(Meters::new(10.0))
-                * Percent::new(0.40)?;
+            let expected = env.absolute_pressure(Meters::new(10.0)) * Percent::new(0.40)?;
 
             assert_relative_eq!(ean(0.40)?.ppo2_at(Meters::new(10.0)).pressure(), expected);
 
@@ -269,7 +266,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summary_formats_full_detail() -> Result<()> {
+        fn summary_formats_full_detail() -> Result<(), InvalidEANxError> {
             // EANx 32 at 33.75 m → ppO₂ = 1.4 bar; depth displays as "33.8 m"
             let p = ean(0.32)?.ppo2_at(Meters::new(33.75));
 
@@ -279,7 +276,7 @@ mod tests {
         }
 
         #[test]
-        fn into_inner_recovers_ppo2() -> Result<()> {
+        fn into_inner_recovers_ppo2() -> Result<(), InvalidEANxError> {
             let p = ean(0.32)?.ppo2_at(Meters::new(30.0));
 
             assert_eq!(p.summary().into_inner(), p);
@@ -288,7 +285,7 @@ mod tests {
         }
 
         #[test]
-        fn from_impl_matches_summary_method() -> Result<()> {
+        fn from_impl_matches_summary_method() -> Result<(), InvalidEANxError> {
             let p = ean(0.32)?.ppo2_at(Meters::new(30.0));
 
             assert_eq!(Ppo2Summary::from(p).to_string(), p.summary().to_string());
