@@ -33,6 +33,9 @@ pub enum Error {
     /// Register-value parse error (unknown value string, …).
     #[error(transparent)]
     Register(#[from] crate::registers::RegisterError),
+    /// Application event-loop error (component failure, channel send, I/O).
+    #[error(transparent)]
+    App(#[from] crate::app::AppError),
 }
 
 /// Installs the `color_eyre` panic and error hooks.

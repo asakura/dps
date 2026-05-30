@@ -1,8 +1,10 @@
 //! Top-level application coordinator: owns components, drives the event loop.
 
+pub mod error;
+pub use error::AppError;
+
 use std::{fmt, path::Path};
 
-use color_eyre::Result;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use tokio::sync::mpsc;
@@ -187,7 +189,7 @@ impl App {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn run(&mut self) -> color_eyre::Result<()> {
+    pub async fn run(&mut self) -> Result<(), AppError> {
         let mut tui = Tui::new()?
             .mouse(true)
             .tick_rate(self.tick_rate)
@@ -254,7 +256,7 @@ impl App {
     /// [`Key`]: Event::Key
     /// [`handle_key_event`]: App::handle_key_event
     /// [`handle_events`]: ComponentNew::handle_events
-    fn handle_events(&mut self, event: Option<Event>) -> color_eyre::Result<()> {
+    fn handle_events(&mut self, event: Option<Event>) -> Result<(), AppError> {
         let Some(event) = event else {
             return Ok(());
         };
@@ -285,7 +287,7 @@ impl App {
     /// - **Exact match** — the bound [`Action`] is sent on the channel.
     /// - **Prefix match** — the engine keeps accumulating; nothing is sent.
     /// - **No match** — the key is silently dropped; no hardcoded fallback.
-    fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<()> {
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<(), AppError> {
         static EMPTY: std::sync::LazyLock<ModeMap> = std::sync::LazyLock::new(ModeMap::default);
         let bindings = self.config.keybindings.get(&self.mode).unwrap_or(&EMPTY);
 
@@ -320,7 +322,7 @@ impl App {
     ///
     /// [`handle_resize`]: App::handle_resize
     /// [`render`]: App::render
-    fn handle_actions(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
+    fn handle_actions(&mut self, tui: &mut Tui) -> Result<(), AppError> {
         while let Ok(action) = self.action_rx.try_recv() {
             if action != Action::Tick && action != Action::Render {
                 debug!("{action:?}");
@@ -350,7 +352,7 @@ impl App {
     ///
     /// Called in response to [`Action::Resize`]; the immediate render prevents
     /// a blank frame between the terminal resize and the next scheduled render tick.
-    fn handle_resize(&mut self, tui: &mut Tui, w: u16, h: u16) -> color_eyre::Result<()> {
+    fn handle_resize(&mut self, tui: &mut Tui, w: u16, h: u16) -> Result<(), AppError> {
         tui.resize(Rect::new(0, 0, w, h))?;
 
         self.render(tui)?;
@@ -364,7 +366,7 @@ impl App {
     /// If a component returns an error it is converted to [`Action::Error`] and
     /// sent on the channel rather than propagating — this keeps a single
     /// misbehaving component from aborting the entire render pass.
-    fn render(&mut self, tui: &mut Tui) -> color_eyre::Result<()> {
+    fn render(&mut self, tui: &mut Tui) -> Result<(), AppError> {
         tui.draw(|frame| {
             for component in &mut self.components {
                 if let Err(err) = component.draw(frame, frame.area()) {
@@ -392,7 +394,7 @@ mod tests {
     use crate::{
         action::Movement,
         config::{AppConfig, Styles},
-        keymap::{KeyBindingsBuilder, KeySeq, parse_key_sequence},
+        keymap::{KeyBindingsBuilder, KeyMapError, KeySeq, parse_key_sequence},
         theme::Theme,
         tui::Tui,
     };
@@ -430,7 +432,7 @@ mod tests {
         out
     }
 
-    fn config_with_bindings(bindings: &[(&str, Action)]) -> color_eyre::Result<Config> {
+    fn config_with_bindings(bindings: &[(&str, Action)]) -> Result<Config, KeyMapError> {
         let mut builder = KeyBindingsBuilder::new();
         for (seq_str, action) in bindings {
             builder.bind(
@@ -510,7 +512,7 @@ mod tests {
         fn stores_tick_and_frame_rate(
             #[case] tick: f64,
             #[case] frame: f64,
-        ) -> color_eyre::Result<()> {
+        ) -> Result<(), crate::Error> {
             let app = App::new(tick, frame, None, None)?;
 
             assert_relative_eq!(app.tick_rate, tick);
@@ -520,7 +522,7 @@ mod tests {
         }
 
         #[test]
-        fn starts_with_mode_normal() -> color_eyre::Result<()> {
+        fn starts_with_mode_normal() -> Result<(), crate::Error> {
             let app = App::new(4.0, 60.0, None, None)?;
 
             assert_eq!(app.mode, Mode::Normal);
@@ -529,7 +531,7 @@ mod tests {
         }
 
         #[test]
-        fn starts_with_flags_cleared() -> color_eyre::Result<()> {
+        fn starts_with_flags_cleared() -> Result<(), crate::Error> {
             let app = App::new(4.0, 60.0, None, None)?;
 
             assert!(!app.should_quit);
@@ -549,7 +551,7 @@ mod tests {
         fn infrastructure_event_enqueues_matching_action(
             #[case] event: Event,
             #[case] expected: Action,
-        ) -> color_eyre::Result<()> {
+        ) -> Result<(), AppError> {
             let mut app = default_app();
 
             app.handle_events(Some(event))?;
@@ -560,7 +562,7 @@ mod tests {
         }
 
         #[test]
-        fn resize_enqueues_resize_action() -> color_eyre::Result<()> {
+        fn resize_enqueues_resize_action() -> Result<(), AppError> {
             let mut app = default_app();
 
             app.handle_events(Some(Event::Resize(80, 24)))?;
@@ -571,7 +573,7 @@ mod tests {
         }
 
         #[test]
-        fn none_enqueues_nothing() -> color_eyre::Result<()> {
+        fn none_enqueues_nothing() -> Result<(), AppError> {
             let mut app = default_app();
 
             app.handle_events(None)?;
@@ -582,7 +584,7 @@ mod tests {
         }
 
         #[test]
-        fn unbound_key_enqueues_nothing() -> color_eyre::Result<()> {
+        fn unbound_key_enqueues_nothing() -> Result<(), AppError> {
             let mut app = default_app();
 
             app.handle_events(Some(Event::Key(press(KeyCode::Char('z')))))?;
@@ -593,7 +595,7 @@ mod tests {
         }
 
         #[test]
-        fn component_returned_action_is_enqueued() -> color_eyre::Result<()> {
+        fn component_returned_action_is_enqueued() -> Result<(), AppError> {
             let mut app = default_app();
             // FocusGained has no built-in routing, so only the component contributes.
             app.components
@@ -607,7 +609,7 @@ mod tests {
         }
 
         #[test]
-        fn key_event_fans_out_to_component_after_keymap_lookup() -> color_eyre::Result<()> {
+        fn key_event_fans_out_to_component_after_keymap_lookup() -> Result<(), AppError> {
             let mut app = default_app();
             // Unbound key → handle_key_event enqueues nothing.
             // Component still receives the event and contributes Select.
@@ -626,7 +628,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn bound_key_enqueues_action() -> color_eyre::Result<()> {
+        fn bound_key_enqueues_action() -> Result<(), crate::Error> {
             let mut app = make_app(config_with_bindings(&[(
                 "j",
                 Action::Move(Movement::Down),
@@ -640,7 +642,7 @@ mod tests {
         }
 
         #[test]
-        fn prefix_enqueues_nothing_until_chord_completes() -> color_eyre::Result<()> {
+        fn prefix_enqueues_nothing_until_chord_completes() -> Result<(), crate::Error> {
             let mut app = make_app(config_with_bindings(&[(
                 "gg",
                 Action::Move(Movement::GotoTop),
@@ -656,7 +658,7 @@ mod tests {
         }
 
         #[test]
-        fn unbound_key_enqueues_nothing() -> color_eyre::Result<()> {
+        fn unbound_key_enqueues_nothing() -> Result<(), crate::Error> {
             let mut app = make_app(Config::default());
 
             app.handle_key_event(press(KeyCode::Char('q')))?;
@@ -667,7 +669,7 @@ mod tests {
         }
 
         #[test]
-        fn chord_break_after_prefix_enqueues_nothing() -> color_eyre::Result<()> {
+        fn chord_break_after_prefix_enqueues_nothing() -> Result<(), crate::Error> {
             let mut app = make_app(config_with_bindings(&[(
                 "gg",
                 Action::Move(Movement::GotoTop),
@@ -686,7 +688,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn quit_sets_should_quit() -> color_eyre::Result<()> {
+        fn quit_sets_should_quit() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
 
@@ -699,7 +701,7 @@ mod tests {
         }
 
         #[test]
-        fn suspend_sets_should_suspend() -> color_eyre::Result<()> {
+        fn suspend_sets_should_suspend() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
 
@@ -712,7 +714,7 @@ mod tests {
         }
 
         #[test]
-        fn resume_clears_should_suspend() -> color_eyre::Result<()> {
+        fn resume_clears_should_suspend() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
             app.should_suspend = true;
@@ -726,7 +728,7 @@ mod tests {
         }
 
         #[test]
-        fn tick_leaves_flags_unchanged() -> color_eyre::Result<()> {
+        fn tick_leaves_flags_unchanged() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
 
@@ -740,7 +742,7 @@ mod tests {
         }
 
         #[test]
-        fn processes_all_queued_actions_in_one_call() -> color_eyre::Result<()> {
+        fn processes_all_queued_actions_in_one_call() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
 
@@ -754,7 +756,7 @@ mod tests {
         }
 
         #[test]
-        fn component_returned_action_is_reenqueued_and_processed() -> color_eyre::Result<()> {
+        fn component_returned_action_is_reenqueued_and_processed() -> Result<(), AppError> {
             let mut app = default_app();
             // On first Tick, spy returns Quit once; Quit is re-enqueued and processed.
             app.components
