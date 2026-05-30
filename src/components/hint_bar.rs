@@ -50,6 +50,14 @@ mod tests {
     use super::*;
     use crate::components::test_utils::widget_text;
 
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error("{0}")]
+        Assert(&'static str),
+    }
+
+    type TestResult<T = ()> = std::result::Result<T, TestError>;
+
     static COMP: &[KeyBinding] = [KeyBinding {
         key: "j/k",
         desc: "move",
@@ -62,21 +70,24 @@ mod tests {
     .as_slice();
 
     #[test]
-    fn renders_component_bindings_first() {
+    fn renders_component_bindings_first() -> TestResult {
         let text = widget_text(HintBar::new(COMP, GLOB, Theme::default()), 60);
-        let Some(j_pos) = text.find("j/k") else {
-            panic!("'j/k' not found in hint bar text")
-        };
-        let Some(q_pos) = text.find("q quit") else {
-            panic!("'q quit' not found in hint bar text")
-        };
+        let j_pos = text
+            .find("j/k")
+            .ok_or(TestError::Assert("'j/k' not found in hint bar text"))?;
+        let q_pos = text
+            .find("q quit")
+            .ok_or(TestError::Assert("'q quit' not found in hint bar text"))?;
 
         assert!(j_pos < q_pos);
+
+        Ok(())
     }
 
     #[test]
     fn renders_all_bindings() {
         let text = widget_text(HintBar::new(COMP, GLOB, Theme::default()), 60);
+
         assert!(text.contains("j/k move"));
         assert!(text.contains("q quit"));
     }

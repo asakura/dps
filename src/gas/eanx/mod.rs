@@ -674,26 +674,25 @@ mod tests {
     use crate::gas::constants::AIR_O2;
     use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
     use approx::assert_relative_eq;
-    use color_eyre::Result;
     use rstest::*;
 
-    fn ean(fraction: f64) -> Result<EANx> {
+    fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
 
-        Ok(EANx::try_from(pct)?)
+        EANx::try_from(pct)
     }
 
-    fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>> {
+    fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
 
-        Ok(EANxBlend::new(pct, Psa)?)
+        EANxBlend::new(pct, Psa)
     }
 
     mod fo2 {
         use super::*;
 
         #[rstest]
-        fn fo2_matches_fraction() -> Result<()> {
+        fn fo2_matches_fraction() -> Result<(), InvalidEANxError> {
             assert_relative_eq!(ean(0.21)?.fo2(), Percent::new(0.21)?);
             assert_relative_eq!(ean(0.32)?.fo2(), Percent::new(0.32)?);
             assert_relative_eq!(ean(1.0)?.fo2(), Percent::new(1.0)?);
@@ -706,7 +705,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn mod_at_eanx32_1_4_bar() -> Result<()> {
+        fn mod_at_eanx32_1_4_bar() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.32)?;
             let expected = (Bar::new(1.4) / fo2 - env.surface_pressure()) * env.water_density();
@@ -717,7 +716,7 @@ mod tests {
         }
 
         #[test]
-        fn mod_at_eanx40_1_4_bar() -> Result<()> {
+        fn mod_at_eanx40_1_4_bar() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.40)?;
             let expected = (Bar::new(1.4) / fo2 - env.surface_pressure()) * env.water_density();
@@ -728,7 +727,7 @@ mod tests {
         }
 
         #[test]
-        fn mod_at_pure_o2_1_6_bar() -> Result<()> {
+        fn mod_at_pure_o2_1_6_bar() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let fo2 = Percent::new(1.0)?;
             let expected = (Bar::new(1.6) / fo2 - env.surface_pressure()) * env.water_density();
@@ -739,7 +738,7 @@ mod tests {
         }
 
         #[test]
-        fn mod_at_clamps_to_zero_when_negative() -> Result<()> {
+        fn mod_at_clamps_to_zero_when_negative() -> Result<(), InvalidEANxError> {
             assert_relative_eq!(
                 ean(1.0)?.mod_at(Bar::new(0.5)).depth(),
                 Meters::new(0.0),
@@ -750,7 +749,7 @@ mod tests {
         }
 
         #[test]
-        fn fo2_is_preserved() -> Result<()> {
+        fn fo2_is_preserved() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.32)?;
             assert_eq!(ean(0.32)?.mod_at(Bar::new(1.4)).fo2(), fo2);
 
@@ -758,7 +757,7 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_max_is_preserved() -> Result<()> {
+        fn ppo2_max_is_preserved() -> Result<(), InvalidEANxError> {
             let ppo2 = Bar::new(1.6);
             assert_eq!(ean(0.32)?.mod_at(ppo2).ppo2_max(), ppo2);
 
@@ -770,7 +769,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn normoxic_mix_has_zero_minimod() -> Result<()> {
+        fn normoxic_mix_has_zero_minimod() -> Result<(), InvalidEANxError> {
             assert_relative_eq!(
                 ean(0.21)?.minimod_at(Bar::new(0.16)).depth(),
                 Meters::new(0.0),
@@ -781,7 +780,7 @@ mod tests {
         }
 
         #[test]
-        fn hypoxic_10_percent_at_0_16_bar() -> Result<()> {
+        fn hypoxic_10_percent_at_0_16_bar() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let fo2 = Percent::new(0.10)?;
             let expected = (Bar::new(0.16) / fo2 - env.surface_pressure()).max(Bar::new(0.0))
@@ -797,7 +796,7 @@ mod tests {
         }
 
         #[test]
-        fn fo2_is_preserved() -> Result<()> {
+        fn fo2_is_preserved() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.10)?;
             assert_eq!(ean(0.10)?.minimod_at(Bar::new(0.16)).fo2(), fo2);
 
@@ -805,7 +804,7 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_min_is_preserved() -> Result<()> {
+        fn ppo2_min_is_preserved() -> Result<(), InvalidEANxError> {
             let ppo2 = Bar::new(0.16);
             assert_eq!(ean(0.10)?.minimod_at(ppo2).ppo2_min(), ppo2);
 
@@ -813,7 +812,7 @@ mod tests {
         }
 
         #[test]
-        fn into_meters_gives_depth() -> Result<()> {
+        fn into_meters_gives_depth() -> Result<(), InvalidEANxError> {
             let m = ean(0.10)?.minimod_at(Bar::new(0.16));
             assert_eq!(Meters::from(m), m.depth());
 
@@ -825,7 +824,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn air_at_surface_is_approximately_1_20_g_per_l() -> Result<()> {
+        fn air_at_surface_is_approximately_1_20_g_per_l() -> Result<(), InvalidEANxError> {
             let density = ean(f64::from(AIR_O2))?.gas_density_at(Meters::new(0.0));
             assert_relative_eq!(density, GramsPerLitre::new(1.204), epsilon = 0.002);
 
@@ -833,7 +832,7 @@ mod tests {
         }
 
         #[test]
-        fn density_doubles_at_one_atmosphere_depth() -> Result<()> {
+        fn density_doubles_at_one_atmosphere_depth() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let surface = ean(0.32)?.gas_density_at(Meters::new(0.0));
             // pressure doubles at depth = surface_pressure × water_density ≈ 10.08 m
@@ -850,7 +849,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn zero_below_threshold() -> Result<()> {
+        fn zero_below_threshold() -> Result<(), InvalidEANxError> {
             assert_relative_eq!(
                 ean(0.21)?.cns_rate_at(Meters::new(0.0)),
                 CnsRatePerMinute::new(0.0)
@@ -860,7 +859,7 @@ mod tests {
         }
 
         #[test]
-        fn at_1_4_bar_limit_is_150_minutes() -> Result<()> {
+        fn at_1_4_bar_limit_is_150_minutes() -> Result<(), InvalidEANxError> {
             // EANx32 at 32.5 m: ppO₂ = (32.5/9.948 + 1.013) × 0.32 ≈ 1.370 bar
             // Falls in the 1.30–1.40 range → 150 min limit.
             assert_relative_eq!(
@@ -873,7 +872,7 @@ mod tests {
         }
 
         #[test]
-        fn above_1_6_bar_is_infinite() -> Result<()> {
+        fn above_1_6_bar_is_infinite() -> Result<(), InvalidEANxError> {
             // Pure O₂ at 7 m: ppO₂ = (7/9.948 + 1.013) × 1.0 ≈ 1.717 bar
             assert_eq!(
                 ean(1.0)?.cns_rate_at(Meters::new(7.0)),
@@ -888,7 +887,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn zero_below_0_5_bar() -> Result<()> {
+        fn zero_below_0_5_bar() -> Result<(), InvalidEANxError> {
             // Air at surface: ppO₂ ≈ 0.21 bar < 0.5 → zero OTU
             assert_relative_eq!(
                 ean(0.21)?.otu_rate_at(Meters::new(0.0)),
@@ -899,7 +898,7 @@ mod tests {
         }
 
         #[test]
-        fn follows_noaa_formula() -> Result<()> {
+        fn follows_noaa_formula() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let depth = Meters::new(40.0);
             let fo2 = Percent::new(0.32)?;
@@ -916,7 +915,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn at_30m_1_4_bar() -> Result<()> {
+        fn at_30m_1_4_bar() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let depth = Meters::new(30.0);
             let ppo2_max = Bar::new(1.4);
@@ -929,7 +928,7 @@ mod tests {
         }
 
         #[test]
-        fn ppo2_at_target_equals_limit() -> Result<()> {
+        fn ppo2_at_target_equals_limit() -> Result<(), InvalidEANxError> {
             let env = DiveEnvironment::standard();
             let depth = Meters::new(40.0);
             let ppo2_max = Bar::new(1.4);
@@ -941,7 +940,7 @@ mod tests {
         }
 
         #[test]
-        fn shallow_depth_clamps_to_pure_o2() -> Result<()> {
+        fn shallow_depth_clamps_to_pure_o2() -> Result<(), InvalidEANxError> {
             // fo2 = 1.4 / (3/9.948 + 1.013) ≈ 1.065 > 1.0 → clamps to 1.0
             let best =
                 EANx::best_mix(Meters::new(3.0), Bar::new(1.4), DiveEnvironment::standard())?;
@@ -969,7 +968,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn display_air() -> Result<()> {
+        fn display_air() -> Result<(), InvalidEANxError> {
             assert_eq!(ean(0.21)?.to_string(), "Air");
             assert_eq!(ean(0.215)?.to_string(), "Air");
             assert_ne!(ean(0.205)?.to_string(), "Air");
@@ -978,7 +977,7 @@ mod tests {
         }
 
         #[test]
-        fn display_named_nitrox_mixes() -> Result<()> {
+        fn display_named_nitrox_mixes() -> Result<(), InvalidEANxError> {
             assert_eq!(ean(0.28)?.to_string(), "EANx 28");
             assert_eq!(ean(0.30)?.to_string(), "EANx 30");
             assert_eq!(ean(0.32)?.to_string(), "EANx 32");
@@ -989,7 +988,7 @@ mod tests {
         }
 
         #[test]
-        fn display_high_o2_mixes() -> Result<()> {
+        fn display_high_o2_mixes() -> Result<(), InvalidEANxError> {
             assert_eq!(ean(0.50)?.to_string(), "O₂ 50%");
             assert_eq!(ean(0.80)?.to_string(), "O₂ 80%");
 
@@ -997,7 +996,7 @@ mod tests {
         }
 
         #[test]
-        fn display_hypoxic_mixes() -> Result<()> {
+        fn display_hypoxic_mixes() -> Result<(), InvalidEANxError> {
             assert_eq!(ean(0.10)?.to_string(), "Hypoxic 10");
             assert_eq!(ean(0.12)?.to_string(), "Hypoxic 12");
             assert_eq!(ean(0.14)?.to_string(), "Hypoxic 14");
@@ -1008,14 +1007,14 @@ mod tests {
         }
 
         #[test]
-        fn display_pure_o2() -> Result<()> {
+        fn display_pure_o2() -> Result<(), InvalidEANxError> {
             assert_eq!(ean(1.0)?.to_string(), "Pure O₂");
 
             Ok(())
         }
 
         #[test]
-        fn display_unnamed_mix_shows_fraction() -> Result<()> {
+        fn display_unnamed_mix_shows_fraction() -> Result<(), InvalidEANxError> {
             assert_eq!(ean(0.25)?.to_string(), "25%");
             assert_eq!(ean(0.33)?.to_string(), "33%");
 
@@ -1023,7 +1022,7 @@ mod tests {
         }
 
         #[test]
-        fn display_is_blend_method_agnostic() -> Result<()> {
+        fn display_is_blend_method_agnostic() -> Result<(), InvalidEANxError> {
             assert_eq!(ean(0.32)?.to_string(), ean_psa(0.32)?.to_string());
 
             Ok(())
@@ -1039,7 +1038,9 @@ mod tests {
         #[case(0.32)]
         #[case(0.40)]
         #[case(1.0)]
-        fn try_from_percent_preserves_fraction(#[case] fraction: f64) -> Result<()> {
+        fn try_from_percent_preserves_fraction(
+            #[case] fraction: f64,
+        ) -> Result<(), InvalidEANxError> {
             let pct = Percent::new(fraction)?;
 
             assert_eq!(EANx::try_from(pct)?.fo2(), pct);
@@ -1048,14 +1049,15 @@ mod tests {
         }
 
         #[test]
-        fn try_from_percent_rejects_below_minimum() -> Result<()> {
+        fn try_from_percent_rejects_below_minimum() -> Result<(), InvalidEANxError> {
             assert!(EANx::try_from(Percent::new(0.09)?).is_err());
 
             Ok(())
         }
 
         #[test]
-        fn try_from_percent_accepts_fraction_that_rounds_into_valid_range() -> Result<()> {
+        fn try_from_percent_accepts_fraction_that_rounds_into_valid_range()
+        -> Result<(), InvalidEANxError> {
             assert!(EANx::try_from(Percent::new(0.316)?).is_ok());
 
             Ok(())

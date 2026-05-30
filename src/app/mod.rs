@@ -717,8 +717,8 @@ mod tests {
         fn resume_clears_should_suspend() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
-            app.should_suspend = true;
 
+            app.should_suspend = true;
             app.action_tx.send(Action::Resume)?;
             app.handle_actions(&mut tui)?;
 
@@ -758,10 +758,11 @@ mod tests {
         #[test]
         fn component_returned_action_is_reenqueued_and_processed() -> Result<(), AppError> {
             let mut app = default_app();
+            let mut tui = Tui::new()?;
+
             // On first Tick, spy returns Quit once; Quit is re-enqueued and processed.
             app.components
                 .push(Box::new(UpdateSpy::new(Action::Tick, Action::Quit)));
-            let mut tui = Tui::new()?;
 
             app.action_tx.send(Action::Tick)?;
             app.handle_actions(&mut tui)?;
