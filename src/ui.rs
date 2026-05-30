@@ -82,7 +82,14 @@ pub(crate) fn build_header_row(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use color_eyre::Result;
+
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error("{0}")]
+        Assert(&'static str),
+    }
+
+    type Result<T> = std::result::Result<T, TestError>;
 
     mod window_start_fn {
         use super::*;
@@ -124,8 +131,7 @@ mod tests {
         };
 
         #[test]
-        fn highlighted_column_is_underlined_others_are_not()
-        -> Result<(), Box<dyn std::error::Error>> {
+        fn highlighted_column_is_underlined_others_are_not() -> Result<()> {
             let header = build_header_row(
                 vec![],
                 ["A".to_string(), "B".to_string()].into_iter(),
@@ -147,13 +153,13 @@ mod tests {
             // Header is row 0; 'A' at x=0, 'B' at x=3.
             assert!(
                 buf.cell(Position::new(0, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or(TestError::Assert("cell out of bounds"))?
                     .modifier
                     .contains(Modifier::UNDERLINED)
             );
             assert!(
                 !buf.cell(Position::new(3, 0))
-                    .ok_or("cell out of bounds")?
+                    .ok_or(TestError::Assert("cell out of bounds"))?
                     .modifier
                     .contains(Modifier::UNDERLINED)
             );
