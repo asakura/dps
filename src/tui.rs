@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-use color_eyre::Result;
 use crossterm::{
     cursor,
     event::{
@@ -138,7 +137,7 @@ impl Tui {
     ///
     /// [`enter`]: Tui::enter
     /// [`draw`]: ratatui::Terminal::draw
-    pub fn new() -> Result<Self> {
+    pub fn new() -> std::io::Result<Self> {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         Ok(Self {
@@ -261,6 +260,7 @@ impl Tui {
             self.frame_rate,
             self.tick_rate
         );
+
         self.cancel();
         self.cancellation_token = CancellationToken::new();
 
@@ -341,7 +341,7 @@ impl Tui {
     ///
     /// Currently always returns `Ok(())`; the `Result` return type is kept for
     /// forward-compatibility should cancellation ever become fallible.
-    pub fn stop(&self) -> Result<()> {
+    pub fn stop(&self) -> std::io::Result<()> {
         const TASK_ABORT_AFTER_MS: u32 = 50;
 
         self.cancel();
@@ -387,7 +387,7 @@ impl Tui {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn enter(&mut self) -> Result<()> {
+    pub fn enter(&mut self) -> std::io::Result<()> {
         enable_raw_mode()?;
         execute!(stdout(), EnterAlternateScreen, cursor::Hide)?;
 
@@ -428,7 +428,7 @@ impl Tui {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn exit(&mut self) -> Result<()> {
+    pub fn exit(&mut self) -> std::io::Result<()> {
         self.stop()?;
 
         if is_raw_mode_enabled()? {
@@ -496,7 +496,7 @@ impl Tui {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn resume(&mut self) -> Result<()> {
+    pub fn resume(&mut self) -> std::io::Result<()> {
         self.enter()
     }
 
@@ -568,6 +568,20 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
 
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error(transparent)]
+        Io(#[from] std::io::Error),
+        #[error("timed out")]
+        Elapsed(#[from] tokio::time::error::Elapsed),
+        #[error(transparent)]
+        Send(#[from] tokio::sync::mpsc::error::SendError<Event>),
+        #[error(transparent)]
+        Json(#[from] serde_json::Error),
+    }
+
+    type Result<T> = std::result::Result<T, TestError>;
+
     mod new {
         use super::*;
 
@@ -638,7 +652,9 @@ mod tests {
         #[tokio::test(flavor = "multi_thread")]
         async fn returns_ok_and_task_finishes() {
             let mut tui = Tui::default();
+
             tui.start();
+
             assert!(tui.stop().is_ok());
             assert!(
                 tui.task
@@ -650,7 +666,9 @@ mod tests {
         #[tokio::test(flavor = "multi_thread")]
         async fn idempotent_on_already_stopped_tui() {
             let mut tui = Tui::default();
+
             tui.start();
+
             assert!(tui.stop().is_ok());
             assert!(tui.stop().is_ok());
         }
