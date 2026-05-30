@@ -3,7 +3,6 @@
 use std::{path::PathBuf, sync::OnceLock};
 
 use clap::{CommandFactory, Parser};
-use color_eyre::Result;
 
 use crate::config::{get_config_dir, get_data_dir};
 
@@ -96,6 +95,16 @@ mod tests {
     use approx::assert_relative_eq;
     use clap::Parser;
 
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error(transparent)]
+        Clap(#[from] clap::Error),
+        #[error("{0}")]
+        Assert(&'static str),
+    }
+
+    type Result<T> = std::result::Result<T, TestError>;
+
     mod cli_args {
         use super::*;
 
@@ -113,7 +122,7 @@ mod tests {
         }
 
         #[test]
-        fn data_and_config_dir_flags() -> Result<(), Box<dyn std::error::Error>> {
+        fn data_and_config_dir_flags() -> Result<()> {
             let cli = Cli::try_parse_from([
                 "dps",
                 "--data-dir",
@@ -123,11 +132,11 @@ mod tests {
             ])?;
 
             assert_eq!(
-                cli.data_dir.ok_or("data_dir not set")?,
+                cli.data_dir.ok_or(TestError::Assert("data_dir not set"))?,
                 PathBuf::from("/tmp/mydata")
             );
             assert_eq!(
-                cli.config_dir.ok_or("config_dir not set")?,
+                cli.config_dir.ok_or(TestError::Assert("config_dir not set"))?,
                 PathBuf::from("/tmp/myconfig")
             );
 
