@@ -1,13 +1,14 @@
 use std::collections::{HashMap, VecDeque};
 
-use super::RegisterValue;
+use super::name::RegIndex;
+use super::{RegisterError, RegisterName, RegisterValue, YankRingTooSmall};
 
 /// Maximum number of entries retained in the yank ring.
 const YANK_RING_CAP: usize = 9;
 
 /// Vim-style named register store.
 ///
-/// Owns a map from register characters to [`RegisterValue`]s. Use
+/// Owns a map from [`RegisterName`] to [`RegisterValue`]s. Use
 /// [`push_yank`](RegisterStore::push_yank) and
 /// [`push_delete`](RegisterStore::push_delete) for the high-level operations,
 /// or [`write`](RegisterStore::write) / [`read`](RegisterStore::read) for
@@ -16,13 +17,10 @@ const YANK_RING_CAP: usize = 9;
 /// # Storage design
 ///
 /// `slots` is a [`HashMap`] rather than a fixed array because the usable
-/// register key space is small and **sparse**: at most ~38 distinct chars
-/// (`'"'`, `'0'`–`'9'`, `'a'`–`'z'`, `'+'`, `'*'`) and only a subset of
-/// those are ever written in a typical session. Allocating a
-/// `[Option<RegisterValue>; 128]` array upfront would waste memory for
-/// registers that are never touched, and would require every access to
-/// bounds-check the char. A `HashMap` pays per-entry rather than per-slot,
-/// so memory scales with actual usage.
+/// register key space is small and **sparse**: at most ~38 distinct
+/// [`RegisterName`] keys and only a subset of those are ever written in a
+/// typical session. A `HashMap` pays per-entry rather than per-slot, so
+/// memory scales with actual usage.
 ///
 /// The performance trade-off (hashing overhead vs. direct array indexing) is
 /// irrelevant here: the store is accessed a handful of times per user
@@ -32,14 +30,14 @@ const YANK_RING_CAP: usize = 9;
 /// ## Yank ring
 ///
 /// Each call to [`push_yank`](RegisterStore::push_yank) prepends to an internal
-/// `VecDeque` capped at [`YANK_RING_CAP`] entries and resets the ring cursor
-/// to 0. Reading register `'0'` always returns the ring head. Older entries
+/// `VecDeque` capped at `YANK_RING_CAP` entries and resets the ring cursor
+/// to 0. Reading [`RegisterName::Yank`] always returns the ring head. Older entries
 /// drive paste cycling: [`cycle_yank`](RegisterStore::cycle_yank) advances the
 /// cursor so components can replace the most recently pasted row with the next
 /// ring entry.
 #[derive(Debug, Default)]
 pub struct RegisterStore {
-    slots: HashMap<char, RegisterValue>,
+    slots: HashMap<RegisterName, RegisterValue>,
     yank_ring: VecDeque<RegisterValue>,
     ring_cursor: usize,
 }
@@ -47,52 +45,68 @@ pub struct RegisterStore {
 impl RegisterStore {
     /// Writes `value` to register `reg`, following Vim register semantics.
     ///
-    /// - `'_'` (black hole): silently discarded.
-    /// - `'A'`–`'Z'` (append): writes to the lowercase partner (`'A'` → `'a'`);
+    /// - [`BlackHole`](RegisterName::BlackHole): silently discarded.
+    /// - [`Named('A'..='Z')`](RegisterName::Named) (append): writes to the lowercase partner;
     ///   for typed domain values last-write wins rather than concatenating.
-    /// - `'+'` / `'*'` (OS clipboard): writes to the OS clipboard and mirrors to `'"'`.
-    /// - All other characters: writes to `reg` and mirrors to `'"'`.
+    /// - [`Clipboard`](RegisterName::Clipboard) / [`Selection`](RegisterName::Selection) (OS clipboard):
+    ///   writes to the OS clipboard and mirrors to the unnamed register.
+    /// - [`Numbered`](RegisterName::Numbered): writes only to the numbered slot; no mirroring
+    ///   to the unnamed register and no OS clipboard interaction. Use
+    ///   [`push_delete`](RegisterStore::push_delete) to perform a full delete with stack-shift.
+    /// - All other registers: writes to `reg` and mirrors to the unnamed register.
     ///
     /// # Examples
     ///
     /// ```
-    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
     /// use dps::gas::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+    /// let reg_a = RegisterName::try_from('a').unwrap();
+    /// let reg_b_upper = RegisterName::try_from('B').unwrap();
+    /// let reg_black_hole = RegisterName::BlackHole;
     ///
     /// // Regular write goes to 'a' and is mirrored to the unnamed register.
-    /// store.write('a', RegisterValue::EANx(ean32));
-    /// assert!(store.read('a').is_some());
-    /// assert!(store.read('"').is_some());
+    /// store.write(reg_a, RegisterValue::EANx(ean32));
+    /// assert!(store.read(reg_a).is_some());
+    /// assert!(store.read(RegisterName::Unnamed).is_some());
     ///
     /// // Black-hole register silently discards.
-    /// store.write('_', RegisterValue::EANx(ean32));
-    /// assert!(store.read('_').is_none());
+    /// store.write(reg_black_hole, RegisterValue::EANx(ean32));
+    /// assert!(store.read(reg_black_hole).is_none());
     ///
     /// // Uppercase redirects to the lowercase partner.
-    /// store.write('B', RegisterValue::EANx(ean32));
-    /// assert!(store.read('b').is_some());
-    /// assert!(store.read('B').is_none());
+    /// store.write(reg_b_upper, RegisterValue::EANx(ean32));
+    /// assert!(store.read(RegisterName::try_from('b').unwrap()).is_some());
+    /// assert!(store.read(reg_b_upper).is_none());
     /// ```
-    pub fn write(&mut self, reg: char, value: RegisterValue) {
+    pub fn write(&mut self, reg: RegisterName, value: RegisterValue) {
         match reg {
-            '_' => {} // black hole — discard
-            'A'..='Z' => {
-                let lower = char::from(reg as u8 + 32);
-                let _ = self.slots.insert(lower, value);
-                let _ = self.slots.insert('"', value);
+            RegisterName::BlackHole => {}
+            RegisterName::Named(rc) if char::from(rc).is_ascii_uppercase() => {
+                let Ok(lower) = RegisterName::try_from(char::from(rc).to_ascii_lowercase()) else {
+                    unreachable!()
+                };
+
+                self.slots.insert(lower, value);
+                self.slots.insert(RegisterName::Unnamed, value);
+
                 Self::write_os(value);
             }
-            '+' | '*' => {
-                let _ = self.slots.insert('"', value);
+            RegisterName::Clipboard | RegisterName::Selection => {
+                self.slots.insert(RegisterName::Unnamed, value);
+
                 Self::write_os(value);
             }
-            _ => {
-                let _ = self.slots.insert(reg, value);
-                let _ = self.slots.insert('"', value);
+            RegisterName::Numbered(_) => {
+                self.slots.insert(reg, value);
+            }
+            reg => {
+                self.slots.insert(reg, value);
+                self.slots.insert(RegisterName::Unnamed, value);
+
                 Self::write_os(value);
             }
         }
@@ -100,34 +114,35 @@ impl RegisterStore {
 
     /// Records a yank operation.
     ///
-    /// Writes to `reg` (defaulting to the unnamed register `'"'` when `None`),
-    /// and prepends `value` to the internal yank ring. Register `'0'` always
-    /// reads as the ring head (most recent yank); older entries are retained up
-    /// to [`YANK_RING_CAP`] for future paste-cycling.
+    /// Writes to `reg` and prepends `value` to the internal yank ring. Register
+    /// `'0'` always reads as the ring head (most recent yank); older entries are
+    /// retained up to `YANK_RING_CAP` entries for future paste-cycling. Pass
+    /// [`RegisterName::Unnamed`] to target the unnamed register `'"'`.
     ///
     /// # Examples
     ///
     /// ```
-    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
     /// use dps::gas::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     ///
-    /// // Without a target register, the value lands in '"' and '0'.
-    /// store.push_yank(None, RegisterValue::EANx(ean32));
-    /// assert!(store.read('"').is_some());
-    /// assert!(store.read('0').is_some());
+    /// // Unnamed register: value lands in '"' and '0'.
+    /// store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32));
+    /// assert!(store.read(RegisterName::Unnamed).is_some());
+    /// assert!(store.read(RegisterName::Yank).is_some());
     ///
-    /// // With an explicit register, the value also lands in '0'.
-    /// store.push_yank(Some('a'), RegisterValue::EANx(ean32));
-    /// assert!(store.read('a').is_some());
-    /// assert!(store.read('0').is_some());
+    /// // Named register: value also lands in '0'.
+    /// let reg_a = RegisterName::try_from('a').unwrap();
+    /// store.push_yank(reg_a, RegisterValue::EANx(ean32));
+    /// assert!(store.read(reg_a).is_some());
+    /// assert!(store.read(RegisterName::Yank).is_some());
     /// ```
-    pub fn push_yank(&mut self, reg: Option<char>, value: RegisterValue) {
-        let target = reg.unwrap_or('"');
-        self.write(target, value);
+    ///
+    pub fn push_yank(&mut self, reg: RegisterName, value: RegisterValue) {
+        self.write(reg, value);
         self.yank_ring.push_front(value);
         self.yank_ring.truncate(YANK_RING_CAP);
         self.ring_cursor = 0;
@@ -144,7 +159,7 @@ impl RegisterStore {
     /// # Examples
     ///
     /// ```
-    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
     /// use dps::gas::EANx;
     /// use dps::units::Percent;
     ///
@@ -152,20 +167,28 @@ impl RegisterStore {
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// let ean36 = EANx::try_from(Percent::new(0.36).unwrap()).unwrap();
     ///
-    /// store.push_yank(None, RegisterValue::EANx(ean32)); // ring = [ean32]
-    /// store.push_yank(None, RegisterValue::EANx(ean36)); // ring = [ean36, ean32]
+    /// store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32)); // ring = [ean32]
+    /// store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean36)); // ring = [ean36, ean32]
     ///
     /// // First cycle: advance to ring[1] (older yank).
-    /// assert_eq!(store.cycle_yank(), Some(RegisterValue::EANx(ean32)));
+    /// assert_eq!(store.cycle_yank(), Ok(RegisterValue::EANx(ean32)));
     /// // Second cycle: wraps back to ring[0].
-    /// assert_eq!(store.cycle_yank(), Some(RegisterValue::EANx(ean36)));
+    /// assert_eq!(store.cycle_yank(), Ok(RegisterValue::EANx(ean36)));
     /// ```
-    pub fn cycle_yank(&mut self) -> Option<RegisterValue> {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RegisterError::YankRingTooSmall`] when the ring has fewer than two entries.
+    pub fn cycle_yank(&mut self) -> Result<RegisterValue, RegisterError> {
         if self.yank_ring.len() < 2 {
-            return None;
+            return Err(YankRingTooSmall.into());
         }
+
         self.ring_cursor = (self.ring_cursor + 1) % self.yank_ring.len();
-        self.yank_ring.get(self.ring_cursor).copied()
+        self.yank_ring
+            .get(self.ring_cursor)
+            .copied()
+            .ok_or_else(|| YankRingTooSmall.into())
     }
 
     /// Resets the yank-ring cursor to 0 (the most recent yank).
@@ -176,7 +199,7 @@ impl RegisterStore {
     /// # Examples
     ///
     /// ```
-    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
     /// use dps::gas::EANx;
     /// use dps::units::Percent;
     ///
@@ -184,15 +207,15 @@ impl RegisterStore {
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// let ean36 = EANx::try_from(Percent::new(0.36).unwrap()).unwrap();
     ///
-    /// store.push_yank(None, RegisterValue::EANx(ean32));
-    /// store.push_yank(None, RegisterValue::EANx(ean36));
-    /// store.cycle_yank(); // cursor = 1
+    /// store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32));
+    /// store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean36));
+    /// store.cycle_yank().unwrap(); // cursor = 1
     ///
     /// store.reset_ring_cursor();
     /// // Next cycle_yank now starts from ring[0] again.
-    /// assert_eq!(store.cycle_yank(), Some(RegisterValue::EANx(ean32)));
+    /// assert_eq!(store.cycle_yank(), Ok(RegisterValue::EANx(ean32)));
     /// ```
-    pub fn reset_ring_cursor(&mut self) {
+    pub const fn reset_ring_cursor(&mut self) {
         self.ring_cursor = 0;
     }
 
@@ -204,7 +227,7 @@ impl RegisterStore {
     /// # Examples
     ///
     /// ```
-    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
     /// use dps::gas::EANx;
     /// use dps::units::Percent;
     ///
@@ -213,139 +236,173 @@ impl RegisterStore {
     /// let ean36 = EANx::try_from(Percent::new(0.36).unwrap()).unwrap();
     ///
     /// store.push_delete(RegisterValue::EANx(ean32));
-    /// assert!(store.read('1').is_some());
-    /// assert!(store.read('"').is_some());
+    /// assert!(store.read(RegisterName::try_from('1').unwrap()).is_some());
+    /// assert!(store.read(RegisterName::Unnamed).is_some());
     ///
     /// // A second delete shifts the first value from '1' to '2'.
     /// store.push_delete(RegisterValue::EANx(ean36));
-    /// assert_eq!(store.read('1'), Some(RegisterValue::EANx(ean36)));
-    /// assert_eq!(store.read('2'), Some(RegisterValue::EANx(ean32)));
+    /// assert_eq!(store.read(RegisterName::try_from('1').unwrap()), Some(RegisterValue::EANx(ean36)));
+    /// assert_eq!(store.read(RegisterName::try_from('2').unwrap()), Some(RegisterValue::EANx(ean32)));
     /// ```
     pub fn push_delete(&mut self, value: RegisterValue) {
-        for n in (b'2'..=b'9').rev() {
-            let from = char::from(n - 1);
-            let to = char::from(n);
+        for n in (1u8..=8).rev() {
+            let from = RegisterName::Numbered(RegIndex(n));
 
-            if let Some(v) = self.slots.get(&from).copied() {
-                let _ = self.slots.insert(to, v);
-            } else {
-                self.slots.remove(&to);
+            if let Some(to) = from.next_numbered() {
+                if let Some(v) = self.slots.get(&from).copied() {
+                    self.slots.insert(to, v);
+                } else {
+                    self.slots.remove(&to);
+                }
             }
         }
 
-        let _ = self.slots.insert('1', value);
-        let _ = self.slots.insert('"', value);
+        self.slots.insert(RegisterName::Numbered(RegIndex(1)), value);
+        self.slots.insert(RegisterName::Unnamed, value);
     }
 
     /// Reads the value stored in register `reg`.
     ///
-    /// - `'_'` (black hole): always `None`.
-    /// - `'+'` / `'*'` (OS clipboard): reads from the OS clipboard.
-    /// - `'0'` (yank register): returns the head of the internal yank ring —
-    ///   the most recent value passed to [`push_yank`](RegisterStore::push_yank).
-    /// - All other characters: reads from the in-memory slot.
+    /// - [`BlackHole`](RegisterName::BlackHole): always `None`.
+    /// - [`Clipboard`](RegisterName::Clipboard) / [`Selection`](RegisterName::Selection)
+    ///   (OS clipboard): reads from the OS clipboard.
+    /// - [`Yank`](RegisterName::Yank) (yank register): returns the head of
+    ///   the internal yank ring — the most recent value passed to
+    ///   [`push_yank`](RegisterStore::push_yank).
+    /// - All other registers: reads from the in-memory slot.
     ///
     /// Returns `None` if the register has never been written to.
     ///
     /// # Examples
     ///
     /// ```
-    /// use dps::registers::{RegisterStore, RegisterValue};
+    /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
     /// use dps::gas::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
-    /// assert!(store.read('a').is_none()); // never written
-    /// assert!(store.read('_').is_none()); // black hole
+    /// let reg_a = RegisterName::try_from('a').unwrap();
+    /// let reg_black_hole = RegisterName::BlackHole;
+    ///
+    /// assert!(store.read(reg_a).is_none());         // never written
+    /// assert!(store.read(reg_black_hole).is_none()); // black hole
     ///
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// store.write('a', RegisterValue::EANx(ean32));
-    /// assert_eq!(store.read('a'), Some(RegisterValue::EANx(ean32)));
+    /// store.write(reg_a, RegisterValue::EANx(ean32));
+    /// assert_eq!(store.read(reg_a), Some(RegisterValue::EANx(ean32)));
     /// ```
     #[must_use]
-    pub fn read(&self, reg: char) -> Option<RegisterValue> {
+    pub fn read(&self, reg: RegisterName) -> Option<RegisterValue> {
         match reg {
-            '_' => None,
-            '+' | '*' => Self::read_os(),
-            '0' => self.yank_ring.front().copied(),
-            _ => self.slots.get(&reg).copied(),
+            RegisterName::BlackHole => None,
+            RegisterName::Clipboard | RegisterName::Selection => Self::read_os(),
+            RegisterName::Yank => self.yank_ring.front().copied(),
+            reg => self.slots.get(&reg).copied(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use color_eyre::eyre::{Report, eyre};
+    use super::*;
+    use crate::errors::Error;
+    use crate::gas::EANx;
+    use crate::registers::RegisterName;
+    use crate::registers::name::RegIndex;
+    use crate::units::Percent;
+    use color_eyre::eyre::Report;
     use rstest::{fixture, rstest};
 
-    use super::{RegisterStore, RegisterValue};
-    use crate::gas::EANx;
-    use crate::units::Percent;
-
-    #[fixture]
-    fn ean32() -> Result<EANx, Report> {
-        let pct = Percent::new(0.32).ok_or_else(|| eyre!("invalid fraction"))?;
-
-        Ok(EANx::try_from(pct)?)
+    fn reg(c: char) -> Result<RegisterName, Error> {
+        Ok(RegisterName::try_from(c)?)
     }
 
     #[fixture]
-    fn ean36() -> Result<EANx, Report> {
-        let pct = Percent::new(0.36).ok_or_else(|| eyre!("invalid fraction"))?;
+    fn ean32() -> Result<EANx, Error> {
+        let pct = Percent::new(0.32)?;
 
-        Ok(EANx::try_from(pct)?)
+        EANx::try_from(pct).map_err(|e| Error::Gas(e.into()))
+    }
+
+    #[fixture]
+    fn ean36() -> Result<EANx, Error> {
+        let pct = Percent::new(0.36)?;
+
+        EANx::try_from(pct).map_err(|e| Error::Gas(e.into()))
     }
 
     mod write {
         use super::*;
 
         #[rstest]
-        fn regular_reg_stores_value(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn regular_reg_stores_value(ean32: Result<EANx, Error>) -> Result<(), Error> {
             let mut store = RegisterStore::default();
-            store.write('a', RegisterValue::EANx(ean32?));
+            store.write(reg('a')?, RegisterValue::EANx(ean32?));
 
-            assert!(matches!(store.read('a'), Some(RegisterValue::EANx(_))));
+            assert!(matches!(
+                store.read(reg('a')?),
+                Some(RegisterValue::EANx(_))
+            ));
 
             Ok(())
         }
 
         #[rstest]
-        fn regular_reg_mirrors_to_unnamed(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn regular_reg_mirrors_to_unnamed(ean32: Result<EANx, Error>) -> Result<(), Error> {
             let mut store = RegisterStore::default();
-            store.write('a', RegisterValue::EANx(ean32?));
 
-            assert!(store.read('"').is_some());
+            store.write(reg('a')?, RegisterValue::EANx(ean32?));
+
+            assert!(store.read(RegisterName::Unnamed).is_some());
 
             Ok(())
         }
 
         #[rstest]
-        fn black_hole_discards(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn black_hole_discards(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
-            store.write('_', RegisterValue::EANx(ean32?));
 
-            assert!(store.read('_').is_none());
+            store.write(RegisterName::BlackHole, RegisterValue::EANx(ean32?));
+
+            assert!(store.read(RegisterName::BlackHole).is_none());
 
             Ok(())
         }
 
         #[rstest]
-        fn uppercase_redirects_to_lowercase(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn uppercase_redirects_to_lowercase(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
-            store.write('A', RegisterValue::EANx(ean32?));
 
-            assert!(store.read('a').is_some());
-            assert!(store.read('A').is_none());
+            store.write(reg('A')?, RegisterValue::EANx(ean32?));
+
+            assert!(store.read(reg('a')?).is_some());
+            assert!(store.read(reg('A')?).is_none());
 
             Ok(())
         }
 
         #[rstest]
-        fn uppercase_mirrors_to_unnamed(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn uppercase_mirrors_to_unnamed(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
-            store.write('A', RegisterValue::EANx(ean32?));
 
-            assert!(store.read('"').is_some());
+            store.write(reg('A')?, RegisterValue::EANx(ean32?));
+
+            assert!(store.read(RegisterName::Unnamed).is_some());
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn numbered_writes_only_to_slot(ean32: Result<EANx, Error>) -> Result<(), Report> {
+            let mut store = RegisterStore::default();
+
+            store.write(
+                RegisterName::Numbered(RegIndex(3)),
+                RegisterValue::EANx(ean32?),
+            );
+
+            assert!(store.read(RegisterName::Numbered(RegIndex(3))).is_some());
+            assert!(store.read(RegisterName::Unnamed).is_none());
 
             Ok(())
         }
@@ -356,51 +413,51 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn none_writes_to_unnamed_and_yank(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn unnamed_writes_to_unnamed_and_yank(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
-            store.push_yank(None, RegisterValue::EANx(ean32?));
+            store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32?));
 
-            assert!(store.read('"').is_some());
-            assert!(store.read('0').is_some());
+            assert!(store.read(RegisterName::Unnamed).is_some());
+            assert!(store.read(RegisterName::Yank).is_some());
 
             Ok(())
         }
 
         #[rstest]
-        fn named_reg_writes_to_reg_and_yank(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn named_reg_writes_to_reg_and_yank(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
-            store.push_yank(Some('a'), RegisterValue::EANx(ean32?));
+            store.push_yank(reg('a')?, RegisterValue::EANx(ean32?));
 
-            assert!(store.read('a').is_some());
-            assert!(store.read('0').is_some());
+            assert!(store.read(reg('a')?).is_some());
+            assert!(store.read(RegisterName::Yank).is_some());
 
             Ok(())
         }
 
         #[rstest]
         fn yank_zero_returns_most_recent(
-            ean32: Result<EANx, Report>,
-            ean36: Result<EANx, Report>,
+            ean32: Result<EANx, Error>,
+            ean36: Result<EANx, Error>,
         ) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v1 = RegisterValue::EANx(ean32?);
             let v2 = RegisterValue::EANx(ean36?);
 
-            store.push_yank(None, v1);
-            store.push_yank(None, v2);
+            store.push_yank(RegisterName::Unnamed, v1);
+            store.push_yank(RegisterName::Unnamed, v2);
 
-            assert_eq!(store.read('0'), Some(v2));
+            assert_eq!(store.read(RegisterName::Yank), Some(v2));
 
             Ok(())
         }
 
         #[rstest]
-        fn ring_retains_history_up_to_cap(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn ring_retains_history_up_to_cap(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v = RegisterValue::EANx(ean32?);
 
             for _ in 0..=YANK_RING_CAP {
-                store.push_yank(None, v);
+                store.push_yank(RegisterName::Unnamed, v);
             }
 
             assert_eq!(store.yank_ring.len(), YANK_RING_CAP);
@@ -410,17 +467,17 @@ mod tests {
 
         #[rstest]
         fn resets_ring_cursor(
-            ean32: Result<EANx, Report>,
-            ean36: Result<EANx, Report>,
+            ean32: Result<EANx, Error>,
+            ean36: Result<EANx, Error>,
         ) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v1 = RegisterValue::EANx(ean32?);
             let v2 = RegisterValue::EANx(ean36?);
 
-            store.push_yank(None, v1);
-            store.push_yank(None, v2);
-            store.cycle_yank(); // cursor = 1
-            store.push_yank(None, v1);
+            store.push_yank(RegisterName::Unnamed, v1);
+            store.push_yank(RegisterName::Unnamed, v2);
+            store.cycle_yank()?; // cursor = 1
+            store.push_yank(RegisterName::Unnamed, v1);
 
             assert_eq!(store.ring_cursor, 0);
 
@@ -432,71 +489,71 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn returns_none_for_empty_ring() {
+        fn returns_err_for_empty_ring() {
             let mut store = RegisterStore::default();
-            assert!(store.cycle_yank().is_none());
+            assert!(store.cycle_yank().is_err());
         }
 
         #[rstest]
-        fn returns_none_for_single_entry(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn returns_err_for_single_entry(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
-            store.push_yank(None, RegisterValue::EANx(ean32?));
+            store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32?));
 
-            assert!(store.cycle_yank().is_none());
+            assert!(store.cycle_yank().is_err());
 
             Ok(())
         }
 
         #[rstest]
         fn advances_to_older_yank(
-            ean32: Result<EANx, Report>,
-            ean36: Result<EANx, Report>,
+            ean32: Result<EANx, Error>,
+            ean36: Result<EANx, Error>,
         ) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let older = RegisterValue::EANx(ean32?);
             let newer = RegisterValue::EANx(ean36?);
 
-            store.push_yank(None, older); // ring = [older]
-            store.push_yank(None, newer); // ring = [newer, older], cursor = 0
+            store.push_yank(RegisterName::Unnamed, older); // ring = [older]
+            store.push_yank(RegisterName::Unnamed, newer); // ring = [newer, older], cursor = 0
 
-            assert_eq!(store.cycle_yank(), Some(older)); // cursor = 1
+            assert_eq!(store.cycle_yank(), Ok(older)); // cursor = 1
 
             Ok(())
         }
 
         #[rstest]
         fn wraps_back_to_newest(
-            ean32: Result<EANx, Report>,
-            ean36: Result<EANx, Report>,
+            ean32: Result<EANx, Error>,
+            ean36: Result<EANx, Error>,
         ) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let older = RegisterValue::EANx(ean32?);
             let newer = RegisterValue::EANx(ean36?);
 
-            store.push_yank(None, older);
-            store.push_yank(None, newer);
-            store.cycle_yank(); // cursor = 1 → older
+            store.push_yank(RegisterName::Unnamed, older);
+            store.push_yank(RegisterName::Unnamed, newer);
+            store.cycle_yank()?; // cursor = 1 → older
 
-            assert_eq!(store.cycle_yank(), Some(newer)); // wraps to cursor = 0 → newer
+            assert_eq!(store.cycle_yank(), Ok(newer)); // wraps to cursor = 0 → newer
 
             Ok(())
         }
 
         #[rstest]
         fn reset_restarts_cycle(
-            ean32: Result<EANx, Report>,
-            ean36: Result<EANx, Report>,
+            ean32: Result<EANx, Error>,
+            ean36: Result<EANx, Error>,
         ) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let older = RegisterValue::EANx(ean32?);
             let newer = RegisterValue::EANx(ean36?);
 
-            store.push_yank(None, older);
-            store.push_yank(None, newer);
-            store.cycle_yank(); // cursor = 1
+            store.push_yank(RegisterName::Unnamed, older);
+            store.push_yank(RegisterName::Unnamed, newer);
+            store.cycle_yank()?; // cursor = 1
             store.reset_ring_cursor(); // back to 0
 
-            assert_eq!(store.cycle_yank(), Some(older)); // cursor = 1 again
+            assert_eq!(store.cycle_yank(), Ok(older)); // cursor = 1 again
 
             Ok(())
         }
@@ -506,20 +563,20 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn first_delete_writes_to_1_and_unnamed(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn first_delete_writes_to_1_and_unnamed(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             store.push_delete(RegisterValue::EANx(ean32?));
 
-            assert!(store.read('1').is_some());
-            assert!(store.read('"').is_some());
+            assert!(store.read(reg('1')?).is_some());
+            assert!(store.read(RegisterName::Unnamed).is_some());
 
             Ok(())
         }
 
         #[rstest]
         fn second_delete_shifts_stack(
-            ean32: Result<EANx, Report>,
-            ean36: Result<EANx, Report>,
+            ean32: Result<EANx, Error>,
+            ean36: Result<EANx, Error>,
         ) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v1 = RegisterValue::EANx(ean32?);
@@ -528,14 +585,14 @@ mod tests {
             store.push_delete(v1);
             store.push_delete(v2);
 
-            assert_eq!(store.read('1'), Some(v2));
-            assert_eq!(store.read('2'), Some(v1));
+            assert_eq!(store.read(reg('1')?), Some(v2));
+            assert_eq!(store.read(reg('2')?), Some(v1));
 
             Ok(())
         }
 
         #[rstest]
-        fn full_stack_stays_within_9(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn full_stack_stays_within_9(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v = RegisterValue::EANx(ean32?);
 
@@ -543,22 +600,28 @@ mod tests {
                 store.push_delete(v);
             }
 
-            assert!(('1'..='9').all(|c| store.read(c).is_some()));
+            for c in '1'..='9' {
+                let r = reg(c)?;
+                assert!(
+                    store.read(r).is_some(),
+                    "register {c:?} should have a value"
+                );
+            }
 
             Ok(())
         }
 
         #[rstest]
-        fn gap_in_stack_clears_higher_slot(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn gap_in_stack_clears_higher_slot(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v = RegisterValue::EANx(ean32?);
 
             store.push_delete(v);
-            assert!(store.read('2').is_none());
+            assert!(store.read(reg('2')?).is_none());
 
             store.push_delete(v);
-            assert!(store.read('2').is_some());
-            assert!(store.read('3').is_none());
+            assert!(store.read(reg('2')?).is_some());
+            assert!(store.read(reg('3')?).is_none());
 
             Ok(())
         }
@@ -567,25 +630,27 @@ mod tests {
     mod read {
         use super::*;
 
-        #[test]
-        fn unwritten_register_is_none() {
+        #[rstest]
+        fn unwritten_register_is_none() -> Result<(), Report> {
             let store = RegisterStore::default();
-            assert!(store.read('a').is_none());
-        }
+            assert!(store.read(reg('a')?).is_none());
 
-        #[test]
-        fn black_hole_is_always_none() {
-            let store = RegisterStore::default();
-            assert!(store.read('_').is_none());
+            Ok(())
         }
 
         #[rstest]
-        fn after_write_returns_value(ean32: Result<EANx, Report>) -> Result<(), Report> {
+        fn black_hole_is_always_none() {
+            let store = RegisterStore::default();
+            assert!(store.read(RegisterName::BlackHole).is_none());
+        }
+
+        #[rstest]
+        fn after_write_returns_value(ean32: Result<EANx, Error>) -> Result<(), Report> {
             let mut store = RegisterStore::default();
             let v = RegisterValue::EANx(ean32?);
 
-            store.write('a', v);
-            assert_eq!(store.read('a'), Some(v));
+            store.write(reg('a')?, v);
+            assert_eq!(store.read(reg('a')?), Some(v));
 
             Ok(())
         }
