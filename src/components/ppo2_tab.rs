@@ -333,12 +333,12 @@ mod tests {
     use crate::action::{Action, Movement};
     use crate::components::test_utils::widget_text;
     use crate::components::{PAGE_DELTA, SCROLL_DELTA};
-    use color_eyre::{Result, eyre::eyre};
+    use rstest::rstest;
 
     mod constants {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn ppo2_table_overhead_w_is_twelve() {
             // 2 + 2 + 7(COL_DEPTH_W) + 1 = 12
             assert_eq!(PPO2_TABLE_OVERHEAD_W, 12);
@@ -348,14 +348,14 @@ mod tests {
     mod visible_cols_fn {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn full_window_returns_all_fourteen_mixes() {
             let tab = PpO2Tab::new();
             assert_eq!(tab.visible_cols(20).len(), 14);
         }
 
-        #[test]
-        fn returns_mixes_at_correct_offsets_from_start() -> Result<()> {
+        #[rstest]
+        fn returns_mixes_at_correct_offsets_from_start() {
             let mut tab = PpO2Tab::new();
 
             // mix_idx: 5 → 6
@@ -364,18 +364,16 @@ mod tests {
             // window_start(6, 14, 3) = 5; percents at indices [5],[6],[7]
             let cols = tab.visible_cols(3);
 
-            assert_eq!(cols[0].fo2(), Percent::new(0.21)?); // [5]
-            assert_eq!(cols[1].fo2(), Percent::new(0.28)?); // [6]
-            assert_eq!(cols[2].fo2(), Percent::new(0.30)?); // [7]
-
-            Ok(())
+            assert_eq!(cols[0].fo2(), Percent::literal(0.21)); // [5]
+            assert_eq!(cols[1].fo2(), Percent::literal(0.28)); // [6]
+            assert_eq!(cols[2].fo2(), Percent::literal(0.30)); // [7]
         }
     }
 
     mod mix_window_col_fn {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn at_max_mix_idx_with_small_window() {
             let mut tab = PpO2Tab::new();
 
@@ -393,12 +391,12 @@ mod tests {
     mod component_trait {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn title_is_correct() {
             assert_eq!(PpO2Tab::new().title(), "ppO\u{2082} by Depth");
         }
 
-        #[test]
+        #[rstest]
         fn key_bindings_is_non_empty() {
             assert!(!PpO2Tab::new().key_bindings().is_empty());
         }
@@ -407,30 +405,17 @@ mod tests {
     mod initial_state {
         use super::*;
 
-        #[test]
-        fn selected_depth_is_zero() -> Result<()> {
-            let tab = PpO2Tab::new();
-
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                0
-            );
-
-            Ok(())
+        #[rstest]
+        fn selected_depth_is_zero() {
+            assert_eq!(PpO2Tab::new().table_state.selected(), Some(0));
         }
 
-        #[test]
-        fn selected_mix_is_air() -> Result<()> {
-            let tab = PpO2Tab::new();
-
-            assert_eq!(tab.selected_mix().fo2(), Percent::new(0.21)?);
-
-            Ok(())
+        #[rstest]
+        fn selected_mix_is_air() {
+            assert_eq!(PpO2Tab::new().selected_mix().fo2(), Percent::literal(0.21));
         }
 
-        #[test]
+        #[rstest]
         fn no_selection() {
             assert!(PpO2Tab::new().selection.is_none());
         }
@@ -439,42 +424,37 @@ mod tests {
     mod select_action {
         use super::*;
 
-        #[test]
-        fn stores_current_depth_and_mix() -> Result<()> {
+        #[rstest]
+        fn stores_current_depth_and_mix() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Select, &mut RegisterStore::default());
 
-            let (depth, mix) = tab.selection.ok_or_else(|| eyre!("no selection"))?;
-
-            assert_eq!(depth, Meters::new(0.0));
-            assert_eq!(mix.fo2(), Percent::new(0.21)?);
-
-            Ok(())
+            assert_eq!(tab.selection.map(|(d, _)| d), Some(Meters::new(0.0)));
+            assert_eq!(
+                tab.selection.map(|(_, m)| m.fo2()),
+                Some(Percent::literal(0.21))
+            );
         }
 
-        #[test]
-        fn selection_updates_after_moving_row() -> Result<()> {
+        #[rstest]
+        fn selection_updates_after_moving_row() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Select, &mut RegisterStore::default());
-
-            let first_depth = tab.selection.ok_or_else(|| eyre!("no selection"))?.0;
+            let first_depth = tab.selection.map(|(d, _)| d);
 
             tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
             tab.handle_action(Action::Select, &mut RegisterStore::default());
 
-            let second_depth = tab.selection.ok_or_else(|| eyre!("no selection"))?.0;
-            assert_ne!(first_depth, second_depth);
-
-            Ok(())
+            assert_ne!(tab.selection.map(|(d, _)| d), first_depth);
         }
     }
 
     mod ppo2_cell_color {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn hypoxic_below_threshold_is_red() {
             assert_eq!(
                 ppo2_cell_color(Bar::new(0.10), &Theme::default()),
@@ -482,7 +462,7 @@ mod tests {
             );
         }
 
-        #[test]
+        #[rstest]
         fn at_hypoxic_threshold_is_green() {
             assert_eq!(
                 ppo2_cell_color(Bar::new(0.18), &Theme::default()),
@@ -490,7 +470,7 @@ mod tests {
             );
         }
 
-        #[test]
+        #[rstest]
         fn normal_range_is_green() {
             assert_eq!(
                 ppo2_cell_color(Bar::new(1.0), &Theme::default()),
@@ -498,7 +478,7 @@ mod tests {
             );
         }
 
-        #[test]
+        #[rstest]
         fn at_caution_threshold_is_yellow() {
             assert_eq!(
                 ppo2_cell_color(Bar::new(1.4), &Theme::default()),
@@ -506,7 +486,7 @@ mod tests {
             );
         }
 
-        #[test]
+        #[rstest]
         fn caution_range_is_yellow() {
             assert_eq!(
                 ppo2_cell_color(Bar::new(1.5), &Theme::default()),
@@ -514,7 +494,7 @@ mod tests {
             );
         }
 
-        #[test]
+        #[rstest]
         fn at_danger_threshold_is_red() {
             assert_eq!(
                 ppo2_cell_color(Bar::new(1.6), &Theme::default()),
@@ -522,7 +502,7 @@ mod tests {
             );
         }
 
-        #[test]
+        #[rstest]
         fn above_danger_is_red() {
             assert_eq!(
                 ppo2_cell_color(Bar::new(2.0), &Theme::default()),
@@ -534,7 +514,7 @@ mod tests {
     mod status_bar {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn no_selection_shows_prompt() {
             let tab = PpO2Tab::new();
 
@@ -549,7 +529,7 @@ mod tests {
             assert!(text.contains("No depth selected"));
         }
 
-        #[test]
+        #[rstest]
         fn selection_shows_depth_mix_and_ppo2() {
             let mut tab = PpO2Tab::new();
 
@@ -575,24 +555,17 @@ mod tests {
     mod action_dispatch {
         use super::*;
 
-        #[test]
-        fn down_advances_depth() -> Result<()> {
+        #[rstest]
+        fn down_advances_depth() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                1
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(1));
         }
 
-        #[test]
-        fn down_clamped_at_max_depth() -> Result<()> {
+        #[rstest]
+        fn down_clamped_at_max_depth() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
@@ -601,57 +574,30 @@ mod tests {
             );
             tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                PPO2_TABLE_DEPTH_MAX
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(PPO2_TABLE_DEPTH_MAX));
         }
 
-        #[test]
-        fn up_retreats_depth() -> Result<()> {
+        #[rstest]
+        fn up_retreats_depth() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
-
-            let after = tab
-                .table_state
-                .selected()
-                .ok_or_else(|| eyre!("no row selected"))?;
-
             tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                after - 1
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(0));
         }
 
-        #[test]
-        fn up_at_zero_stays_at_zero() -> Result<()> {
+        #[rstest]
+        fn up_at_zero_stays_at_zero() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                0
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(0));
         }
 
-        #[test]
-        fn goto_top_selects_depth_zero() -> Result<()> {
+        #[rstest]
+        fn goto_top_selects_depth_zero() {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..10 {
@@ -663,18 +609,11 @@ mod tests {
                 &mut RegisterStore::default(),
             );
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                0
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(0));
         }
 
-        #[test]
-        fn goto_bottom_selects_max_depth() -> Result<()> {
+        #[rstest]
+        fn goto_bottom_selects_max_depth() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
@@ -682,18 +621,11 @@ mod tests {
                 &mut RegisterStore::default(),
             );
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                PPO2_TABLE_DEPTH_MAX
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(PPO2_TABLE_DEPTH_MAX));
         }
 
-        #[test]
-        fn scroll_down_moves_by_delta() -> Result<()> {
+        #[rstest]
+        fn scroll_down_moves_by_delta() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
@@ -701,18 +633,11 @@ mod tests {
                 &mut RegisterStore::default(),
             );
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                SCROLL_DELTA as usize,
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(SCROLL_DELTA as usize));
         }
 
-        #[test]
-        fn scroll_up_moves_by_delta() -> Result<()> {
+        #[rstest]
+        fn scroll_up_moves_by_delta() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
@@ -725,17 +650,13 @@ mod tests {
             );
 
             assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                PPO2_TABLE_DEPTH_MAX - SCROLL_DELTA as usize,
+                tab.table_state.selected(),
+                Some(PPO2_TABLE_DEPTH_MAX - SCROLL_DELTA as usize),
             );
-
-            Ok(())
         }
 
-        #[test]
-        fn page_down_moves_by_page_delta() -> Result<()> {
+        #[rstest]
+        fn page_down_moves_by_page_delta() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
@@ -743,18 +664,11 @@ mod tests {
                 &mut RegisterStore::default(),
             );
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                PAGE_DELTA as usize,
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(PAGE_DELTA as usize));
         }
 
-        #[test]
-        fn page_up_moves_by_page_delta() -> Result<()> {
+        #[rstest]
+        fn page_up_moves_by_page_delta() {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
@@ -767,16 +681,12 @@ mod tests {
             );
 
             assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                PPO2_TABLE_DEPTH_MAX - PAGE_DELTA as usize,
+                tab.table_state.selected(),
+                Some(PPO2_TABLE_DEPTH_MAX - PAGE_DELTA as usize),
             );
-
-            Ok(())
         }
 
-        #[test]
+        #[rstest]
         fn right_increments_mix() {
             let mut tab = PpO2Tab::new();
             let before = tab.mix_idx;
@@ -786,7 +696,7 @@ mod tests {
             assert_eq!(tab.mix_idx, before + 1);
         }
 
-        #[test]
+        #[rstest]
         fn right_clamped_at_last_mix() {
             let mut tab = PpO2Tab::new();
 
@@ -797,7 +707,7 @@ mod tests {
             assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
         }
 
-        #[test]
+        #[rstest]
         fn left_decrements_mix() {
             let mut tab = PpO2Tab::new();
 
@@ -810,7 +720,7 @@ mod tests {
             assert_eq!(tab.mix_idx, before - 1);
         }
 
-        #[test]
+        #[rstest]
         fn left_clamped_at_zero_mix() {
             let mut tab = PpO2Tab::new();
 
@@ -821,51 +731,29 @@ mod tests {
             assert_eq!(tab.mix_idx, 0);
         }
 
-        #[test]
-        fn none_is_a_noop() -> Result<()> {
+        #[rstest]
+        fn none_is_a_noop() {
             let mut tab = PpO2Tab::new();
-            let before = tab
-                .table_state
-                .selected()
-                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::None, &mut RegisterStore::default());
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                before
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(0));
         }
 
-        #[test]
-        fn quit_is_a_noop() -> Result<()> {
+        #[rstest]
+        fn quit_is_a_noop() {
             let mut tab = PpO2Tab::new();
-            let before = tab
-                .table_state
-                .selected()
-                .ok_or_else(|| eyre!("no row selected"))?;
 
             tab.handle_action(Action::Quit, &mut RegisterStore::default());
 
-            assert_eq!(
-                tab.table_state
-                    .selected()
-                    .ok_or_else(|| eyre!("no row selected"))?,
-                before
-            );
-
-            Ok(())
+            assert_eq!(tab.table_state.selected(), Some(0));
         }
     }
 
     mod render {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn selected_column_is_mix_window_col_plus_fixed_col_count() {
             // width 123 fits all 14 mix columns (window_size=14), so col_in_window = PPO2_MIX_DEFAULT_IDX(5).
             // selected_column = col_in_window(5) + FIXED_COL_COUNT(1) = 6

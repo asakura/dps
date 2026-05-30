@@ -157,30 +157,31 @@ fn bottom_rect(height: u16, area: Rect) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::{Terminal, backend::TestBackend, layout::Position};
+    use ratatui::{Terminal, backend::TestBackend, buffer::Cell, layout::Position};
+    use rstest::rstest;
 
     mod bottom_rect {
         use super::*;
 
-        #[test]
+        #[rstest]
         fn anchors_to_bottom() {
             let area = Rect::new(0, 0, 40, 10);
             assert_eq!(bottom_rect(3, area), Rect::new(0, 7, 40, 3));
         }
 
-        #[test]
+        #[rstest]
         fn full_height_fills_area() {
             let area = Rect::new(0, 0, 40, 10);
             assert_eq!(bottom_rect(10, area), Rect::new(0, 0, 40, 10));
         }
 
-        #[test]
+        #[rstest]
         fn clamps_to_area_height() {
             let area = Rect::new(0, 0, 40, 5);
             assert_eq!(bottom_rect(10, area), Rect::new(0, 0, 40, 5));
         }
 
-        #[test]
+        #[rstest]
         fn preserves_area_offset() {
             // Non-zero origin: popup must be at the bottom of that sub-area, not the screen.
             let area = Rect::new(5, 2, 30, 8);
@@ -211,43 +212,44 @@ mod tests {
             terminal.backend().buffer().clone()
         }
 
-        #[test]
+        #[rstest]
         fn key_placed_after_lead() {
             let buf = render_entry(&BINDING, 30);
+
             assert_eq!(
-                buf.cell(Position::new(LEAD, 0)).map(|c| c.symbol()),
+                buf.cell(Position::new(LEAD, 0)).map(Cell::symbol),
                 Some("?")
             );
         }
 
-        #[test]
+        #[rstest]
         fn desc_placed_after_lead_key_gap() {
             let buf = render_entry(&BINDING, 30);
             let x = LEAD + KEY_W + ENTRY_GAP;
 
-            assert_eq!(buf.cell(Position::new(x, 0)).map(|c| c.symbol()), Some("z"));
+            assert_eq!(buf.cell(Position::new(x, 0)).map(Cell::symbol), Some("z"));
             assert_eq!(
-                buf.cell(Position::new(x + 1, 0)).map(|c| c.symbol()),
+                buf.cell(Position::new(x + 1, 0)).map(Cell::symbol),
                 Some("i")
             );
             assert_eq!(
-                buf.cell(Position::new(x + 2, 0)).map(|c| c.symbol()),
+                buf.cell(Position::new(x + 2, 0)).map(Cell::symbol),
                 Some("g")
             );
         }
 
-        #[test]
+        #[rstest]
         fn long_key_clipped_to_key_width() {
             // Key longer than KEY_W is clipped by the layout rect; desc starts at the correct offset.
             let buf = render_entry(&LONG_KEY, 30);
 
             assert_eq!(
-                buf.cell(Position::new(LEAD, 0)).map(|c| c.symbol()),
+                buf.cell(Position::new(LEAD, 0)).map(Cell::symbol),
                 Some("t")
             );
             assert_eq!(
                 buf.cell(Position::new(LEAD + KEY_W + ENTRY_GAP, 0))
-                    .map(|c| c.symbol()),
+                    .map(Cell::symbol),
                 Some("d")
             );
         }
@@ -256,24 +258,30 @@ mod tests {
     mod which_key {
         use super::*;
 
+        fn render_whichkey(
+            global: &'static [KeyBinding],
+            comp: &'static [KeyBinding],
+            width: u16,
+            height: u16,
+        ) -> ratatui::buffer::Buffer {
+            let backend = TestBackend::new(width, height);
+            let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
+
+            terminal
+                .draw(|f| {
+                    f.render_widget(WhichKey::new(global, comp, Theme::default()), f.area());
+                })
+                .unwrap_or_else(|e| match e {});
+
+            terminal.backend().buffer().clone()
+        }
+
         mod empty {
             use super::*;
 
-            #[test]
+            #[rstest]
             fn bindings_is_noop() {
-                let backend = TestBackend::new(40, 5);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(
-                            WhichKey::new([].as_slice(), [].as_slice(), Theme::default()),
-                            f.area(),
-                        );
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer().clone();
+                let buf = render_whichkey([].as_slice(), [].as_slice(), 40, 5);
                 assert!(buf.content.iter().all(|c| c.symbol() == " "));
             }
         }
@@ -327,120 +335,73 @@ mod tests {
             ]
             .as_slice();
 
-            #[test]
+            #[rstest]
             fn one_column_at_width_43() {
                 // min_col_w = LEAD+KEY_W+ENTRY_GAP+MIN_DESC_W = 20; COL_GAP = 4.
                 // At width 43: cols = (43+4)/(20+4) = 1 → 2 bindings stack into 1 column,
                 // 2-row popup, first key at y=3.
-                let backend = TestBackend::new(43, 5);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
+                let buf = render_whichkey(PAIR, [].as_slice(), 43, 5);
 
-                terminal
-                    .draw(|f| {
-                        f.render_widget(
-                            WhichKey::new(PAIR, [].as_slice(), Theme::default()),
-                            f.area(),
-                        );
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer();
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 3)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 3)).map(Cell::symbol),
                     Some("q")
                 );
             }
 
-            #[test]
+            #[rstest]
             fn two_bindings_stacked_in_one_column() {
                 // area 30×5: 2 bindings, 1 col, 2 rows → popup at y=3..4.
-                let backend = TestBackend::new(30, 5);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(
-                            WhichKey::new(PAIR, [].as_slice(), Theme::default()),
-                            f.area(),
-                        );
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer();
+                let buf = render_whichkey(PAIR, [].as_slice(), 30, 5);
 
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 3)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 3)).map(Cell::symbol),
                     Some("q")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 4)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 4)).map(Cell::symbol),
                     Some("j")
                 );
             }
 
-            #[test]
+            #[rstest]
             fn across_two_columns() {
                 // area 44×3: cols = ((44+4)/(min_col_w+4)).max(1) = 2, rows = 4/2 = 2.
                 // Each Fill(1) column = (44 - COL_GAP) / 2 = min_col_w; col 1 starts at min_col_w + COL_GAP.
-                let backend = TestBackend::new(44, 3);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(
-                            WhichKey::new(FOUR, [].as_slice(), Theme::default()),
-                            f.area(),
-                        );
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer();
+                let buf = render_whichkey(FOUR, [].as_slice(), 44, 3);
                 let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
                 let col1_key_x = min_col_w + COL_GAP + LEAD;
 
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 1)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 1)).map(Cell::symbol),
                     Some("a")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 2)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 2)).map(Cell::symbol),
                     Some("b")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 1)).map(|c| c.symbol()),
+                    buf.cell(Position::new(col1_key_x, 1)).map(Cell::symbol),
                     Some("c")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 2)).map(|c| c.symbol()),
+                    buf.cell(Position::new(col1_key_x, 2)).map(Cell::symbol),
                     Some("d")
                 );
             }
 
-            #[test]
+            #[rstest]
             fn partial_last_column_leaves_row_empty() {
                 // area 44×3: cols=2, rows=ceil(3/2)=2. col 1 has only 1 entry; its second row is empty.
-                let backend = TestBackend::new(44, 3);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(
-                            WhichKey::new(THREE, [].as_slice(), Theme::default()),
-                            f.area(),
-                        );
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer();
+                let buf = render_whichkey(THREE, [].as_slice(), 44, 3);
                 let min_col_w = LEAD + KEY_W + ENTRY_GAP + MIN_DESC_W;
                 let col1_key_x = min_col_w + COL_GAP + LEAD;
 
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 1)).map(|c| c.symbol()),
+                    buf.cell(Position::new(col1_key_x, 1)).map(Cell::symbol),
                     Some("c")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(col1_key_x, 2)).map(|c| c.symbol()),
+                    buf.cell(Position::new(col1_key_x, 2)).map(Cell::symbol),
                     Some(" ")
                 );
             }
@@ -460,26 +421,17 @@ mod tests {
             }]
             .as_slice();
 
-            #[test]
+            #[rstest]
             fn global_and_component_bindings() {
                 // area 30×5: 2 total bindings, 1 col, 2 rows → popup at y=3..4.
-                let backend = TestBackend::new(30, 5);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(WhichKey::new(GLOBAL, COMP, Theme::default()), f.area());
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer();
+                let buf = render_whichkey(GLOBAL, COMP, 30, 5);
 
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 3)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 3)).map(Cell::symbol),
                     Some("g")
                 );
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 4)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 4)).map(Cell::symbol),
                     Some("c")
                 );
             }
@@ -512,25 +464,13 @@ mod tests {
             ]
             .as_slice();
 
-            #[test]
+            #[rstest]
             fn bounded_by_area() {
                 // 5 bindings in a 30×3 area: rows=5 would exceed area height=3,
                 // so popup_h is clamped to 3 and fills the whole terminal.
-                let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(
-                            WhichKey::new(FIVE, [].as_slice(), Theme::default()),
-                            f.area(),
-                        );
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer();
+                let buf = render_whichkey(FIVE, [].as_slice(), 30, 3);
                 assert_eq!(
-                    buf.cell(Position::new(LEAD, 0)).map(|c| c.symbol()),
+                    buf.cell(Position::new(LEAD, 0)).map(Cell::symbol),
                     Some("a")
                 );
             }
@@ -545,26 +485,14 @@ mod tests {
             }]
             .as_slice();
 
-            #[test]
+            #[rstest]
             fn long_desc_clipped_to_column_width() {
                 // Desc longer than the available Fill(1) width is clipped; nothing bleeds past the column.
-                let backend = TestBackend::new(30, 3);
-                let mut terminal = Terminal::new(backend).unwrap_or_else(|e| match e {});
-
-                terminal
-                    .draw(|f| {
-                        f.render_widget(
-                            WhichKey::new(LONG_DESC, [].as_slice(), Theme::default()),
-                            f.area(),
-                        );
-                    })
-                    .unwrap_or_else(|e| match e {});
-
-                let buf = terminal.backend().buffer();
+                let buf = render_whichkey(LONG_DESC, [].as_slice(), 30, 3);
                 let desc_x = LEAD + KEY_W + ENTRY_GAP;
 
                 assert_eq!(
-                    buf.cell(Position::new(desc_x, 2)).map(|c| c.symbol()),
+                    buf.cell(Position::new(desc_x, 2)).map(Cell::symbol),
                     Some("a")
                 );
             }
