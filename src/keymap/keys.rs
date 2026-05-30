@@ -14,9 +14,9 @@ use super::error::ParseError;
 ///
 /// # Errors
 ///
-/// - [`ParseError::EmptySequence`] if `raw` is empty.
-/// - [`ParseError::UnclosedAngleBracket`] if a `<` has no matching `>`.
-/// - [`ParseError::UnknownKey`] if a `<…>` spec names an unrecognised key.
+/// - `EmptySequence` if `raw` is empty.
+/// - `UnclosedAngleBracket` if a `<` has no matching `>`.
+/// - `UnknownKey` if a `<…>` spec names an unrecognised key.
 ///
 /// # Examples
 ///
