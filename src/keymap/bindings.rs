@@ -148,7 +148,11 @@ mod tests {
         #[rstest]
         fn binding_in_registered_mode_resolves(simple_bindings: &KeyBindings) {
             assert_eq!(
-                lookup(simple_bindings, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                lookup(
+                    simple_bindings,
+                    Mode::Normal,
+                    [press(KeyCode::Char('j'))].as_slice()
+                ),
                 Some(&Action::Move(Movement::Down))
             );
         }
@@ -238,7 +242,11 @@ mod tests {
         #[rstest]
         fn bind_overwrites_in_same_mode(overwritten_binding: &KeyBindings) {
             assert_eq!(
-                lookup(overwritten_binding, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                lookup(
+                    overwritten_binding,
+                    Mode::Normal,
+                    [press(KeyCode::Char('j'))].as_slice()
+                ),
                 Some(&Action::Move(Movement::Up))
             );
         }
@@ -246,7 +254,11 @@ mod tests {
         #[rstest]
         fn bind_default_does_not_overwrite(default_not_overwritten: &KeyBindings) {
             assert_eq!(
-                lookup(default_not_overwritten, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                lookup(
+                    default_not_overwritten,
+                    Mode::Normal,
+                    [press(KeyCode::Char('j'))].as_slice()
+                ),
                 Some(&Action::Move(Movement::Down))
             );
         }
@@ -270,11 +282,19 @@ mod tests {
         #[rstest]
         fn merge_defaults_fills_missing_bindings(merged_with_defaults: &KeyBindings) {
             assert_eq!(
-                lookup(merged_with_defaults, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                lookup(
+                    merged_with_defaults,
+                    Mode::Normal,
+                    [press(KeyCode::Char('j'))].as_slice()
+                ),
                 Some(&Action::Move(Movement::Down))
             );
             assert_eq!(
-                lookup(merged_with_defaults, Mode::Normal, &[press(KeyCode::Char('x'))]),
+                lookup(
+                    merged_with_defaults,
+                    Mode::Normal,
+                    [press(KeyCode::Char('x'))].as_slice()
+                ),
                 Some(&Action::Quit)
             );
         }
@@ -282,7 +302,11 @@ mod tests {
         #[rstest]
         fn merge_defaults_does_not_overwrite_user_binding(user_overrides_merged: &KeyBindings) {
             assert_eq!(
-                lookup(user_overrides_merged, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                lookup(
+                    user_overrides_merged,
+                    Mode::Normal,
+                    [press(KeyCode::Char('j'))].as_slice()
+                ),
                 Some(&Action::Move(Movement::Up))
             );
         }
@@ -297,7 +321,11 @@ mod tests {
             let bindings = builder.build();
 
             assert_eq!(
-                lookup(&bindings, Mode::Normal, &[press(KeyCode::Char('j'))]),
+                lookup(
+                    &bindings,
+                    Mode::Normal,
+                    [press(KeyCode::Char('j'))].as_slice()
+                ),
                 Some(&Action::Move(Movement::Down))
             );
 
@@ -314,7 +342,7 @@ mod tests {
                 lookup(
                     &bindings,
                     Mode::Normal,
-                    &[press(KeyCode::Char('g')), press(KeyCode::Char('g'))]
+                    [press(KeyCode::Char('g')), press(KeyCode::Char('g'))].as_slice()
                 ),
                 Some(&Action::Move(Movement::GotoTop))
             );
@@ -362,7 +390,7 @@ mod tests {
                 lookup(
                     &bindings,
                     Mode::Normal,
-                    &[KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)]
+                    [KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)].as_slice()
                 ),
                 Some(&Action::Move(Movement::ScrollDown))
             );

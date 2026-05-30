@@ -63,20 +63,17 @@ mod tests {
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
-
-        Ok(EANx::try_from(pct)?)
+        EANx::try_from(pct)
     }
 
     fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
-
-        Ok(EANxBlend::new(pct, Psa)?)
+        EANxBlend::new(pct, Psa)
     }
 
     fn ean_membrane(fraction: f64) -> Result<EANxBlend<Membrane>, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
-
-        Ok(EANxBlend::new(pct, Membrane::typical())?)
+        EANxBlend::new(pct, Membrane::typical())
     }
 
     mod display {

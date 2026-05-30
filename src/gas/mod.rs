@@ -57,14 +57,12 @@ mod tests {
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
-
-        Ok(EANx::try_from(pct)?)
+        EANx::try_from(pct)
     }
 
     fn ean_psa(fraction: f64) -> Result<EANxBlend<Psa>, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
-
-        Ok(EANxBlend::new(pct, Psa)?)
+        EANxBlend::new(pct, Psa)
     }
 
     #[test]

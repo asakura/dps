@@ -321,7 +321,7 @@ mod tests {
     }
 
     fn reg(c: char) -> Result<RegisterName, RegisterError> {
-        Ok(RegisterName::try_from(c)?)
+        RegisterName::try_from(c)
     }
 
     #[fixture]

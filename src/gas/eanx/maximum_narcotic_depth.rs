@@ -188,8 +188,7 @@ mod tests {
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
-
-        Ok(EANx::try_from(pct)?)
+        EANx::try_from(pct)
     }
 
     mod maximum_narcotic_depth {
