@@ -6,7 +6,7 @@ pub use self::error::AppError;
 
 use crate::{
     action::Action,
-    components::{ComponentNew, FpsCounter, Home},
+    components::{ComponentNew, FpsCounter, TabPane},
     config::Config,
     keymap::{ChordEngine, ChordResult, Mode, ModeMap, SequenceEngine},
     registers::RegisterStore,
@@ -50,7 +50,7 @@ use std::{fmt, path::Path};
 /// # Default components
 ///
 /// A fresh instance always starts with two components:
-/// - [`Home`] — main application screen.
+/// - [`TabPane`] — main application screen with tab switching.
 /// - [`FpsCounter`] — tick/frame-rate overlay.
 ///
 /// # Suspension
@@ -126,7 +126,7 @@ impl App {
         Ok(Self {
             tick_rate,
             frame_rate,
-            components: vec![Box::new(Home::new()), Box::new(FpsCounter::new())],
+            components: vec![Box::new(TabPane::new()), Box::new(FpsCounter::new())],
             should_quit: false,
             should_suspend: false,
             config,

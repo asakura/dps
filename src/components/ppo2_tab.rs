@@ -1,9 +1,18 @@
 //! ppO₂-by-depth table component.
+//!
+//! # Examples
+//!
+//! ```
+//! use dps::components::ppo2_tab::PpO2Tab;
+//!
+//! let _tab = PpO2Tab::new();
+//! ```
 
-use super::{Component, KeyBinding};
+use super::{ComponentNew, Result};
 
 use crate::{
     action::{Action, Movement},
+    config::Config,
     gas::EANx,
     registers::RegisterStore,
     theme::Theme,
@@ -12,10 +21,11 @@ use crate::{
 };
 
 use ratatui::{
+    Frame,
     buffer::Buffer,
     layout::{Constraint, Rect},
     style::Style,
-    widgets::{Cell, Paragraph, Row, StatefulWidget, TableState, Widget},
+    widgets::{Cell, Row, StatefulWidget, TableState},
 };
 
 const PPO2_TABLE_MIX_PERCENTS: &[Percent] = [
@@ -50,8 +60,9 @@ const COL_PPO2_MIX_W: u16 = 7;
 const FIXED_COL_COUNT: usize = 1;
 
 /// ppO₂-by-depth table: partial pressure of oxygen for each mix at each depth.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PpO2Tab {
+    theme: Theme,
     table_state: TableState,
     mix_idx: usize,
     selection: Option<(Meters, EANx)>,
@@ -64,7 +75,17 @@ impl Default for PpO2Tab {
 }
 
 impl PpO2Tab {
+    pub(crate) const TITLE: &'static str = "ppO\u{2082} by Depth";
+
     /// Creates a `PpO2Tab` pre-selected on Air (21%) at 0 m depth.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::components::ppo2_tab::PpO2Tab;
+    ///
+    /// let tab = PpO2Tab::new();
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         let mut table_state = TableState::default();
@@ -72,6 +93,7 @@ impl PpO2Tab {
         table_state.select(Some(0));
 
         Self {
+            theme: Theme::default(),
             table_state,
             mix_idx: PPO2_MIX_DEFAULT_IDX,
             selection: None,
@@ -173,84 +195,13 @@ impl PpO2Tab {
             })
             .collect()
     }
-}
-
-struct PpO2Row<'a> {
-    depth: usize,
-    mixes: &'a [EANx],
-    theme: &'a Theme,
-}
-
-impl From<PpO2Row<'_>> for Row<'static> {
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "depth is bounded by PPO2_TABLE_DEPTH_MAX = 80"
-    )]
-    fn from(r: PpO2Row<'_>) -> Self {
-        let depth = Meters::new(r.depth as f64);
-        let mut cells = vec![Cell::from(format!("{:>3} m", r.depth))];
-
-        for mix in r.mixes {
-            let ppo2 = mix.ppo2_at(depth).pressure();
-
-            cells.push(
-                Cell::from(format!("{:.2}", f64::from(ppo2))).style(ppo2_cell_color(ppo2, r.theme)),
-            );
-        }
-
-        Row::new(cells)
-    }
-}
-
-fn ppo2_cell_color(ppo2: Bar, theme: &Theme) -> Style {
-    if !(PPO2_HYPOXIC_BELOW..PPO2_DANGER_FROM).contains(&ppo2) {
-        theme.danger()
-    } else if ppo2 >= PPO2_CAUTION_FROM {
-        theme.caution()
-    } else {
-        theme.safe()
-    }
-}
-
-struct PpO2TabStatus<'a> {
-    tab: &'a PpO2Tab,
-    theme: Theme,
-}
-
-impl Widget for PpO2TabStatus<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        match self.tab.selection {
-            Some((depth, mix)) => {
-                let ppo2 = mix.ppo2_at(depth).pressure();
-                let text = format!(
-                    " \u{25c6} {}  @ {}  \u{2192}  ppO\u{2082} {:.2} bar",
-                    mix,
-                    depth,
-                    f64::from(ppo2),
-                );
-
-                Paragraph::new(text)
-                    .style(self.theme.status_active())
-                    .render(area, buf);
-            }
-            None => Paragraph::new(" No depth selected — press Enter to select")
-                .style(self.theme.status_empty())
-                .render(area, buf),
-        }
-    }
-}
-
-impl Component for PpO2Tab {
-    fn title(&self) -> &'static str {
-        "ppO₂ by Depth"
-    }
 
     #[expect(
         clippy::cast_precision_loss,
         reason = "depth_m is bounded by PPO2_TABLE_DEPTH_MAX = 80"
     )]
-    fn handle_action(&mut self, action: Action, _registers: &mut RegisterStore) {
-        match action {
+    fn handle_action(&mut self, action: &Action, _registers: &mut RegisterStore) {
+        match *action {
             Action::Move(mv) => self.handle_movement(mv),
             Action::Select => {
                 if let Some(depth_m) = self.table_state.selected() {
@@ -300,29 +251,60 @@ impl Component for PpO2Tab {
 
         StatefulWidget::render(table, area, buf, &mut self.table_state);
     }
+}
 
-    fn render_status(&self, area: Rect, buf: &mut Buffer, theme: &Theme) {
-        PpO2TabStatus {
-            tab: self,
-            theme: *theme,
+struct PpO2Row<'a> {
+    depth: usize,
+    mixes: &'a [EANx],
+    theme: &'a Theme,
+}
+
+impl From<PpO2Row<'_>> for Row<'static> {
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "depth is bounded by PPO2_TABLE_DEPTH_MAX = 80"
+    )]
+    fn from(r: PpO2Row<'_>) -> Self {
+        let depth = Meters::new(r.depth as f64);
+        let mut cells = vec![Cell::from(format!("{:>3} m", r.depth))];
+
+        for mix in r.mixes {
+            let ppo2 = mix.ppo2_at(depth).pressure();
+
+            cells.push(
+                Cell::from(format!("{:.2}", f64::from(ppo2))).style(ppo2_cell_color(ppo2, r.theme)),
+            );
         }
-        .render(area, buf);
+
+        Row::new(cells)
+    }
+}
+
+fn ppo2_cell_color(ppo2: Bar, theme: &Theme) -> Style {
+    if !(PPO2_HYPOXIC_BELOW..PPO2_DANGER_FROM).contains(&ppo2) {
+        theme.danger()
+    } else if ppo2 >= PPO2_CAUTION_FROM {
+        theme.caution()
+    } else {
+        theme.safe()
+    }
+}
+
+impl ComponentNew for PpO2Tab {
+    fn register_config_handler(&mut self, config: Config) -> Result<()> {
+        self.theme = *config.active_theme();
+        Ok(())
     }
 
-    fn key_bindings(&self) -> &'static [KeyBinding] {
-        static BINDINGS: &[KeyBinding] = [
-            KeyBinding {
-                key: "j/k",
-                desc: "navigate depth",
-            },
-            KeyBinding {
-                key: "h/l",
-                desc: "change mix",
-            },
-        ]
-        .as_slice();
+    fn update(&mut self, action: Action, registers: &mut RegisterStore) -> Result<Option<Action>> {
+        self.handle_action(&action, registers);
+        Ok(None)
+    }
 
-        BINDINGS
+    fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> {
+        let theme = self.theme;
+        self.render(area, frame.buffer_mut(), &theme);
+        Ok(())
     }
 }
 
@@ -331,7 +313,6 @@ mod tests {
     use super::*;
 
     use crate::action::{Action, Movement};
-    use crate::components::test_utils::widget_text;
     use crate::components::{PAGE_DELTA, SCROLL_DELTA};
 
     use rstest::rstest;
@@ -360,7 +341,10 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             // mix_idx: 5 → 6
-            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
+            tab.handle_action(
+                &Action::Move(Movement::Right),
+                &mut RegisterStore::default(),
+            );
 
             // window_start(6, 14, 3) = 5; percents at indices [5],[6],[7]
             let cols = tab.visible_cols(3);
@@ -379,27 +363,16 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..PPO2_TABLE_MIX_COUNT {
-                tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
+                tab.handle_action(
+                    &Action::Move(Movement::Right),
+                    &mut RegisterStore::default(),
+                );
             }
 
             // = 13
             assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
             // window_start(13, 14, 3): half=1, max_start=11, (13-1).min(11)=11 → col=13-11=2
             assert_eq!(tab.mix_window_col(3), 2);
-        }
-    }
-
-    mod component_trait {
-        use super::*;
-
-        #[rstest]
-        fn title_is_correct() {
-            assert_eq!(PpO2Tab::new().title(), "ppO\u{2082} by Depth");
-        }
-
-        #[rstest]
-        fn key_bindings_is_non_empty() {
-            assert!(!PpO2Tab::new().key_bindings().is_empty());
         }
     }
 
@@ -429,7 +402,7 @@ mod tests {
         fn stores_current_depth_and_mix() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Select, &mut RegisterStore::default());
+            tab.handle_action(&Action::Select, &mut RegisterStore::default());
 
             assert_eq!(tab.selection.map(|(d, _)| d), Some(Meters::new(0.0)));
             assert_eq!(
@@ -442,11 +415,11 @@ mod tests {
         fn selection_updates_after_moving_row() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Select, &mut RegisterStore::default());
+            tab.handle_action(&Action::Select, &mut RegisterStore::default());
             let first_depth = tab.selection.map(|(d, _)| d);
 
-            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
-            tab.handle_action(Action::Select, &mut RegisterStore::default());
+            tab.handle_action(&Action::Move(Movement::Down), &mut RegisterStore::default());
+            tab.handle_action(&Action::Select, &mut RegisterStore::default());
 
             assert_ne!(tab.selection.map(|(d, _)| d), first_depth);
         }
@@ -512,47 +485,6 @@ mod tests {
         }
     }
 
-    mod status_bar {
-        use super::*;
-
-        #[rstest]
-        fn no_selection_shows_prompt() {
-            let tab = PpO2Tab::new();
-
-            let text = widget_text(
-                PpO2TabStatus {
-                    tab: &tab,
-                    theme: Theme::default(),
-                },
-                60,
-            );
-
-            assert!(text.contains("No depth selected"));
-        }
-
-        #[rstest]
-        fn selection_shows_depth_mix_and_ppo2() {
-            let mut tab = PpO2Tab::new();
-
-            for _ in 0..10 {
-                tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
-            }
-
-            tab.handle_action(Action::Select, &mut RegisterStore::default());
-
-            let text = widget_text(
-                PpO2TabStatus {
-                    tab: &tab,
-                    theme: Theme::default(),
-                },
-                80,
-            );
-
-            assert!(text.contains("10.0 m"));
-            assert!(text.contains("Air"));
-        }
-    }
-
     mod action_dispatch {
         use super::*;
 
@@ -560,7 +492,7 @@ mod tests {
         fn down_advances_depth() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
+            tab.handle_action(&Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(tab.table_state.selected(), Some(1));
         }
@@ -570,10 +502,10 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
-                Action::Move(Movement::GotoBottom),
+                &Action::Move(Movement::GotoBottom),
                 &mut RegisterStore::default(),
             );
-            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
+            tab.handle_action(&Action::Move(Movement::Down), &mut RegisterStore::default());
 
             assert_eq!(tab.table_state.selected(), Some(PPO2_TABLE_DEPTH_MAX));
         }
@@ -582,8 +514,8 @@ mod tests {
         fn up_retreats_depth() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
-            tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
+            tab.handle_action(&Action::Move(Movement::Down), &mut RegisterStore::default());
+            tab.handle_action(&Action::Move(Movement::Up), &mut RegisterStore::default());
 
             assert_eq!(tab.table_state.selected(), Some(0));
         }
@@ -592,7 +524,7 @@ mod tests {
         fn up_at_zero_stays_at_zero() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Up), &mut RegisterStore::default());
+            tab.handle_action(&Action::Move(Movement::Up), &mut RegisterStore::default());
 
             assert_eq!(tab.table_state.selected(), Some(0));
         }
@@ -602,11 +534,11 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..10 {
-                tab.handle_action(Action::Move(Movement::Down), &mut RegisterStore::default());
+                tab.handle_action(&Action::Move(Movement::Down), &mut RegisterStore::default());
             }
 
             tab.handle_action(
-                Action::Move(Movement::GotoTop),
+                &Action::Move(Movement::GotoTop),
                 &mut RegisterStore::default(),
             );
 
@@ -618,7 +550,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
-                Action::Move(Movement::GotoBottom),
+                &Action::Move(Movement::GotoBottom),
                 &mut RegisterStore::default(),
             );
 
@@ -630,7 +562,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
-                Action::Move(Movement::ScrollDown),
+                &Action::Move(Movement::ScrollDown),
                 &mut RegisterStore::default(),
             );
 
@@ -642,11 +574,11 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
-                Action::Move(Movement::GotoBottom),
+                &Action::Move(Movement::GotoBottom),
                 &mut RegisterStore::default(),
             );
             tab.handle_action(
-                Action::Move(Movement::ScrollUp),
+                &Action::Move(Movement::ScrollUp),
                 &mut RegisterStore::default(),
             );
 
@@ -661,7 +593,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
-                Action::Move(Movement::PageDown),
+                &Action::Move(Movement::PageDown),
                 &mut RegisterStore::default(),
             );
 
@@ -673,11 +605,11 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             tab.handle_action(
-                Action::Move(Movement::GotoBottom),
+                &Action::Move(Movement::GotoBottom),
                 &mut RegisterStore::default(),
             );
             tab.handle_action(
-                Action::Move(Movement::PageUp),
+                &Action::Move(Movement::PageUp),
                 &mut RegisterStore::default(),
             );
 
@@ -692,7 +624,10 @@ mod tests {
             let mut tab = PpO2Tab::new();
             let before = tab.mix_idx;
 
-            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
+            tab.handle_action(
+                &Action::Move(Movement::Right),
+                &mut RegisterStore::default(),
+            );
 
             assert_eq!(tab.mix_idx, before + 1);
         }
@@ -702,7 +637,10 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..=PPO2_TABLE_MIX_COUNT {
-                tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
+                tab.handle_action(
+                    &Action::Move(Movement::Right),
+                    &mut RegisterStore::default(),
+                );
             }
 
             assert_eq!(tab.mix_idx, PPO2_TABLE_MIX_COUNT - 1);
@@ -712,11 +650,14 @@ mod tests {
         fn left_decrements_mix() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Move(Movement::Right), &mut RegisterStore::default());
+            tab.handle_action(
+                &Action::Move(Movement::Right),
+                &mut RegisterStore::default(),
+            );
 
             let before = tab.mix_idx;
 
-            tab.handle_action(Action::Move(Movement::Left), &mut RegisterStore::default());
+            tab.handle_action(&Action::Move(Movement::Left), &mut RegisterStore::default());
 
             assert_eq!(tab.mix_idx, before - 1);
         }
@@ -726,7 +667,7 @@ mod tests {
             let mut tab = PpO2Tab::new();
 
             for _ in 0..=PPO2_MIX_DEFAULT_IDX {
-                tab.handle_action(Action::Move(Movement::Left), &mut RegisterStore::default());
+                tab.handle_action(&Action::Move(Movement::Left), &mut RegisterStore::default());
             }
 
             assert_eq!(tab.mix_idx, 0);
@@ -736,7 +677,7 @@ mod tests {
         fn none_is_a_noop() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::None, &mut RegisterStore::default());
+            tab.handle_action(&Action::None, &mut RegisterStore::default());
 
             assert_eq!(tab.table_state.selected(), Some(0));
         }
@@ -745,7 +686,7 @@ mod tests {
         fn quit_is_a_noop() {
             let mut tab = PpO2Tab::new();
 
-            tab.handle_action(Action::Quit, &mut RegisterStore::default());
+            tab.handle_action(&Action::Quit, &mut RegisterStore::default());
 
             assert_eq!(tab.table_state.selected(), Some(0));
         }

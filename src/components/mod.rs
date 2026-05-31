@@ -1,18 +1,35 @@
 //! Component trait and per-screen implementations.
+//!
+//! # Examples
+//!
+//! ```
+//! use dps::components::move_row;
+//! use ratatui::widgets::TableState;
+//!
+//! let mut state = TableState::default();
+//! state.select(Some(3));
+//! move_row(&mut state, 2, 10);
+//! assert_eq!(state.selected(), Some(5));
+//! ```
 
 pub mod fps;
 pub mod hint_bar;
-pub mod home;
 pub mod mod_tab;
 pub mod ppo2_tab;
+pub mod tab_pane;
 pub mod which_key;
 
 pub use self::fps::FpsCounter;
-pub use self::home::Home;
-use crate::{action::Action, config::Config, registers::RegisterStore, theme::Theme, tui::Event};
+pub use self::tab_pane::TabPane;
+
+use crate::{action::Action, config::Config, registers::RegisterStore, tui::Event};
 
 use crossterm::event::{KeyEvent, MouseEvent};
-use ratatui::{Frame, buffer::Buffer, layout::{Rect, Size}, widgets::TableState};
+use ratatui::{
+    Frame,
+    layout::{Rect, Size},
+    widgets::TableState,
+};
 use tokio::sync::mpsc::UnboundedSender;
 
 /// Error produced by [`ComponentNew`] implementors.
@@ -56,28 +73,6 @@ pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
         .map_or(0, |i| i.saturating_add_signed(delta).min(max));
 
     state.select(Some(next));
-}
-
-/// Interface that every screen must implement to participate in the event loop
-/// and render pipeline.
-pub trait Component {
-    /// Short display name shown in the tab bar.
-    fn title(&self) -> &'static str;
-    /// Draw the component's content into `area`.
-    fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &Theme);
-    /// Render a one-line status bar below the main content area.
-    fn render_status(&self, area: Rect, buf: &mut Buffer, theme: &Theme);
-    /// Respond to a semantic action produced by the keybinding layer.
-    ///
-    /// Called when a configured key sequence resolves to an [`Action`] before
-    /// the raw-key fallback path is reached.  The default implementation is a
-    /// no-op; components override it for the actions they support.
-    fn handle_action(&mut self, _action: Action, _registers: &mut RegisterStore) {}
-
-    /// Structured key bindings for the which-key popup and hint line.
-    fn key_bindings(&self) -> &'static [KeyBinding] {
-        [].as_slice()
-    }
 }
 
 /// Interface for visual and interactive UI elements in the [`App`] event loop.
@@ -281,7 +276,6 @@ pub trait ComponentNew: Send {
     /// ```
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         let _ = config; // to appease clippy
-
         Ok(())
     }
 
@@ -317,7 +311,6 @@ pub trait ComponentNew: Send {
     /// ```
     fn init(&mut self, area: Size) -> Result<()> {
         let _ = area; // to appease clippy
-
         Ok(())
     }
 
