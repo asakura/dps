@@ -6,7 +6,7 @@ mod theme;
 pub use self::error::Error as ConfigError;
 
 use crate::{
-    keymap::{KeyBindings, KeyBindingsBuilder},
+    keymap::{KeyBindings, KeyBindingsBuilder, keys::parse_key_sequence},
     theme::Theme,
 };
 
@@ -220,6 +220,8 @@ impl Config {
 
         let mut raw: RawConfig = builder.build()?.try_deserialize()?;
 
+        parse_key_sequence(&raw.leader)?;
+
         raw.keybindings.merge_defaults(&default_raw.keybindings);
 
         if raw.default_theme.is_empty() {
@@ -398,6 +400,7 @@ mod tests {
 
     mod keybindings {
         use super::*;
+        use rstest::rstest;
 
         #[test]
         fn default_keybindings_loaded_from_embedded_config() -> Result<()> {
@@ -511,7 +514,7 @@ mod tests {
             Ok(())
         }
 
-        #[test]
+        #[rstest]
         fn leader_key_substitutes_in_bindings() -> Result<()> {
             let dir = tempfile::tempdir()?;
 

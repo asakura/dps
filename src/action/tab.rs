@@ -1,4 +1,12 @@
 //! Tab-navigation direction dispatched through the event loop.
+//!
+//! ```
+//! use std::str::FromStr;
+//! use dps::action::TabDir;
+//!
+//! assert_eq!(TabDir::Next.to_string(), "Next");
+//! assert_eq!(TabDir::from_str("GoTo(3)").unwrap(), TabDir::GoTo(3));
+//! ```
 
 use super::{ActionError, error::ParseError};
 
@@ -70,19 +78,15 @@ impl FromStr for TabDir {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Next" => return Ok(Self::Next),
-            "Prev" => return Ok(Self::Prev),
-            _ => {}
-        }
-
-        if let Some(inner) = s.strip_prefix("GoTo(").and_then(|t| t.strip_suffix(")")) {
-            return inner
-                .parse::<usize>()
+            "Next" => Ok(Self::Next),
+            "Prev" => Ok(Self::Prev),
+            s => s
+                .strip_prefix("GoTo(")
+                .and_then(|t| t.strip_suffix(")"))
+                .and_then(|n| n.parse::<usize>().ok())
                 .map(Self::GoTo)
-                .map_err(|_| ParseError::VariantNotFound.into());
+                .ok_or_else(|| ParseError::VariantNotFound.into()),
         }
-
-        Err(ParseError::VariantNotFound.into())
     }
 }
 

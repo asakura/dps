@@ -88,7 +88,7 @@ pub struct InvalidRegisterLetter(pub(super) char);
 /// let mut store = RegisterStore::default();
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 ///
-/// store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32)).unwrap();
+/// store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32));
 /// assert_eq!(store.cycle_yank(), Err(YankRingTooSmall.into()));
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
