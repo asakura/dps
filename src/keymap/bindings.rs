@@ -184,7 +184,7 @@ impl<'de> Deserialize<'de> for KeyBindingsBuilder {
 mod tests {
     use super::*;
 
-    use crate::action::{Action, Movement, TabDir};
+    use crate::action::{Action, Movement, TabMotion};
     use crate::keymap::testutil::{press, single};
 
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -492,7 +492,7 @@ mod tests {
                     ]
                     .as_slice()
                 ),
-                Some(&Action::Tab(TabDir::Next))
+                Some(&Action::Tab(TabMotion::Next))
             );
 
             Ok(())
@@ -514,7 +514,7 @@ mod tests {
                     ]
                     .as_slice()
                 ),
-                Some(&Action::Tab(TabDir::Next))
+                Some(&Action::Tab(TabMotion::Next))
             );
 
             Ok(())
@@ -546,7 +546,7 @@ mod tests {
                     ]
                     .as_slice()
                 ),
-                Some(&Action::Tab(TabDir::Next))
+                Some(&Action::Tab(TabMotion::Next))
             );
 
             Ok(())

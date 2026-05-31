@@ -160,7 +160,6 @@ impl ModTab {
             Movement::PageDown => self.page_down(),
             Movement::GotoTop => self.goto_top(),
             Movement::GotoBottom => self.goto_bottom(),
-            Movement::None => {}
         }
     }
 

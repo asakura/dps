@@ -1,18 +1,18 @@
-//! Tab-navigation direction dispatched through the event loop.
+//! Tab-navigation motion dispatched through the event loop.
 //!
 //! ```
 //! use std::str::FromStr;
-//! use dps::action::TabDir;
+//! use dps::action::TabMotion;
 //!
-//! assert_eq!(TabDir::Next.to_string(), "Next");
-//! assert_eq!(TabDir::from_str("GoTo(3)").unwrap(), TabDir::GoTo(3));
+//! assert_eq!(TabMotion::Next.to_string(), "Next");
+//! assert_eq!(TabMotion::from_str("GoTo(3)").unwrap(), TabMotion::GoTo(3));
 //! ```
 
 use super::{ActionError, error::ParseError};
 
 use std::{fmt, str::FromStr};
 
-/// Direction or destination for a tab-switch action.
+/// Motion or destination for a tab-switch action.
 ///
 /// Carried by [`Action::Tab`](crate::action::Action::Tab) and consumed by
 /// the tab-pane component to select the active tab.
@@ -21,18 +21,19 @@ use std::{fmt, str::FromStr};
 ///
 /// ```
 /// use std::str::FromStr;
-/// use dps::action::TabDir;
+/// use dps::action::TabMotion;
 ///
-/// assert_eq!(TabDir::Next.to_string(),     "Next");
-/// assert_eq!(TabDir::Prev.to_string(),     "Prev");
-/// assert_eq!(TabDir::GoTo(3).to_string(),  "GoTo(3)");
+/// assert_eq!(TabMotion::Next.to_string(),     "Next");
+/// assert_eq!(TabMotion::Prev.to_string(),     "Prev");
+/// assert_eq!(TabMotion::GoTo(3).to_string(),  "GoTo(3)");
 ///
-/// assert_eq!(TabDir::from_str("Next").unwrap(),    TabDir::Next);
-/// assert_eq!(TabDir::from_str("Prev").unwrap(),    TabDir::Prev);
-/// assert_eq!(TabDir::from_str("GoTo(3)").unwrap(), TabDir::GoTo(3));
+/// assert_eq!(TabMotion::from_str("Next").unwrap(),    TabMotion::Next);
+/// assert_eq!(TabMotion::from_str("Prev").unwrap(),    TabMotion::Prev);
+/// assert_eq!(TabMotion::from_str("GoTo(3)").unwrap(), TabMotion::GoTo(3));
 /// ```
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TabDir {
+pub enum TabMotion {
     /// Move to the next tab, wrapping at the end.
     Next,
     /// Move to the previous tab, wrapping at the start.
@@ -45,7 +46,7 @@ pub enum TabDir {
     GoTo(usize),
 }
 
-impl fmt::Display for TabDir {
+impl fmt::Display for TabMotion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Next => f.write_str("Next"),
@@ -55,7 +56,7 @@ impl fmt::Display for TabDir {
     }
 }
 
-/// Parses a `TabDir` from its flat-string representation.
+/// Parses a `TabMotion` from its flat-string representation.
 ///
 /// # Errors
 ///
@@ -65,15 +66,15 @@ impl fmt::Display for TabDir {
 ///
 /// ```
 /// use std::str::FromStr;
-/// use dps::action::TabDir;
+/// use dps::action::TabMotion;
 ///
-/// assert_eq!(TabDir::from_str("Next").unwrap(),    TabDir::Next);
-/// assert_eq!(TabDir::from_str("Prev").unwrap(),    TabDir::Prev);
-/// assert_eq!(TabDir::from_str("GoTo(1)").unwrap(), TabDir::GoTo(1));
-/// assert!(TabDir::from_str("Unknown").is_err());
-/// assert!(TabDir::from_str("GoTo(abc)").is_err());
+/// assert_eq!(TabMotion::from_str("Next").unwrap(),    TabMotion::Next);
+/// assert_eq!(TabMotion::from_str("Prev").unwrap(),    TabMotion::Prev);
+/// assert_eq!(TabMotion::from_str("GoTo(1)").unwrap(), TabMotion::GoTo(1));
+/// assert!(TabMotion::from_str("Unknown").is_err());
+/// assert!(TabMotion::from_str("GoTo(abc)").is_err());
 /// ```
-impl FromStr for TabDir {
+impl FromStr for TabMotion {
     type Err = ActionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -100,12 +101,12 @@ mod tests {
         use super::*;
 
         #[rstest]
-        #[case(TabDir::Next, "Next")]
-        #[case(TabDir::Prev, "Prev")]
-        #[case(TabDir::GoTo(1), "GoTo(1)")]
-        #[case(TabDir::GoTo(42), "GoTo(42)")]
-        fn formats_correctly(#[case] dir: TabDir, #[case] expected: &str) {
-            assert_eq!(dir.to_string(), expected);
+        #[case(TabMotion::Next, "Next")]
+        #[case(TabMotion::Prev, "Prev")]
+        #[case(TabMotion::GoTo(1), "GoTo(1)")]
+        #[case(TabMotion::GoTo(42), "GoTo(42)")]
+        fn formats_correctly(#[case] motion: TabMotion, #[case] expected: &str) {
+            assert_eq!(motion.to_string(), expected);
         }
     }
 
@@ -113,15 +114,15 @@ mod tests {
         use super::*;
 
         #[rstest]
-        #[case("Next", TabDir::Next)]
-        #[case("Prev", TabDir::Prev)]
-        #[case("GoTo(1)", TabDir::GoTo(1))]
-        #[case("GoTo(99)", TabDir::GoTo(99))]
+        #[case("Next", TabMotion::Next)]
+        #[case("Prev", TabMotion::Prev)]
+        #[case("GoTo(1)", TabMotion::GoTo(1))]
+        #[case("GoTo(99)", TabMotion::GoTo(99))]
         fn parses_correctly(
             #[case] input: &str,
-            #[case] expected: TabDir,
+            #[case] expected: TabMotion,
         ) -> Result<(), ActionError> {
-            assert_eq!(TabDir::from_str(input)?, expected);
+            assert_eq!(TabMotion::from_str(input)?, expected);
 
             Ok(())
         }
@@ -133,7 +134,7 @@ mod tests {
         #[case("GoTo(abc)")]
         #[case("GoTo()")]
         fn unknown_variants_return_err(#[case] input: &str) {
-            assert!(TabDir::from_str(input).is_err());
+            assert!(TabMotion::from_str(input).is_err());
         }
     }
 
@@ -141,12 +142,14 @@ mod tests {
         use super::*;
 
         #[rstest]
-        #[case(TabDir::Next)]
-        #[case(TabDir::Prev)]
-        #[case(TabDir::GoTo(1))]
-        #[case(TabDir::GoTo(7))]
-        fn display_then_from_str_is_identity(#[case] dir: TabDir) -> Result<(), ActionError> {
-            assert_eq!(TabDir::from_str(&dir.to_string())?, dir);
+        #[case(TabMotion::Next)]
+        #[case(TabMotion::Prev)]
+        #[case(TabMotion::GoTo(1))]
+        #[case(TabMotion::GoTo(7))]
+        fn display_then_from_str_is_identity(
+            #[case] motion: TabMotion,
+        ) -> Result<(), ActionError> {
+            assert_eq!(TabMotion::from_str(&motion.to_string())?, motion);
 
             Ok(())
         }

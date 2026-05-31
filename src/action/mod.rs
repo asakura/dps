@@ -1,29 +1,45 @@
 //! UI action types dispatched through the event loop.
 //!
-//! Two enums are provided:
+//! Domain types — each owns a payload enum and serialises as `Variant(payload)`:
 //!
-//! - [`Movement`] — directional navigation commands (Up, Down, scroll, page, go-to-top/bottom).
-//!   Implements [`Display`](std::fmt::Display), [`FromStr`], [`Serialize`], and [`Deserialize`]
-//!   so that key-binding configuration can reference movements by name
-//!   (`"Down"`, `"GotoBottom"`, …).
+//! - [`Movement`] — cursor / scroll navigation (`Up`, `Down`, `GotoBottom`, …).
+//! - [`EditOp`] — yank / paste / delete operations (`YankRow`, `Paste`, …).
+//! - [`TabMotion`] — tab-bar navigation (`Next`, `Prev`, `GoTo(n)`).
+//! - [`PromptOp`] — modal prompt responses (`Confirm`, `Cancel`).
+//! - [`UiOp`] — display-layer controls (`Help`).
 //!
-//! - [`Action`] — the unified message type flowing through the application event loop.
-//!   Produced by timers, OS signals, key bindings, and component logic; consumed by
-//!   `App::run`. Serialises as a flat string — simple variants
-//!   by name (`"Quit"`, `"Tick"`, …), data variants with parenthesised payload
-//!   (`"Move(Down)"`, `"Resize(80,24)"`, `"Error(oops)"`) — for use in key-binding
-//!   configuration files.
+//! [`Action`] is the unified envelope dispatched through the event loop.
+//! Infrastructure variants (`Tick`, `Render`, `Resize`, …) are handled directly
+//! by `App::run`; domain variants are forwarded to every component's
+//! [`ComponentNew::update`](crate::components::ComponentNew::update).
+//! Serialises as a flat string for key-binding configuration files:
+//! `"Quit"`, `"Move(Down)"`, `"Resize(80,24)"`, `"Error(oops)"`, …
+//!
+//! ```
+//! use std::str::FromStr;
+//! use dps::action::{Action, Movement};
+//!
+//! assert_eq!(Action::Quit.to_string(), "Quit");
+//! assert_eq!(
+//!     Action::from_str("Move(Down)").unwrap(),
+//!     Action::Move(Movement::Down),
+//! );
+//! ```
 
 mod edit;
 mod error;
 mod movement;
+mod prompt;
 mod tab;
+mod ui;
 
 pub use self::edit::EditOp;
 pub use self::error::Error as ActionError;
 use self::error::ParseError;
 pub use self::movement::Movement;
-pub use self::tab::TabDir;
+pub use self::prompt::PromptOp;
+pub use self::tab::TabMotion;
+pub use self::ui::UiOp;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use strum::VariantNames;
@@ -35,7 +51,7 @@ use std::{fmt, str::FromStr};
 /// `Action` is produced by the tick/render timers, OS signals, key bindings,
 /// and component logic. `App::run` handles infrastructure variants directly
 /// (`Tick`, `Render`, `Resize`, `Quit`, `Suspend`, `Resume`, `ClearScreen`) and
-/// forwards every action to each component's
+/// forwards every other action to each component's
 /// [`ComponentNew::update`](crate::components::ComponentNew::update).
 ///
 /// ## Serialisation
@@ -85,8 +101,12 @@ use std::{fmt, str::FromStr};
 ///     Action::Error("out of gas".to_owned()),
 /// );
 /// ```
+#[non_exhaustive]
 #[derive(Default, Debug, Clone, PartialEq, Eq, VariantNames)]
 pub enum Action {
+    // Infrastructure
+    // Handled directly by App::run; never forwarded to components.
+    //
     /// Fired at the configured `tick_rate`.
     ///
     /// Drives periodic state updates such as polling background tasks or
@@ -99,7 +119,6 @@ pub enum Action {
     /// calls [`Tui::draw`](crate::tui::Tui) when this arrives and a render
     /// has been flagged as necessary.
     Render,
-
     /// Save terminal state and suspend the process with `SIGTSTP`.
     ///
     /// On Unix, `App::run` exits the alternate screen before raising the
@@ -120,7 +139,6 @@ pub enum Action {
     /// `SIGINT`. `App::run` breaks on this variant; terminal cleanup is
     /// handled by [`Tui`](crate::tui::Tui)'s `Drop` implementation.
     Quit,
-
     /// The terminal was resized to `(columns, rows)`.
     ///
     /// Produced by [`Tui`](crate::tui::Tui)'s event loop when the terminal
@@ -133,6 +151,9 @@ pub enum Action {
     /// the display.
     ClearScreen,
 
+    // User commands
+    // Forwarded to every component's update method.
+    //
     /// A directional or positional navigation command.
     ///
     /// Forwarded to every component's
@@ -146,39 +167,45 @@ pub enum Action {
     /// which reads or writes the [`RegisterStore`](crate::registers::RegisterStore)
     /// and mutates its table state accordingly.
     Edit(EditOp),
+    /// Switch the active tab.
+    ///
+    /// Consumed by the tab-pane component; forwarded to every
+    /// [`ComponentNew::update`](crate::components::ComponentNew::update) so
+    /// components other than the tab pane can react if needed.
+    /// [`Next`](TabMotion::Next) and [`Prev`](TabMotion::Prev) accept a count
+    /// (e.g. `3gt` cycles three tabs forward).
+    /// [`GoTo`](TabMotion::GoTo) does not — the count *is* the destination.
+    Tab(TabMotion),
     /// Confirm or activate the currently highlighted row.
     ///
     /// Typically mapped to Enter. Forwarded to every component's
     /// [`ComponentNew::update`](crate::components::ComponentNew::update),
     /// which records the selection and may produce a follow-up action.
     Select,
-    /// Switch the active tab.
-    ///
-    /// Consumed by the tab-pane component; forwarded to every
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update) so
-    /// components other than the tab pane can react if needed.
-    /// [`Next`](TabDir::Next) and [`Prev`](TabDir::Prev) accept a count
-    /// (e.g. `3gt` cycles three tabs forward).
-    /// [`GoTo`](TabDir::GoTo) does not — the count *is* the destination.
-    Tab(TabDir),
-    /// Affirmative answer to a confirmation prompt.
-    ///
-    /// Produced in [`Mode::Confirm`](crate::keymap::Mode) when the user
-    /// presses `y` or Enter. The active component decides what to do next
-    /// (e.g. proceed with a destructive operation).
-    Confirm,
-    /// Negative answer to a confirmation prompt — dismiss without acting.
-    ///
-    /// Produced in [`Mode::Confirm`](crate::keymap::Mode) when the user
-    /// presses `n`, Esc, or `q`. Returns control to the caller without
-    /// performing the guarded operation.
-    Cancel,
-    /// Toggle the which-key / help overlay.
-    ///
-    /// Wired to `?` by default. Forwarded to every component's
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update).
-    Help,
 
+    // Modal responses
+    // Produced only in Mode::Confirm; answer an in-flight confirmation dialog.
+    //
+    /// Response to a modal confirmation prompt.
+    ///
+    /// Produced in [`Mode::Confirm`](crate::keymap::Mode) when the user
+    /// answers the active dialog. The active component decides what to do
+    /// next based on the [`PromptOp`] variant.
+    Prompt(PromptOp),
+
+    // UI controls
+    // Overlay panels, toggles, and display-layer controls.
+    //
+    /// A UI-layer control operation.
+    ///
+    /// Forwarded to every component's
+    /// [`ComponentNew::update`](crate::components::ComponentNew::update).
+    /// Currently carries [`UiOp::Help`] to toggle the which-key overlay;
+    /// panel toggles and other display controls will be added here.
+    Ui(UiOp),
+
+    // Sentinels
+    //
     /// A key was consumed but produced no state change.
     ///
     /// The default variant. Components return this from
@@ -214,14 +241,14 @@ impl Action {
     /// # Examples
     ///
     /// ```
-    /// use dps::action::{Action, EditOp, Movement};
+    /// use dps::action::{Action, EditOp, Movement, PromptOp, TabMotion, UiOp};
     ///
     /// assert!(Action::Move(Movement::Down).accepts_count());
     /// assert!(Action::Edit(EditOp::Delete(None)).accepts_count());
     /// assert!(!Action::Edit(EditOp::YankRow(None)).accepts_count());
     /// assert!(!Action::Quit.accepts_count());
-    /// assert!(!Action::Help.accepts_count());
-    /// assert!(!Action::Confirm.accepts_count());
+    /// assert!(!Action::Ui(UiOp::Help).accepts_count());
+    /// assert!(!Action::Prompt(PromptOp::Confirm).accepts_count());
     /// ```
     #[must_use]
     pub const fn accepts_count(&self) -> bool {
@@ -229,7 +256,7 @@ impl Action {
             self,
             Self::Move(_)
                 | Self::Edit(EditOp::Delete(_) | EditOp::Paste(_) | EditOp::PasteAbove(_))
-                | Self::Tab(TabDir::Next | TabDir::Prev)
+                | Self::Tab(TabMotion::Next | TabMotion::Prev)
         )
     }
 }
@@ -259,11 +286,10 @@ impl fmt::Display for Action {
             Self::ClearScreen => f.write_str("ClearScreen"),
             Self::Move(mv) => write!(f, "Move({mv})"),
             Self::Edit(op) => write!(f, "Edit({op})"),
-            Self::Tab(dir) => write!(f, "Tab({dir})"),
+            Self::Tab(motion) => write!(f, "Tab({motion})"),
             Self::Select => f.write_str("Select"),
-            Self::Help => f.write_str("Help"),
-            Self::Confirm => f.write_str("Confirm"),
-            Self::Cancel => f.write_str("Cancel"),
+            Self::Prompt(op) => write!(f, "Prompt({op})"),
+            Self::Ui(op) => write!(f, "Ui({op})"),
             Self::None => f.write_str("None"),
             Self::Error(msg) => write!(f, "Error({msg})"),
         }
@@ -333,7 +359,15 @@ impl FromStr for Action {
         }
 
         if let Some(inner) = s.strip_prefix("Tab(").and_then(|s| s.strip_suffix(")")) {
-            return TabDir::from_str(inner).map(Self::Tab);
+            return TabMotion::from_str(inner).map(Self::Tab);
+        }
+
+        if let Some(inner) = s.strip_prefix("Prompt(").and_then(|s| s.strip_suffix(")")) {
+            return PromptOp::from_str(inner).map(Self::Prompt);
+        }
+
+        if let Some(inner) = s.strip_prefix("Ui(").and_then(|s| s.strip_suffix(")")) {
+            return UiOp::from_str(inner).map(Self::Ui);
         }
 
         if let Some(inner) = s.strip_prefix("Error(").and_then(|s| s.strip_suffix(")")) {
@@ -348,9 +382,6 @@ impl FromStr for Action {
             "Quit" => Ok(Self::Quit),
             "ClearScreen" => Ok(Self::ClearScreen),
             "Select" => Ok(Self::Select),
-            "Help" => Ok(Self::Help),
-            "Confirm" => Ok(Self::Confirm),
-            "Cancel" => Ok(Self::Cancel),
             "None" => Ok(Self::None),
             _ => Err(ParseError::VariantNotFound.into()),
         }
@@ -391,11 +422,8 @@ mod tests {
         #[case(Action::Resume, "Resume")]
         #[case(Action::Quit, "Quit")]
         #[case(Action::ClearScreen, "ClearScreen")]
-        #[case(Action::Help, "Help")]
-        #[case(Action::Confirm, "Confirm")]
-        #[case(Action::Cancel, "Cancel")]
-        #[case(Action::None, "None")]
         #[case(Action::Select, "Select")]
+        #[case(Action::None, "None")]
         #[case(Action::Edit(EditOp::YankRow(None)), "Edit(YankRow)")]
         #[case(Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())), "Edit(YankRow(a))")]
         #[case(Action::Edit(EditOp::Paste(None)), "Edit(Paste)")]
@@ -435,11 +463,23 @@ mod tests {
         }
 
         #[rstest]
-        #[case(TabDir::Next, "Tab(Next)")]
-        #[case(TabDir::Prev, "Tab(Prev)")]
-        #[case(TabDir::GoTo(3), "Tab(GoTo(3))")]
-        fn tab_wraps_dir_in_parens(#[case] dir: TabDir, #[case] expected: &str) {
-            assert_eq!(Action::Tab(dir).to_string(), expected);
+        #[case(TabMotion::Next, "Tab(Next)")]
+        #[case(TabMotion::Prev, "Tab(Prev)")]
+        #[case(TabMotion::GoTo(3), "Tab(GoTo(3))")]
+        fn tab_wraps_motion_in_parens(#[case] motion: TabMotion, #[case] expected: &str) {
+            assert_eq!(Action::Tab(motion).to_string(), expected);
+        }
+
+        #[rstest]
+        #[case(PromptOp::Confirm, "Prompt(Confirm)")]
+        #[case(PromptOp::Cancel, "Prompt(Cancel)")]
+        fn prompt_wraps_op_in_parens(#[case] op: PromptOp, #[case] expected: &str) {
+            assert_eq!(Action::Prompt(op).to_string(), expected);
+        }
+
+        #[rstest]
+        fn ui_wraps_op_in_parens() {
+            assert_eq!(Action::Ui(UiOp::Help).to_string(), "Ui(Help)");
         }
     }
 
@@ -453,11 +493,8 @@ mod tests {
         #[case("Resume", Action::Resume)]
         #[case("Quit", Action::Quit)]
         #[case("ClearScreen", Action::ClearScreen)]
-        #[case("Help", Action::Help)]
-        #[case("Confirm", Action::Confirm)]
-        #[case("Cancel", Action::Cancel)]
-        #[case("None", Action::None)]
         #[case("Select", Action::Select)]
+        #[case("None", Action::None)]
         #[case("Move(Up)", Action::Move(Movement::Up))]
         #[case("Move(Down)", Action::Move(Movement::Down))]
         #[case("Move(GotoBottom)", Action::Move(Movement::GotoBottom))]
@@ -509,14 +546,33 @@ mod tests {
         }
 
         #[rstest]
-        #[case("Tab(Next)", Action::Tab(TabDir::Next))]
-        #[case("Tab(Prev)", Action::Tab(TabDir::Prev))]
-        #[case("Tab(GoTo(3))", Action::Tab(TabDir::GoTo(3)))]
+        #[case("Tab(Next)", Action::Tab(TabMotion::Next))]
+        #[case("Tab(Prev)", Action::Tab(TabMotion::Prev))]
+        #[case("Tab(GoTo(3))", Action::Tab(TabMotion::GoTo(3)))]
         fn tab_variants_parse(
             #[case] input: &str,
             #[case] expected: Action,
         ) -> Result<(), ActionError> {
             assert_eq!(Action::from_str(input)?, expected);
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case("Prompt(Confirm)", Action::Prompt(PromptOp::Confirm))]
+        #[case("Prompt(Cancel)", Action::Prompt(PromptOp::Cancel))]
+        fn prompt_variants_parse(
+            #[case] input: &str,
+            #[case] expected: Action,
+        ) -> Result<(), ActionError> {
+            assert_eq!(Action::from_str(input)?, expected);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn ui_help_parses() -> Result<(), ActionError> {
+            assert_eq!(Action::from_str("Ui(Help)")?, Action::Ui(UiOp::Help));
 
             Ok(())
         }
@@ -547,11 +603,8 @@ mod tests {
         #[case(Action::Resume)]
         #[case(Action::Quit)]
         #[case(Action::ClearScreen)]
-        #[case(Action::Help)]
-        #[case(Action::Confirm)]
-        #[case(Action::Cancel)]
-        #[case(Action::None)]
         #[case(Action::Select)]
+        #[case(Action::None)]
         fn simple_actions_roundtrip(#[case] action: Action) -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(&action)?, action);
 
@@ -647,11 +700,27 @@ mod tests {
         }
 
         #[rstest]
-        #[case(Action::Tab(TabDir::Next))]
-        #[case(Action::Tab(TabDir::Prev))]
-        #[case(Action::Tab(TabDir::GoTo(3)))]
+        #[case(Action::Tab(TabMotion::Next))]
+        #[case(Action::Tab(TabMotion::Prev))]
+        #[case(Action::Tab(TabMotion::GoTo(3)))]
         fn tab_variants_roundtrip(#[case] action: Action) -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(&action)?, action);
+
+            Ok(())
+        }
+
+        #[rstest]
+        #[case(Action::Prompt(PromptOp::Confirm))]
+        #[case(Action::Prompt(PromptOp::Cancel))]
+        fn prompt_variants_roundtrip(#[case] action: Action) -> Result<(), serde_json::Error> {
+            assert_eq!(roundtrip(&action)?, action);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn ui_variant_roundtrips() -> Result<(), serde_json::Error> {
+            assert_eq!(roundtrip(&Action::Ui(UiOp::Help))?, Action::Ui(UiOp::Help));
 
             Ok(())
         }
@@ -699,9 +768,6 @@ mod tests {
         #[case(Action::Render)]
         #[case(Action::ClearScreen)]
         #[case(Action::Select)]
-        #[case(Action::Confirm)]
-        #[case(Action::Cancel)]
-        #[case(Action::Help)]
         #[case(Action::None)]
         #[case(Action::Edit(EditOp::YankRow(None)))]
         #[case(Action::Edit(EditOp::YankRow(RegisterName::try_from('a').ok())))]
@@ -721,15 +787,27 @@ mod tests {
         }
 
         #[rstest]
-        #[case(TabDir::Next)]
-        #[case(TabDir::Prev)]
-        fn tab_next_prev_accept_count(#[case] dir: TabDir) {
-            assert!(Action::Tab(dir).accepts_count());
+        #[case(TabMotion::Next)]
+        #[case(TabMotion::Prev)]
+        fn tab_next_prev_accept_count(#[case] motion: TabMotion) {
+            assert!(Action::Tab(motion).accepts_count());
         }
 
         #[rstest]
         fn tab_goto_rejects_count() {
-            assert!(!Action::Tab(TabDir::GoTo(3)).accepts_count());
+            assert!(!Action::Tab(TabMotion::GoTo(3)).accepts_count());
+        }
+
+        #[rstest]
+        #[case(PromptOp::Confirm)]
+        #[case(PromptOp::Cancel)]
+        fn prompt_variants_reject_count(#[case] op: PromptOp) {
+            assert!(!Action::Prompt(op).accepts_count());
+        }
+
+        #[rstest]
+        fn ui_help_rejects_count() {
+            assert!(!Action::Ui(UiOp::Help).accepts_count());
         }
     }
 }

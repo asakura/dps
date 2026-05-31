@@ -215,7 +215,7 @@
       "<C-l>": "ClearScreen",
 
       // help
-      "?": "Help",
+      "?": "Ui(Help)",
 
       // movement
       j: "Move(Down)",
@@ -362,13 +362,13 @@
 
     Confirm: {
       // confirm
-      y: "Confirm",
-      "<CR>": "Confirm",
+      y: "Prompt(Confirm)",
+      "<CR>": "Prompt(Confirm)",
 
       // cancel
-      n: "Cancel",
-      "<Esc>": "Cancel",
-      q: "Cancel",
+      n: "Prompt(Cancel)",
+      "<Esc>": "Prompt(Cancel)",
+      q: "Prompt(Cancel)",
     },
   },
 }

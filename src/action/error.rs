@@ -24,12 +24,6 @@ pub enum ParseError {
     VariantNotFound,
 }
 
-impl From<strum::ParseError> for ParseError {
-    fn from(_: strum::ParseError) -> Self {
-        Self::VariantNotFound
-    }
-}
-
 /// Module-level error for action parsing.
 ///
 /// # Examples

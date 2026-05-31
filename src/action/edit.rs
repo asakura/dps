@@ -1,4 +1,12 @@
 //! Edit operations dispatched through the event loop.
+//!
+//! ```
+//! use std::str::FromStr;
+//! use dps::action::EditOp;
+//!
+//! assert_eq!(EditOp::YankRow(None).to_string(), "YankRow");
+//! assert_eq!(EditOp::from_str("Delete").unwrap(), EditOp::Delete(None));
+//! ```
 
 use super::{ActionError, error::ParseError};
 

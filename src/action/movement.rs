@@ -1,11 +1,19 @@
-//! TODO: module doc
+//! Directional and positional navigation commands.
+//!
+//! ```
+//! use std::str::FromStr;
+//! use dps::action::Movement;
+//!
+//! assert_eq!(Movement::Down.to_string(), "Down");
+//! assert_eq!(Movement::from_str("GotoTop").unwrap(), Movement::GotoTop);
+//! ```
 
 use super::{ActionError, error::ParseError};
 
-use std::str::FromStr;
-
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use strum::{Display, VariantNames};
+use strum::VariantNames;
+
+use std::{fmt, str::FromStr};
 
 /// Directional and positional navigation commands.
 ///
@@ -35,7 +43,8 @@ use strum::{Display, VariantNames};
 /// assert_eq!(Movement::Down.to_string(), "Down");
 /// assert_eq!(Movement::from_str("GotoTop").unwrap(), Movement::GotoTop);
 /// ```
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Display, VariantNames)]
+#[non_exhaustive]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, VariantNames)]
 pub enum Movement {
     /// Move the cursor or selection up by one row.
     Up,
@@ -65,10 +74,25 @@ pub enum Movement {
     GotoTop,
     /// Jump to the last row.
     GotoBottom,
+}
 
-    /// No movement; a no-op sentinel used as the default when no direction has been set.
-    #[default]
-    None,
+impl fmt::Display for Movement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Up => f.write_str("Up"),
+            Self::Down => f.write_str("Down"),
+            Self::Left => f.write_str("Left"),
+            Self::Right => f.write_str("Right"),
+            Self::LineUp => f.write_str("LineUp"),
+            Self::LineDown => f.write_str("LineDown"),
+            Self::ScrollUp => f.write_str("ScrollUp"),
+            Self::ScrollDown => f.write_str("ScrollDown"),
+            Self::PageUp => f.write_str("PageUp"),
+            Self::PageDown => f.write_str("PageDown"),
+            Self::GotoTop => f.write_str("GotoTop"),
+            Self::GotoBottom => f.write_str("GotoBottom"),
+        }
+    }
 }
 
 impl Serialize for Movement {
@@ -117,7 +141,6 @@ impl FromStr for Movement {
             "PageDown" => Ok(Self::PageDown),
             "GotoTop" => Ok(Self::GotoTop),
             "GotoBottom" => Ok(Self::GotoBottom),
-            "None" => Ok(Self::None),
             _ => Err(ParseError::VariantNotFound.into()),
         }
     }
@@ -147,7 +170,6 @@ mod tests {
         #[case(Movement::PageDown, "PageDown")]
         #[case(Movement::GotoTop, "GotoTop")]
         #[case(Movement::GotoBottom, "GotoBottom")]
-        #[case(Movement::None, "None")]
         fn variant_displays_as_name(#[case] mv: Movement, #[case] expected: &str) {
             assert_eq!(mv.to_string(), expected);
         }
@@ -169,7 +191,6 @@ mod tests {
         #[case("PageDown", Movement::PageDown)]
         #[case("GotoTop", Movement::GotoTop)]
         #[case("GotoBottom", Movement::GotoBottom)]
-        #[case("None", Movement::None)]
         fn known_variants_parse(
             #[case] input: &str,
             #[case] expected: Movement,
@@ -182,6 +203,7 @@ mod tests {
         #[rstest]
         #[case("Unknown")]
         #[case("")]
+        #[case("None")]
         fn invalid_input_returns_err(#[case] input: &str) {
             assert!(Movement::from_str(input).is_err());
         }
@@ -209,7 +231,6 @@ mod tests {
         #[case(Movement::PageDown)]
         #[case(Movement::GotoTop)]
         #[case(Movement::GotoBottom)]
-        #[case(Movement::None)]
         fn all_variants_roundtrip(#[case] mv: Movement) -> Result<(), serde_json::Error> {
             assert_eq!(roundtrip(mv)?, mv);
 
