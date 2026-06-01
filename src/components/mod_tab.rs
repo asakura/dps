@@ -8,7 +8,7 @@
 //! let _tab = ModTab::new();
 //! ```
 
-use super::{ComponentNew, Result};
+use super::{Component, Result};
 
 use crate::{
     action::{Action, EditOp, Movement},
@@ -332,7 +332,7 @@ fn mod_color(depth: Meters, theme: &Theme) -> Style {
     }
 }
 
-impl ComponentNew for ModTab {
+impl Component for ModTab {
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.theme = *config.active_theme();
         Ok(())

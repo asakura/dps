@@ -8,7 +8,7 @@
 //! let _pane = TabPane::new();
 //! ```
 
-use super::{ComponentNew, Result, mod_tab::ModTab, ppo2_tab::PpO2Tab};
+use super::{Component, Result, mod_tab::ModTab, ppo2_tab::PpO2Tab};
 
 use crate::{
     action::{Action, TabMotion},
@@ -66,7 +66,7 @@ impl Default for TabPane {
     }
 }
 
-impl ComponentNew for TabPane {
+impl Component for TabPane {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.mod_tab.register_action_handler(tx.clone())?;
         self.ppo2_tab.register_action_handler(tx)?;

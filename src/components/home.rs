@@ -1,6 +1,6 @@
 //! Home screen component — placeholder for the main application view.
 
-use super::{ComponentNew, Result};
+use super::{Component, Result};
 
 use crate::{action::Action, config::Config, registers::RegisterStore};
 
@@ -22,7 +22,7 @@ impl Home {
     }
 }
 
-impl ComponentNew for Home {
+impl Component for Home {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
 

@@ -1,4 +1,4 @@
-//! Component trait and per-screen implementations.
+//! [`Component`] trait and per-screen implementations.
 //!
 //! # Examples
 //!
@@ -32,7 +32,7 @@ use ratatui::{
 };
 use tokio::sync::mpsc::UnboundedSender;
 
-/// Error produced by [`ComponentNew`] implementors.
+/// Error produced by [`Component`] implementors.
 ///
 /// # Examples
 ///
@@ -137,12 +137,12 @@ pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
 /// Minimal component — only `draw` is required:
 ///
 /// ```no_run
-/// use dps::components::{ComponentNew, Result};
+/// use dps::components::{Component, Result};
 /// use ratatui::{Frame, layout::Rect, widgets::Paragraph};
 ///
 /// struct Label(&'static str);
 ///
-/// impl ComponentNew for Label {
+/// impl Component for Label {
 ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> {
 ///         frame.render_widget(Paragraph::new(self.0), area);
 ///         Ok(())
@@ -157,7 +157,7 @@ pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
 /// use crossterm::event::{KeyCode, KeyEvent};
 /// use tokio::sync::mpsc::UnboundedSender;
 /// use dps::action::{Action, Movement};
-/// use dps::components::{ComponentNew, Result};
+/// use dps::components::{Component, Result};
 /// use dps::registers::RegisterStore;
 /// use ratatui::{Frame, layout::Rect, widgets::Paragraph};
 ///
@@ -166,7 +166,7 @@ pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
 ///     tx: Option<UnboundedSender<Action>>,
 /// }
 ///
-/// impl ComponentNew for Counter {
+/// impl Component for Counter {
 ///     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
 ///         self.tx = Some(tx);
 ///         Ok(())
@@ -194,21 +194,21 @@ pub fn move_row(state: &mut TableState, delta: isize, max: usize) {
 /// ```
 ///
 /// [`App`]: crate::app::App
-/// [`draw`]: ComponentNew::draw
-/// [`register_action_handler`]: ComponentNew::register_action_handler
-/// [`register_config_handler`]: ComponentNew::register_config_handler
-/// [`init`]: ComponentNew::init
-/// [`handle_events`]: ComponentNew::handle_events
-/// [`handle_key_event`]: ComponentNew::handle_key_event
-/// [`handle_mouse_event`]: ComponentNew::handle_mouse_event
-/// [`update`]: ComponentNew::update
+/// [`draw`]: Component::draw
+/// [`register_action_handler`]: Component::register_action_handler
+/// [`register_config_handler`]: Component::register_config_handler
+/// [`init`]: Component::init
+/// [`handle_events`]: Component::handle_events
+/// [`handle_key_event`]: Component::handle_key_event
+/// [`handle_mouse_event`]: Component::handle_mouse_event
+/// [`update`]: Component::update
 /// [`Key`]: crate::tui::Event::Key
 /// [`Mouse`]: crate::tui::Event::Mouse
 /// [`FocusGained`]: crate::tui::Event::FocusGained
 /// [`Render`]: crate::action::Action::Render
 /// [`mpsc::UnboundedSender<Action>`]: tokio::sync::mpsc::UnboundedSender
 /// [`Size`]: ratatui::layout::Size
-pub trait ComponentNew: Send {
+pub trait Component: Send {
     /// Provides the component with a sender for dispatching [`Action`]s.
     ///
     /// The default is a no-op; override to store `tx` so the component can push
@@ -223,14 +223,14 @@ pub trait ComponentNew: Send {
     /// ```no_run
     /// use tokio::sync::mpsc::UnboundedSender;
     /// use dps::action::Action;
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use ratatui::{Frame, layout::Rect};
     ///
     /// struct MyComponent {
     ///     tx: Option<UnboundedSender<Action>>,
     /// }
     ///
-    /// impl ComponentNew for MyComponent {
+    /// impl Component for MyComponent {
     ///     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
     ///         self.tx = Some(tx);
     ///         Ok(())
@@ -257,7 +257,7 @@ pub trait ComponentNew: Send {
     ///
     /// ```no_run
     /// use dps::config::Config;
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use dps::theme::Theme;
     /// use ratatui::{Frame, layout::Rect};
     ///
@@ -265,7 +265,7 @@ pub trait ComponentNew: Send {
     ///     theme: Option<Theme>,
     /// }
     ///
-    /// impl ComponentNew for Styled {
+    /// impl Component for Styled {
     ///     fn register_config_handler(&mut self, config: Config) -> Result<()> {
     ///         self.theme = Some(*config.active_theme());
     ///         Ok(())
@@ -284,7 +284,7 @@ pub trait ComponentNew: Send {
     /// Override to pre-allocate layout buffers or clamp scroll state to the
     /// visible height.
     ///
-    /// [`draw`]: ComponentNew::draw
+    /// [`draw`]: Component::draw
     ///
     /// # Errors
     ///
@@ -293,14 +293,14 @@ pub trait ComponentNew: Send {
     /// # Examples
     ///
     /// ```no_run
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use ratatui::{Frame, layout::{Rect, Size}};
     ///
     /// struct Scrollable {
     ///     visible_rows: usize,
     /// }
     ///
-    /// impl ComponentNew for Scrollable {
+    /// impl Component for Scrollable {
     ///     fn init(&mut self, area: Size) -> Result<()> {
     ///         self.visible_rows = area.height as usize;
     ///         Ok(())
@@ -323,8 +323,8 @@ pub trait ComponentNew: Send {
     /// For ordinary key or mouse handling, override [`handle_key_event`] or
     /// [`handle_mouse_event`] instead.
     ///
-    /// [`handle_key_event`]: ComponentNew::handle_key_event
-    /// [`handle_mouse_event`]: ComponentNew::handle_mouse_event
+    /// [`handle_key_event`]: Component::handle_key_event
+    /// [`handle_mouse_event`]: Component::handle_mouse_event
     ///
     /// # Errors
     ///
@@ -335,14 +335,14 @@ pub trait ComponentNew: Send {
     /// Override to handle focus events in addition to the default key/mouse routing:
     ///
     /// ```no_run
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use dps::tui::Event;
     /// use dps::action::Action;
     /// use ratatui::{Frame, layout::Rect};
     ///
     /// struct FocusAware { focused: bool }
     ///
-    /// impl ComponentNew for FocusAware {
+    /// impl Component for FocusAware {
     ///     fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
     ///         match &event {
     ///             Some(Event::FocusGained) => { self.focused = true; return Ok(None); }
@@ -385,12 +385,12 @@ pub trait ComponentNew: Send {
     /// ```no_run
     /// use crossterm::event::{KeyCode, KeyEvent};
     /// use dps::action::{Action, Movement};
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use ratatui::{Frame, layout::Rect};
     ///
     /// struct Nav;
     ///
-    /// impl ComponentNew for Nav {
+    /// impl Component for Nav {
     ///     fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
     ///         let action = match key.code {
     ///             KeyCode::Char('j') => Some(Action::Move(Movement::Down)),
@@ -422,12 +422,12 @@ pub trait ComponentNew: Send {
     /// ```no_run
     /// use crossterm::event::{MouseEvent, MouseEventKind};
     /// use dps::action::{Action, Movement};
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use ratatui::{Frame, layout::Rect};
     ///
     /// struct Scrollable;
     ///
-    /// impl ComponentNew for Scrollable {
+    /// impl Component for Scrollable {
     ///     fn handle_mouse_event(&mut self, mouse: MouseEvent) -> Result<Option<Action>> {
     ///         let action = match mouse.kind {
     ///             MouseEventKind::ScrollDown => Some(Action::Move(Movement::ScrollDown)),
@@ -469,7 +469,7 @@ pub trait ComponentNew: Send {
     ///
     /// ```no_run
     /// use dps::action::Action;
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use dps::registers::RegisterStore;
     /// use ratatui::{Frame, layout::Rect};
     ///
@@ -477,7 +477,7 @@ pub trait ComponentNew: Send {
     ///     count: u32,
     /// }
     ///
-    /// impl ComponentNew for Counter {
+    /// impl Component for Counter {
     ///     fn update(&mut self, action: Action, _registers: &mut RegisterStore) -> Result<Option<Action>> {
     ///         if matches!(action, Action::Select) {
     ///             self.count += 1;
@@ -515,12 +515,12 @@ pub trait ComponentNew: Send {
     /// # Examples
     ///
     /// ```no_run
-    /// use dps::components::{ComponentNew, Result};
+    /// use dps::components::{Component, Result};
     /// use ratatui::{Frame, layout::Rect, widgets::Paragraph};
     ///
     /// struct StatusLine(String);
     ///
-    /// impl ComponentNew for StatusLine {
+    /// impl Component for StatusLine {
     ///     fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) -> Result<()> {
     ///         frame.render_widget(Paragraph::new(self.0.as_str()), area);
     ///         Ok(())

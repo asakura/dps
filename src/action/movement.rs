@@ -20,7 +20,7 @@ use std::{fmt, str::FromStr};
 /// `Movement` is the payload of [`Action::Move`](crate::action::Action::Move). Key bindings
 /// produce a `Move(movement)` action; `App::dispatch` unwraps it and forwards the `Movement`
 /// to the active component's
-/// [`Component::handle_action`](crate::components::Component::handle_action), which maps it
+/// [`Component::update`](crate::components::Component::update), which maps it
 /// to a cursor offset, scroll position, or absolute row index.
 ///
 /// ## Serialisation

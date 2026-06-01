@@ -6,7 +6,7 @@ pub use self::error::AppError;
 
 use crate::{
     action::Action,
-    components::{ComponentNew, FpsCounter, TabPane},
+    components::{Component, FpsCounter, TabPane},
     config::Config,
     keymap::{ChordEngine, ChordResult, Mode, ModeMap, SequenceEngine},
     registers::RegisterStore,
@@ -20,10 +20,10 @@ use tracing::{debug, info};
 
 use std::{fmt, path::Path};
 
-/// Event-loop coordinator that owns a set of [`ComponentNew`] instances.
+/// Event-loop coordinator that owns a set of [`Component`] instances.
 ///
 /// `App` drives the TUI using the channel-based action pipeline introduced
-/// by the [`ComponentNew`] trait family.  Every component receives a clone of
+/// by the [`Component`] trait family.  Every component receives a clone of
 /// the [`mpsc::UnboundedSender<Action>`] during initialisation so it can push
 /// actions at any time; `App` owns the matching receiver and drains it on
 /// every loop iteration.
@@ -38,7 +38,7 @@ use std::{fmt, path::Path};
 /// 2. **Action phase** (`handle_actions`) — drains the action channel,
 ///    applies infrastructure actions (`Quit`, `Suspend`, `Resume`,
 ///    `ClearScreen`, `Resize`, `Render`) directly, then forwards every action
-///    to each component's [`ComponentNew::update`] so components can react and
+///    to each component's [`Component::update`] so components can react and
 ///    optionally enqueue follow-up actions.
 ///
 /// # Keybindings
@@ -62,7 +62,7 @@ pub struct App {
     config: Config,
     tick_rate: f64,
     frame_rate: f64,
-    components: Vec<Box<dyn ComponentNew>>,
+    components: Vec<Box<dyn Component>>,
     should_quit: bool,
     should_suspend: bool,
     mode: Mode,
@@ -143,11 +143,11 @@ impl App {
     /// **Initialisation** (before the loop):
     /// 1. Constructs and enters the [`Tui`] with mouse support enabled and the
     ///    configured tick/frame rates.
-    /// 2. Calls [`ComponentNew::register_action_handler`] on every component so
+    /// 2. Calls [`Component::register_action_handler`] on every component so
     ///    each receives a sender it can use to push actions asynchronously.
-    /// 3. Calls [`ComponentNew::register_config_handler`] to distribute a clone
+    /// 3. Calls [`Component::register_config_handler`] to distribute a clone
     ///    of the loaded [`Config`] to every component.
-    /// 4. Calls [`ComponentNew::init`] with the current terminal size so
+    /// 4. Calls [`Component::init`] with the current terminal size so
     ///    components can pre-compute layout-dependent state.
     ///
     /// **Event loop** (each iteration):
@@ -158,7 +158,7 @@ impl App {
     ///   to all components.
     /// - `handle_actions` drains the action channel, applies infrastructure
     ///   actions, and forwards every action to each component's
-    ///   [`ComponentNew::update`].
+    ///   [`Component::update`].
     ///
     /// **Suspension** (`Action::Suspend`):
     /// On Unix, the TUI is torn down, `SIGTSTP` is emitted so the OS actually
@@ -256,7 +256,7 @@ impl App {
     ///
     /// [`Key`]: Event::Key
     /// [`handle_key_event`]: App::handle_key_event
-    /// [`handle_events`]: ComponentNew::handle_events
+    /// [`handle_events`]: Component::handle_events
     fn handle_events(&mut self, event: Option<Event>) -> Result<(), AppError> {
         let Some(event) = event else {
             return Ok(());
@@ -318,7 +318,7 @@ impl App {
     /// | `Render` | Delegates to [`render`]. |
     ///
     /// After each infrastructure action, the same action is forwarded to every
-    /// component's [`ComponentNew::update`].  Any [`Action`] returned by
+    /// component's [`Component::update`].  Any [`Action`] returned by
     /// `update` is re-enqueued so components can chain effects.
     ///
     /// [`handle_resize`]: App::handle_resize
@@ -363,7 +363,7 @@ impl App {
 
     /// Draws all components onto the terminal frame.
     ///
-    /// Calls [`ComponentNew::draw`] on each component in registration order.
+    /// Calls [`Component::draw`] on each component in registration order.
     /// If a component returns an error it is converted to [`Action::Error`] and
     /// sent on the channel rather than propagating — this keeps a single
     /// misbehaving component from aborting the entire render pass.
@@ -455,7 +455,7 @@ mod tests {
     /// Returns a fixed action from `handle_events` for every event; no-op update.
     struct EventSpy(Option<Action>);
 
-    impl ComponentNew for EventSpy {
+    impl Component for EventSpy {
         fn handle_events(&mut self, _: Option<Event>) -> crate::components::Result<Option<Action>> {
             Ok(self.0.clone())
         }
@@ -482,7 +482,7 @@ mod tests {
         }
     }
 
-    impl ComponentNew for UpdateSpy {
+    impl Component for UpdateSpy {
         fn update(
             &mut self,
             action: Action,

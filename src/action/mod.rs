@@ -11,7 +11,7 @@
 //! [`Action`] is the unified envelope dispatched through the event loop.
 //! Infrastructure variants (`Tick`, `Render`, `Resize`, …) are handled directly
 //! by `App::run`; domain variants are forwarded to every component's
-//! [`ComponentNew::update`](crate::components::ComponentNew::update).
+//! [`Component::update`](crate::components::Component::update).
 //! Serialises as a flat string for key-binding configuration files:
 //! `"Quit"`, `"Move(Down)"`, `"Resize(80,24)"`, `"Error(oops)"`, …
 //!
@@ -52,7 +52,7 @@ use std::{fmt, str::FromStr};
 /// and component logic. `App::run` handles infrastructure variants directly
 /// (`Tick`, `Render`, `Resize`, `Quit`, `Suspend`, `Resume`, `ClearScreen`) and
 /// forwards every other action to each component's
-/// [`ComponentNew::update`](crate::components::ComponentNew::update).
+/// [`Component::update`](crate::components::Component::update).
 ///
 /// ## Serialisation
 ///
@@ -111,7 +111,7 @@ pub enum Action {
     ///
     /// Drives periodic state updates such as polling background tasks or
     /// advancing progress indicators. Components respond to this in
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update).
+    /// [`Component::update`](crate::components::Component::update).
     Tick,
     /// Requests a terminal frame draw.
     ///
@@ -157,20 +157,20 @@ pub enum Action {
     /// A directional or positional navigation command.
     ///
     /// Forwarded to every component's
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update),
+    /// [`Component::update`](crate::components::Component::update),
     /// which applies the movement to its table selection or scroll offset.
     Move(Movement),
     /// An edit operation: yank, paste, paste-above, or delete.
     ///
     /// Forwarded to every component's
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update),
+    /// [`Component::update`](crate::components::Component::update),
     /// which reads or writes the [`RegisterStore`](crate::registers::RegisterStore)
     /// and mutates its table state accordingly.
     Edit(EditOp),
     /// Switch the active tab.
     ///
     /// Consumed by the tab-pane component; forwarded to every
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update) so
+    /// [`Component::update`](crate::components::Component::update) so
     /// components other than the tab pane can react if needed.
     /// [`Next`](TabMotion::Next) and [`Prev`](TabMotion::Prev) accept a count
     /// (e.g. `3gt` cycles three tabs forward).
@@ -179,7 +179,7 @@ pub enum Action {
     /// Confirm or activate the currently highlighted row.
     ///
     /// Typically mapped to Enter. Forwarded to every component's
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update),
+    /// [`Component::update`](crate::components::Component::update),
     /// which records the selection and may produce a follow-up action.
     Select,
 
@@ -199,7 +199,7 @@ pub enum Action {
     /// A UI-layer control operation.
     ///
     /// Forwarded to every component's
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update).
+    /// [`Component::update`](crate::components::Component::update).
     /// Currently carries [`UiOp::Help`] to toggle the which-key overlay;
     /// panel toggles and other display controls will be added here.
     Ui(UiOp),
@@ -209,7 +209,7 @@ pub enum Action {
     /// A key was consumed but produced no state change.
     ///
     /// The default variant. Components return this from
-    /// [`ComponentNew::update`](crate::components::ComponentNew::update)
+    /// [`Component::update`](crate::components::Component::update)
     /// for any action they recognise but handle silently, signalling to the
     /// caller that no further processing is needed.
     #[default]

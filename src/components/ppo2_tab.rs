@@ -8,7 +8,7 @@
 //! let _tab = PpO2Tab::new();
 //! ```
 
-use super::{ComponentNew, Result};
+use super::{Component, Result};
 
 use crate::{
     action::{Action, Movement},
@@ -290,7 +290,7 @@ fn ppo2_cell_color(ppo2: Bar, theme: &Theme) -> Style {
     }
 }
 
-impl ComponentNew for PpO2Tab {
+impl Component for PpO2Tab {
     fn register_config_handler(&mut self, config: Config) -> Result<()> {
         self.theme = *config.active_theme();
         Ok(())

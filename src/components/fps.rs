@@ -1,6 +1,6 @@
 //! Frames-per-second and ticks-per-second overlay component.
 
-use super::{ComponentNew, Result};
+use super::{Component, Result};
 
 use crate::action::Action;
 use crate::registers::RegisterStore;
@@ -72,7 +72,7 @@ impl FpsCounter {
     }
 }
 
-impl ComponentNew for FpsCounter {
+impl Component for FpsCounter {
     fn update(&mut self, action: Action, _registers: &mut RegisterStore) -> Result<Option<Action>> {
         match action {
             Action::Tick => self.app_tick(),
