@@ -6,7 +6,7 @@ mod theme;
 pub use self::error::Error as ConfigError;
 
 use crate::{
-    keymap::{KeyBindings, KeyBindingsBuilder, keys::parse_key_sequence},
+    keymap::{KeyBindings, KeyBindingsBuilder},
     theme::Theme,
 };
 
@@ -19,19 +19,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const CONFIG: &str = include_str!("../../.config/config.json5");
-
-/// Paths written into [`Config`] by the config loader; override the
-/// platform defaults via the `DPS_DATA` / `DPS_CONFIG` environment variables.
-#[derive(Clone, Debug, Deserialize, Default)]
-pub struct AppConfig {
-    /// Directory used for persistent data files such as logs.
-    #[serde(default)]
-    pub data_dir: PathBuf,
-    /// Directory containing user configuration files.
-    #[serde(default)]
-    pub config_dir: PathBuf,
-}
+const BASE_CONFIG_CONTENT: &str = include_str!("../../.config/config.json5");
 
 fn default_leader() -> String {
     "<Space>".to_string()
@@ -43,8 +31,6 @@ fn default_leader() -> String {
 /// to consume them; never exposed publicly.
 #[derive(Deserialize, Default)]
 struct RawConfig {
-    #[serde(default, flatten)]
-    config: AppConfig,
     /// Leader key used to resolve `<leader>` tokens in keybinding sequences.
     /// Accepts any key sequence string understood by `parse_key_sequence`,
     /// e.g. `"<Space>"`, `","`, `"<C-a>"`. Defaults to `"<Space>"`.
@@ -60,6 +46,77 @@ struct RawConfig {
     themes: HashMap<String, theme::ThemeConfig>,
     #[serde(default)]
     palettes: HashMap<String, theme::PaletteConfig>,
+}
+
+struct RawConfigContext<'a> {
+    config: &'a mut RawConfig,
+    base_config: &'a RawConfig,
+    config_dir: &'a Path,
+    data_dir: &'a Path,
+}
+
+impl<'a> TryFrom<RawConfigContext<'a>> for Config {
+    type Error = ConfigError;
+
+    fn try_from(ctx: RawConfigContext<'a>) -> Result<Self, Self::Error> {
+        let RawConfigContext {
+            config,
+            base_config,
+            config_dir,
+            data_dir,
+        } = ctx;
+
+        config.keybindings.merge_defaults(&base_config.keybindings);
+
+        if config.default_theme.is_empty() {
+            config.default_theme.clone_from(&base_config.default_theme);
+        }
+
+        for (name, t) in &base_config.themes {
+            config
+                .themes
+                .entry(name.clone())
+                .or_insert_with(|| t.clone());
+        }
+
+        for (name, p) in &base_config.palettes {
+            config
+                .palettes
+                .entry(name.clone())
+                .or_insert_with(|| p.clone());
+        }
+
+        let themes = theme::resolve_theme(&config.themes, &config.palettes)?;
+
+        if !themes.contains_key(&config.default_theme) {
+            return Err(error::Error::UnknownTheme(std::mem::take(
+                &mut config.default_theme,
+            )));
+        }
+
+        Ok(Self {
+            config: AppConfig {
+                config_dir: config_dir.to_path_buf(),
+                data_dir: data_dir.to_path_buf(),
+            },
+            keybindings: config.keybindings.build_with_leader(&config.leader),
+            styles: config.styles,
+            themes,
+            default_theme: std::mem::take(&mut config.default_theme),
+        })
+    }
+}
+
+/// Paths written into [`Config`] by the config loader; override the
+/// platform defaults via the `DPS_DATA` / `DPS_CONFIG` environment variables.
+#[derive(Clone, Debug, Deserialize, Default)]
+pub struct AppConfig {
+    /// Directory used for persistent data files such as logs.
+    #[serde(default)]
+    pub data_dir: PathBuf,
+    /// Directory containing user configuration files.
+    #[serde(default)]
+    pub config_dir: PathBuf,
 }
 
 /// Top-level application configuration with all colours already resolved.
@@ -125,14 +182,9 @@ impl Config {
     /// palette colour or missing palette), or if `defaultTheme` does not
     /// match any resolved theme.
     pub fn from_dirs<P: AsRef<Path>>(config_dir: P, data_dir: P) -> Result<Self, ConfigError> {
-        let default_raw: RawConfig = json5::from_str(CONFIG)?;
+        let base_config: RawConfig = json5::from_str(BASE_CONFIG_CONTENT)?;
 
-        let mut builder = config::Config::builder()
-            .set_default("data_dir", data_dir.as_ref().to_string_lossy().into_owned())?
-            .set_default(
-                "config_dir",
-                config_dir.as_ref().to_string_lossy().into_owned(),
-            )?;
+        let mut builder = config::Config::builder();
 
         let config_files = [
             ("config.json5", config::FileFormat::Json5),
@@ -160,38 +212,13 @@ impl Config {
             error!("No configuration file found. Application may not behave as expected");
         }
 
-        let mut raw: RawConfig = builder.build()?.try_deserialize()?;
+        let mut config: RawConfig = builder.build()?.try_deserialize()?;
 
-        parse_key_sequence(&raw.leader)?;
-
-        raw.keybindings.merge_defaults(&default_raw.keybindings);
-
-        if raw.default_theme.is_empty() {
-            raw.default_theme.clone_from(&default_raw.default_theme);
-        }
-
-        for (name, t) in &default_raw.themes {
-            raw.themes.entry(name.clone()).or_insert_with(|| t.clone());
-        }
-
-        for (name, p) in &default_raw.palettes {
-            raw.palettes
-                .entry(name.clone())
-                .or_insert_with(|| p.clone());
-        }
-
-        let themes = theme::resolve_theme(&raw.themes, &raw.palettes)?;
-
-        if !themes.contains_key(&raw.default_theme) {
-            return Err(error::Error::UnknownTheme(raw.default_theme));
-        }
-
-        Ok(Self {
-            config: raw.config,
-            keybindings: raw.keybindings.build_with_leader(&raw.leader),
-            styles: raw.styles,
-            themes,
-            default_theme: raw.default_theme,
+        Self::try_from(RawConfigContext {
+            config: &mut config,
+            base_config: &base_config,
+            config_dir: config_dir.as_ref(),
+            data_dir: data_dir.as_ref(),
         })
     }
 
