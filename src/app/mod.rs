@@ -6,9 +6,11 @@ pub use self::error::AppError;
 
 use crate::{
     action::Action,
+    cli::Args,
     components::{Component, FpsCounter, TabPane},
     config::Config,
     keymap::{ChordEngine, ChordResult, Mode, ModeMap, SequenceEngine},
+    logging,
     registers::RegisterStore,
     tui::{Event, Tui},
 };
@@ -18,12 +20,12 @@ use ratatui::layout::Rect;
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
-use std::{fmt, path::Path};
+use std::fmt;
 
 /// Event-loop coordinator that owns a set of [`Component`] instances.
 ///
 /// `App` drives the TUI using the channel-based action pipeline introduced
-/// by the [`Component`] trait family.  Every component receives a clone of
+/// by the [`Component`] trait family. Every component receives a clone of
 /// the [`mpsc::UnboundedSender<Action>`] during initialisation so it can push
 /// actions at any time; `App` owns the matching receiver and drains it on
 /// every loop iteration.
@@ -94,27 +96,27 @@ impl App {
     ///
     /// # Errors
     ///
-    /// Returns an error if [`Config::new`] fails to load or parse the
+    /// Returns an error if [`Config::from_dirs`] fails to load or parse the
     /// configuration from disk.
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```
     /// # fn main() -> color_eyre::Result<()> {
-    /// use dps::app::App;
-    /// let _app = App::new(4.0, 60.0, None, None)?;
+    /// use clap::Parser;
+    /// use dps::{app::App, cli::Cli};
+    /// let args = Cli::try_parse_from(["dps"]).unwrap().try_into().unwrap();
+    /// let _app = App::new(&args)?;
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// [`run`]: App::run
-    pub fn new(
-        tick_rate: f64,
-        frame_rate: f64,
-        config_dir: Option<&Path>,
-        data_dir: Option<&Path>,
-    ) -> Result<Self, crate::Error> {
-        let config = Config::from_dirs(config_dir, data_dir)?;
+    pub fn new(args: &Args) -> Result<Self, crate::Error> {
+        logging::init(args.data_dir())?;
+
+        let config = Config::from_dirs(args.config_dir(), args.data_dir())?;
+
         tracing::debug!(
             data_dir = %config.config.data_dir.display(),
             config_dir = %config.config.config_dir.display(),
@@ -124,8 +126,8 @@ impl App {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
 
         Ok(Self {
-            tick_rate,
-            frame_rate,
+            tick_rate: args.tick_rate(),
+            frame_rate: args.frame_rate(),
             components: vec![Box::new(TabPane::new()), Box::new(FpsCounter::new())],
             should_quit: false,
             should_suspend: false,
@@ -181,11 +183,13 @@ impl App {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```
     /// # #[tokio::main]
     /// # async fn main() -> color_eyre::Result<()> {
-    /// use dps::app::App;
-    /// let mut app = App::new(4.0, 60.0, None, None)?;
+    /// use clap::Parser;
+    /// use dps::{app::App, cli::Cli};
+    /// let args = Cli::try_parse_from(["dps"]).unwrap().try_into().unwrap();
+    /// let mut app = App::new(&args)?;
     /// app.run().await?;
     /// # Ok(())
     /// # }
@@ -388,6 +392,7 @@ mod tests {
 
     use crate::{
         action::Movement,
+        cli::{Args, Cli},
         config::{AppConfig, Styles},
         keymap::{KeyBindingsBuilder, KeyMapError, KeySeq, parse_key_sequence},
         theme::Theme,
@@ -395,11 +400,22 @@ mod tests {
     };
 
     use approx::assert_relative_eq;
+    use clap::Parser;
     use crossterm::event::{KeyCode, KeyModifiers};
     use ratatui::Frame;
     use rstest::rstest;
 
     use std::collections::HashMap;
+
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error(transparent)]
+        Clap(#[from] clap::error::Error),
+        #[error(transparent)]
+        App(#[from] crate::Error),
+    }
+
+    type TestResult<T = (), E = TestError> = std::result::Result<T, E>;
 
     fn press(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)
@@ -490,8 +506,10 @@ mod tests {
         ) -> crate::components::Result<Option<Action>> {
             if !self.fired && action == self.trigger {
                 self.fired = true;
+
                 return Ok(Some(self.response.clone()));
             }
+
             Ok(None)
         }
 
@@ -500,22 +518,29 @@ mod tests {
         }
     }
 
+    fn default_args(tick_rate: f64, frame_rate: f64) -> TestResult<Args> {
+        let tick = tick_rate.to_string();
+        let frame = frame_rate.to_string();
+        Ok(
+            Cli::try_parse_from(["dps", "--tick-rate", &tick, "--frame-rate", &frame])?
+                .try_into()?,
+        )
+    }
+
     mod new {
         use super::*;
 
         #[test]
-        fn succeeds_with_valid_rates() {
-            assert!(App::new(4.0, 60.0, None, None).is_ok());
+        fn succeeds_with_valid_rates() -> TestResult {
+            assert!(App::new(&default_args(4.0, 60.0)?).is_ok());
+            Ok(())
         }
 
         #[rstest]
         #[case(10.0, 30.0)]
         #[case(4.0, 60.0)]
-        fn stores_tick_and_frame_rate(
-            #[case] tick: f64,
-            #[case] frame: f64,
-        ) -> Result<(), crate::Error> {
-            let app = App::new(tick, frame, None, None)?;
+        fn stores_tick_and_frame_rate(#[case] tick: f64, #[case] frame: f64) -> TestResult {
+            let app = App::new(&default_args(tick, frame)?)?;
 
             assert_relative_eq!(app.tick_rate, tick);
             assert_relative_eq!(app.frame_rate, frame);
@@ -524,8 +549,8 @@ mod tests {
         }
 
         #[test]
-        fn starts_with_mode_normal() -> Result<(), crate::Error> {
-            let app = App::new(4.0, 60.0, None, None)?;
+        fn starts_with_mode_normal() -> TestResult {
+            let app = App::new(&default_args(4.0, 60.0)?)?;
 
             assert_eq!(app.mode, Mode::Normal);
 
@@ -533,8 +558,8 @@ mod tests {
         }
 
         #[test]
-        fn starts_with_flags_cleared() -> Result<(), crate::Error> {
-            let app = App::new(4.0, 60.0, None, None)?;
+        fn starts_with_flags_cleared() -> TestResult {
+            let app = App::new(&default_args(4.0, 60.0)?)?;
 
             assert!(!app.should_quit);
             assert!(!app.should_suspend);
