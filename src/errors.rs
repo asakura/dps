@@ -36,6 +36,9 @@ pub enum Error {
     /// Application event-loop error (component failure, channel send, I/O).
     #[error(transparent)]
     App(#[from] crate::app::AppError),
+    /// Logging initialisation error (I/O, bad filter directive, already initialised).
+    #[error(transparent)]
+    Logging(#[from] crate::logging::LoggingError),
 }
 
 /// Installs the `color_eyre` panic and error hooks.
