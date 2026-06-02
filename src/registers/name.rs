@@ -18,7 +18,10 @@
 //! assert_eq!(char::from(RegisterName::Unnamed), '"');
 //! ```
 
-use super::{RegisterError, error::{InvalidRegisterIndex, InvalidRegisterLetter}};
+use super::{
+    RegisterError,
+    error::{InvalidRegisterIndex, InvalidRegisterLetter},
+};
 
 use std::fmt;
 

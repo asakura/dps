@@ -146,9 +146,7 @@ mod tests {
         #[case(TabMotion::Prev)]
         #[case(TabMotion::GoTo(1))]
         #[case(TabMotion::GoTo(7))]
-        fn display_then_from_str_is_identity(
-            #[case] motion: TabMotion,
-        ) -> Result<(), ActionError> {
+        fn display_then_from_str_is_identity(#[case] motion: TabMotion) -> Result<(), ActionError> {
             assert_eq!(TabMotion::from_str(&motion.to_string())?, motion);
 
             Ok(())
