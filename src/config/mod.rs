@@ -11,15 +11,12 @@ use crate::{
 };
 
 use color_eyre::Result;
-use directories::ProjectDirs;
 use serde::{Deserialize, de::Deserializer};
 use tracing::error;
 
 use std::{
     collections::HashMap,
-    env,
     path::{Path, PathBuf},
-    sync::LazyLock,
 };
 
 const CONFIG: &str = include_str!("../../.config/config.json5");
@@ -105,45 +102,8 @@ impl Default for Config {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Styles();
 
-/// Upper-cased crate name, used as the prefix for environment variables
-/// (`DPS_DATA`, `DPS_CONFIG`, `DPS_LOG_LEVEL`).
-pub static PROJECT_NAME: LazyLock<String> =
-    LazyLock::new(|| env!("CARGO_CRATE_NAME").to_uppercase());
-
-/// Value of the `DPS_DATA` environment variable at process start, if set.
-///
-/// `None` means no override — the platform default from [`get_data_dir`] is in use.
-/// Consumed at startup for diagnostic logging.
-pub static DATA_FOLDER: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
-    env::var(format!("{}_DATA", *PROJECT_NAME))
-        .ok()
-        .map(PathBuf::from)
-});
-
-/// Value of the `DPS_CONFIG` environment variable at process start, if set.
-///
-/// `None` means no override — the platform default from [`get_config_dir`] is in use.
-/// Consumed at startup for diagnostic logging.
-pub static CONFIG_FOLDER: LazyLock<Option<PathBuf>> = LazyLock::new(|| {
-    env::var(format!("{}_CONFIG", *PROJECT_NAME))
-        .ok()
-        .map(PathBuf::from)
-});
-
 impl Config {
-    /// Loads config from the env-var / platform-default directories.
-    ///
-    /// # Errors
-    ///
-    /// Returns `Err` if the config source cannot be read or parsed; see
-    /// [`Config::from_dirs`].
-    pub fn new() -> Result<Self, error::Error> {
-        Self::from_dirs(None, None)
-    }
-
-    /// Loads and merges configuration, optionally overriding the config and
-    /// data directories.  `None` falls back to the env-var / platform default
-    /// (same as [`Config::new`]).
+    /// Loads and merges configuration from the given directories.
     ///
     /// Directory priority (highest → lowest):
     /// 1. `config_dir` / `data_dir` parameters (CLI flags)
@@ -164,23 +124,14 @@ impl Config {
     /// cannot be parsed or deserialised, if theme resolution fails (unknown
     /// palette colour or missing palette), or if `defaultTheme` does not
     /// match any resolved theme.
-    pub fn from_dirs(
-        config_dir: Option<&Path>,
-        data_dir: Option<&Path>,
-    ) -> Result<Self, error::Error> {
+    pub fn from_dirs<P: AsRef<Path>>(config_dir: P, data_dir: P) -> Result<Self, ConfigError> {
         let default_raw: RawConfig = json5::from_str(CONFIG)?;
 
-        let effective_data_dir = data_dir.map_or_else(get_data_dir, Path::to_path_buf);
-        let effective_config_dir = config_dir.map_or_else(get_config_dir, Path::to_path_buf);
-
         let mut builder = config::Config::builder()
-            .set_default(
-                "data_dir",
-                effective_data_dir.to_string_lossy().into_owned(),
-            )?
+            .set_default("data_dir", data_dir.as_ref().to_string_lossy().into_owned())?
             .set_default(
                 "config_dir",
-                effective_config_dir.to_string_lossy().into_owned(),
+                config_dir.as_ref().to_string_lossy().into_owned(),
             )?;
 
         let config_files = [
@@ -194,28 +145,19 @@ impl Config {
         let mut found_config = false;
 
         for (file, format) in &config_files {
-            let source = config::File::from(effective_config_dir.join(file))
+            let source = config::File::from(config_dir.as_ref().join(file))
                 .format(*format)
                 .required(false);
 
             builder = builder.add_source(source);
 
-            if effective_config_dir.join(file).exists() {
+            if config_dir.as_ref().join(file).exists() {
                 found_config = true;
             }
         }
 
         if !found_config {
             error!("No configuration file found. Application may not behave as expected");
-        }
-
-        // Explicit directory parameters win over anything the config file may set.
-        if let Some(p) = data_dir {
-            builder = builder.set_override("data_dir", p.to_string_lossy().into_owned())?;
-        }
-
-        if let Some(p) = config_dir {
-            builder = builder.set_override("config_dir", p.to_string_lossy().into_owned())?;
         }
 
         let mut raw: RawConfig = builder.build()?.try_deserialize()?;
@@ -258,13 +200,13 @@ impl Config {
     /// # Panics
     ///
     /// Panics if `default_theme` is not a key in `themes`. This invariant
-    /// holds for any `Config` produced by [`Config::new`] or
-    /// [`Config::from_dirs`]; it can be violated by assigning a name to
+    /// holds for any `Config` produced by [`Config::from_dirs`];
+    /// it can be violated by assigning a name to
     /// `default_theme` that is not present in `themes`.
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```
     /// use dps::config::Config;
     ///
     /// let config = Config::default();
@@ -276,72 +218,6 @@ impl Config {
             .get(&self.default_theme)
             .unwrap_or_else(|| unreachable!("invariant: default_theme is always a key in themes"))
     }
-}
-
-/// Returns the XDG/platform config directory for this application, or `None`
-/// if the home directory cannot be determined.
-fn project_directory() -> Option<ProjectDirs> {
-    ProjectDirs::from("", "", env!("CARGO_PKG_NAME"))
-}
-
-/// Returns the configuration directory.
-///
-/// Resolution order:
-/// 1. `DPS_CONFIG` environment variable
-/// 2. Platform config directory (`~/.config/dps` on Linux)
-/// 3. `.config` in the current working directory
-///
-/// The env variable is re-read on every call so that tests can override it
-/// in isolation without racing against each other.
-///
-/// # Examples
-///
-/// ```no_run
-/// use dps::config::get_config_dir;
-///
-/// assert!(!get_config_dir().as_os_str().is_empty());
-/// ```
-#[must_use]
-pub fn get_config_dir() -> PathBuf {
-    env::var(format!("{}_CONFIG", *PROJECT_NAME)).map_or_else(
-        |_| {
-            project_directory().map_or_else(
-                || PathBuf::from(".").join(".config"),
-                |d| d.config_local_dir().to_path_buf(),
-            )
-        },
-        PathBuf::from,
-    )
-}
-
-/// Returns the data directory used for logs and application state.
-///
-/// Resolution order:
-/// 1. `DPS_DATA` environment variable
-/// 2. Platform data directory (`~/.local/share/dps` on Linux)
-/// 3. `.data` in the current working directory
-///
-/// The env variable is re-read on every call so that tests can override it
-/// in isolation without racing against each other.
-///
-/// # Examples
-///
-/// ```no_run
-/// use dps::config::get_data_dir;
-///
-/// assert!(!get_data_dir().as_os_str().is_empty());
-/// ```
-#[must_use]
-pub fn get_data_dir() -> PathBuf {
-    env::var(format!("{}_DATA", *PROJECT_NAME)).map_or_else(
-        |_| {
-            project_directory().map_or_else(
-                || PathBuf::from(".").join(".data"),
-                |d| d.data_local_dir().to_path_buf(),
-            )
-        },
-        PathBuf::from,
-    )
 }
 
 impl<'de> Deserialize<'de> for Styles {
@@ -362,68 +238,32 @@ mod tests {
 
     use color_eyre::eyre::eyre;
 
-    mod get_config_dir_fn {
-        use super::*;
-
-        #[test]
-        fn env_var_overrides_platform_dir() {
-            temp_env::with_var("DPS_CONFIG", Some("/tmp/dps-test-config"), || {
-                assert_eq!(get_config_dir(), PathBuf::from("/tmp/dps-test-config"));
-            });
-        }
-
-        #[test]
-        fn returns_nonempty_path_without_env_var() {
-            temp_env::with_var_unset("DPS_CONFIG", || {
-                assert!(!get_config_dir().as_os_str().is_empty());
-            });
-        }
-    }
-
-    mod get_data_dir_fn {
-        use super::*;
-
-        #[test]
-        fn env_var_overrides_platform_dir() {
-            temp_env::with_var("DPS_DATA", Some("/tmp/dps-test-data"), || {
-                assert_eq!(get_data_dir(), PathBuf::from("/tmp/dps-test-data"));
-            });
-        }
-
-        #[test]
-        fn returns_nonempty_path_without_env_var() {
-            temp_env::with_var_unset("DPS_DATA", || {
-                assert!(!get_data_dir().as_os_str().is_empty());
-            });
-        }
-    }
-
     mod keybindings {
         use super::*;
         use rstest::rstest;
 
         #[test]
         fn default_keybindings_loaded_from_embedded_config() -> Result<()> {
-            temp_env::with_var_unset("DPS_CONFIG", || {
-                let c = Config::new()?;
-                let home = c
-                    .keybindings
-                    .get(&Mode::Normal)
-                    .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+            let dir = tempfile::tempdir()?;
+            let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
 
-                assert_eq!(
-                    home.get(&parse_key_sequence("j")?)
-                        .ok_or_else(|| eyre!("no binding for 'j'"))?,
-                    &Action::Move(Movement::Down)
-                );
-                assert_eq!(
-                    home.get(&parse_key_sequence("gg")?)
-                        .ok_or_else(|| eyre!("no binding for 'gg'"))?,
-                    &Action::Move(Movement::GotoTop)
-                );
+            let home = c
+                .keybindings
+                .get(&Mode::Normal)
+                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
 
-                Ok(())
-            })
+            assert_eq!(
+                home.get(&parse_key_sequence("j")?)
+                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
+                &Action::Move(Movement::Down)
+            );
+            assert_eq!(
+                home.get(&parse_key_sequence("gg")?)
+                    .ok_or_else(|| eyre!("no binding for 'gg'"))?,
+                &Action::Move(Movement::GotoTop)
+            );
+
+            Ok(())
         }
 
         #[test]
@@ -435,27 +275,26 @@ mod tests {
                 r#"{ keybindings: { Normal: { x: "Move(ScrollUp)" } } }"#,
             )?;
 
-            temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
-                let c = Config::new()?;
-                let home = c
-                    .keybindings
-                    .get(&Mode::Normal)
-                    .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+            let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
 
-                assert_eq!(
-                    home.get(&parse_key_sequence("x")?)
-                        .ok_or_else(|| eyre!("no binding for 'x'"))?,
-                    &Action::Move(Movement::ScrollUp),
-                );
+            let home = c
+                .keybindings
+                .get(&Mode::Normal)
+                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
 
-                assert_eq!(
-                    home.get(&parse_key_sequence("j")?)
-                        .ok_or_else(|| eyre!("no binding for 'j'"))?,
-                    &Action::Move(Movement::Down),
-                );
+            assert_eq!(
+                home.get(&parse_key_sequence("x")?)
+                    .ok_or_else(|| eyre!("no binding for 'x'"))?,
+                &Action::Move(Movement::ScrollUp),
+            );
 
-                Ok(())
-            })
+            assert_eq!(
+                home.get(&parse_key_sequence("j")?)
+                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
+                &Action::Move(Movement::Down),
+            );
+
+            Ok(())
         }
 
         #[test]
@@ -467,21 +306,20 @@ mod tests {
                 r#"{ keybindings: { Normal: { j: "Move(Up)" } } }"#,
             )?;
 
-            temp_env::with_var("DPS_CONFIG", Some(dir.path()), || {
-                let c = Config::new()?;
-                let home = c
-                    .keybindings
-                    .get(&Mode::Normal)
-                    .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+            let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
 
-                assert_eq!(
-                    home.get(&parse_key_sequence("j")?)
-                        .ok_or_else(|| eyre!("no binding for 'j'"))?,
-                    &Action::Move(Movement::Up),
-                );
+            let home = c
+                .keybindings
+                .get(&Mode::Normal)
+                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
 
-                Ok(())
-            })
+            assert_eq!(
+                home.get(&parse_key_sequence("j")?)
+                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
+                &Action::Move(Movement::Up),
+            );
+
+            Ok(())
         }
 
         #[test]
@@ -493,7 +331,7 @@ mod tests {
                 r#"{ keybindings: { Normal: { x: "Move(ScrollUp)" } } }"#,
             )?;
 
-            let c = Config::from_dirs(Some(dir.path()), None)?;
+            let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
             let home = c
                 .keybindings
                 .get(&Mode::Normal)
@@ -523,7 +361,7 @@ mod tests {
                 r#"{ leader: "<C-a>", keybindings: { Normal: { "<leader>j": "Quit" } } }"#,
             )?;
 
-            let c = Config::from_dirs(Some(dir.path()), None)?;
+            let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
             let home = c
                 .keybindings
                 .get(&Mode::Normal)
@@ -547,7 +385,7 @@ mod tests {
                 "{ this is not valid {{ json5 }",
             )?;
 
-            assert!(Config::from_dirs(Some(dir.path()), None).is_err());
+            assert!(Config::from_dirs(dir.path(), &std::env::temp_dir()).is_err());
 
             Ok(())
         }

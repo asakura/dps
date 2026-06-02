@@ -451,7 +451,7 @@ mod tests {
         fn config_defaults() -> TestResult<Config> {
             let dir = tempfile::tempdir()?;
 
-            Ok(Config::from_dirs(Some(dir.path()), None)?)
+            Ok(Config::from_dirs(dir.path(), &std::env::temp_dir())?)
         }
 
         #[rstest]
@@ -491,7 +491,7 @@ mod tests {
                 r#"{ defaultTheme: "doesNotExist" }"#,
             )?;
 
-            let result = Config::from_dirs(Some(dir.path()), None);
+            let result = Config::from_dirs(dir.path(), &std::env::temp_dir());
 
             assert!(matches!(
                 result,
@@ -512,7 +512,7 @@ mod tests {
 
             std::fs::write(dir.path().join("config.json5"), content)?;
 
-            assert!(Config::from_dirs(Some(dir.path()), None).is_err());
+            assert!(Config::from_dirs(dir.path(), &std::env::temp_dir()).is_err());
 
             Ok(())
         }
