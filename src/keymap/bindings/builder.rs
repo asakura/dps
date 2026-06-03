@@ -1,58 +1,34 @@
-//! Mode-indexed keybinding registry and its builder.
+//! Mutable keybinding accumulator [`KeyBindingsBuilder`].
+//!
+//! # Examples
+//!
+//! ```
+//! use dps::keymap::{KeyBindingsBuilder, KeySeq, Mode, keys::parse_key_sequence};
+//! use dps::action::{Action, Movement};
+//!
+//! let mut b = KeyBindingsBuilder::new();
+//! b.bind(
+//!     Mode::Normal,
+//!     KeySeq::from(parse_key_sequence("j").unwrap()),
+//!     Action::Move(Movement::Down),
+//! );
+//! let bindings = b.build();
+//! assert!(bindings.get(&Mode::Normal).is_some());
+//! ```
 
-use super::{
+use super::registry::KeyBindings;
+
+use crate::action::Action;
+use crate::keymap::{
     keys::parse_key_sequence,
     map::{ModeMap, ModeMapBuilder},
     mode::Mode,
     seq::KeySeq,
 };
 
-use crate::action::Action;
-
 use serde::{Deserialize, Deserializer};
 
 use std::collections::HashMap;
-
-/// Read-only mode-indexed keybinding registry.
-///
-/// Constructed via [`KeyBindingsBuilder`]; immutable thereafter.
-/// Stored as a flat boxed slice sorted by [`Mode`] for compact memory.
-#[derive(Clone, Debug, Default)]
-pub struct KeyBindings(Box<[(Mode, ModeMap)]>);
-
-impl KeyBindings {
-    /// Returns the binding map for `mode`, or `None` if none is registered.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use dps::keymap::{KeyBindings, KeyBindingsBuilder, Mode};
-    ///
-    /// let bindings = KeyBindingsBuilder::new().build();
-    /// assert!(bindings.get(&Mode::Normal).is_none());
-    /// ```
-    #[must_use]
-    pub fn get(&self, mode: &Mode) -> Option<&ModeMap> {
-        self.0.iter().find(|(m, _)| m == mode).map(|(_, map)| map)
-    }
-
-    /// Returns an iterator over `(&Mode, &ModeMap)` pairs.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use dps::keymap::{KeyBindingsBuilder, KeySeq, Mode, keys::parse_key_sequence};
-    /// use dps::action::{Action, Movement};
-    ///
-    /// let mut b = KeyBindingsBuilder::new();
-    /// b.bind(Mode::Normal, KeySeq::from(parse_key_sequence("j").unwrap()), Action::Move(Movement::Down));
-    /// let bindings = b.build();
-    /// assert_eq!(bindings.iter().count(), 1);
-    /// ```
-    pub fn iter(&self) -> impl Iterator<Item = (&Mode, &ModeMap)> {
-        self.0.iter().map(|(m, map)| (m, map))
-    }
-}
 
 /// Mutable accumulator that produces an immutable [`KeyBindings`] on [`build`](Self::build).
 ///
@@ -228,11 +204,32 @@ impl KeyBindingsBuilder {
 
         pairs.sort_by_key(|(m, _)| *m);
 
-        KeyBindings(pairs.into_boxed_slice())
+        KeyBindings::from_sorted_pairs(pairs.into_boxed_slice())
     }
 }
 
 impl<'de> Deserialize<'de> for KeyBindingsBuilder {
+    /// Deserializes from a `Mode → { key_string → action }` map.
+    ///
+    /// Key strings use Vim notation. `<leader>` is a placeholder resolved
+    /// at [`build`](Self::build) / [`build_with_leader`](Self::build_with_leader) time.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error if any key spec (with `<leader>`
+    /// replaced by `<Space>`) fails to parse, or if any action string is
+    /// unrecognised.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::{KeyBindingsBuilder, Mode};
+    ///
+    /// let mut b: KeyBindingsBuilder =
+    ///     serde_json::from_str(r#"{"Normal": {"j": "Move(Down)"}}"#).unwrap();
+    /// let bindings = b.build();
+    /// assert!(bindings.get(&Mode::Normal).is_some());
+    /// ```
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -270,7 +267,10 @@ mod tests {
     use super::*;
 
     use crate::action::{Action, Movement, TabMotion};
-    use crate::keymap::testutil::{press, single};
+    use crate::keymap::{
+        KeyBindings,
+        testutil::{press, single},
+    };
 
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use rstest::fixture;
@@ -278,50 +278,6 @@ mod tests {
 
     fn lookup<'a>(b: &'a KeyBindings, mode: Mode, keys: &[KeyEvent]) -> Option<&'a Action> {
         b.get(&mode).and_then(|m| m.get(keys))
-    }
-
-    #[fixture]
-    #[once]
-    fn simple_bindings() -> KeyBindings {
-        KeyBindingsBuilder::new()
-            .bind(
-                Mode::Normal,
-                single(KeyCode::Char('j')),
-                Action::Move(Movement::Down),
-            )
-            .bind(
-                Mode::Normal,
-                single(KeyCode::Char('k')),
-                Action::Move(Movement::Up),
-            )
-            .build()
-    }
-
-    mod key_bindings {
-        use super::*;
-
-        #[rstest]
-        fn registered_mode_is_found(simple_bindings: &KeyBindings) {
-            assert!(simple_bindings.get(&Mode::Normal).is_some());
-        }
-
-        #[rstest]
-        fn binding_in_registered_mode_resolves(simple_bindings: &KeyBindings) {
-            assert_eq!(
-                lookup(
-                    simple_bindings,
-                    Mode::Normal,
-                    [press(KeyCode::Char('j'))].as_slice()
-                ),
-                Some(&Action::Move(Movement::Down))
-            );
-        }
-
-        #[rstest]
-        fn iter_yields_registered_modes(simple_bindings: &KeyBindings) {
-            let modes: Vec<&Mode> = simple_bindings.iter().map(|(m, _)| m).collect();
-            assert_eq!(modes, vec![&Mode::Normal]);
-        }
     }
 
     mod key_bindings_builder {
@@ -474,6 +430,7 @@ mod tests {
 
     mod deserialize {
         use super::*;
+
         #[rstest]
         fn single_binding_deserializes() -> Result<(), serde_json::Error> {
             let json = r#"{ "Normal": { "j": "Move(Down)" } }"#;
