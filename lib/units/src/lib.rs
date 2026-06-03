@@ -1,3 +1,10 @@
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        reason = "Tests legitimately combine Result return types with panic-inducing assertions"
+    )
+)]
 #![allow(
     rustdoc::private_doc_tests,
     reason = "Module-level doc examples reference crate paths that are private to rustdoc"
