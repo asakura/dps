@@ -21,6 +21,15 @@ use std::{
 
 const BASE_CONFIG_CONTENT: &str = include_str!("../../.config/config.json5");
 
+const CONFIG_FILES: &[(&str, config::FileFormat)] = [
+    ("config.json5", config::FileFormat::Json5),
+    ("config.json", config::FileFormat::Json),
+    ("config.yaml", config::FileFormat::Yaml),
+    ("config.toml", config::FileFormat::Toml),
+    ("config.ini", config::FileFormat::Ini),
+]
+.as_slice();
+
 fn default_leader() -> String {
     "<Space>".to_string()
 }
@@ -183,20 +192,10 @@ impl Config {
     /// match any resolved theme.
     pub fn from_dirs<P: AsRef<Path>>(config_dir: P, data_dir: P) -> Result<Self, ConfigError> {
         let base_config: RawConfig = json5::from_str(BASE_CONFIG_CONTENT)?;
-
         let mut builder = config::Config::builder();
-
-        let config_files = [
-            ("config.json5", config::FileFormat::Json5),
-            ("config.json", config::FileFormat::Json),
-            ("config.yaml", config::FileFormat::Yaml),
-            ("config.toml", config::FileFormat::Toml),
-            ("config.ini", config::FileFormat::Ini),
-        ];
-
         let mut found_config = false;
 
-        for (file, format) in &config_files {
+        for (file, format) in CONFIG_FILES {
             let source = config::File::from(config_dir.as_ref().join(file))
                 .format(*format)
                 .required(false);
