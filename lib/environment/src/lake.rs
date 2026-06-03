@@ -36,6 +36,7 @@ use dps_units::{Celsius, Meters};
     strum::EnumIter,
 )]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
 pub enum Lake {
     // Extreme altitude > 5 000 m
     /// Ojos del Salado crater lake, Argentina/Chile — $\pu{6390 m}$, ${\approx}\pu{0 ^\circ C}$.

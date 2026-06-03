@@ -36,6 +36,7 @@ use dps_units::{Celsius, PartsPerThousand};
     strum::EnumIter,
 )]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
 pub enum Ocean {
     // Five oceans
     /// Pacific Ocean — $\pu{34.5 ‰}$, $\pu{17 ^\circ C}$.
