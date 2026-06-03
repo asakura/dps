@@ -49,8 +49,14 @@ pub const ICAO_TEMP_GRADIENT: f64 = 2.255_77e-5;
 /// Barometric exponent g·M/(R·L) in the ICAO ISA formula (dimensionless).
 pub const ICAO_PRESSURE_EXPONENT: f64 = 5.255_88;
 
+/// Lower altitude bound (sea level).
+pub const MIN_ALTITUDE: Meters = Meters::new(0.0);
+
 /// Upper altitude bound (Mt Everest summit).
 pub const MAX_ALTITUDE: Meters = Meters::new(8_849.0);
+
+/// Lower salinity bound accepted by the density model (pure fresh water).
+pub const MIN_SALINITY_PPT: PartsPerThousand = PartsPerThousand::new(0.0);
 
 /// Upper salinity bound accepted by the density model.
 pub const MAX_SALINITY_PPT: PartsPerThousand = PartsPerThousand::new(350.0);

@@ -124,4 +124,6 @@ pub use self::dive_environment::{
 };
 pub use self::lake::Lake;
 pub use self::ocean::Ocean;
-pub use self::physics::{MAX_ALTITUDE, MAX_SALINITY_PPT, MAX_TEMP_C, MIN_TEMP_C};
+pub use self::physics::{
+    MAX_ALTITUDE, MAX_SALINITY_PPT, MAX_TEMP_C, MIN_ALTITUDE, MIN_SALINITY_PPT, MIN_TEMP_C,
+};

@@ -50,8 +50,8 @@ pub use self::error::{DiveEnvironmentError, ParseDiveEnvironmentError};
 use super::physics::{
     DENSITY_BASE, DENSITY_SALINITY_COEFF, DENSITY_TEMP_COEFF, FRESHWATER_TEMP_C,
     ICAO_PRESSURE_EXPONENT, ICAO_SEA_LEVEL_PA, ICAO_TEMP_GRADIENT, ISO_SEAWATER_DENSITY,
-    MAX_ALTITUDE, MAX_SALINITY_PPT, MAX_TEMP_C, MIN_TEMP_C, PA_PER_BAR, SEA_LEVEL_PRESSURE_BAR,
-    STANDARD_GRAVITY,
+    MAX_ALTITUDE, MAX_SALINITY_PPT, MAX_TEMP_C, MIN_ALTITUDE, MIN_SALINITY_PPT, MIN_TEMP_C,
+    PA_PER_BAR, SEA_LEVEL_PRESSURE_BAR, STANDARD_GRAVITY,
 };
 use super::{Lake, Ocean};
 
@@ -570,7 +570,7 @@ impl DiveEnvironment {
 }
 
 fn validate_altitude(altitude: Meters) -> Result<(), DiveEnvironmentError> {
-    if !altitude.is_finite() || !altitude.contains(Meters::new(0.0)..=MAX_ALTITUDE) {
+    if !altitude.is_finite() || !altitude.contains(MIN_ALTITUDE..=MAX_ALTITUDE) {
         Err(DiveEnvironmentError::AltitudeOutOfRange(altitude))
     } else {
         Ok(())
@@ -578,7 +578,7 @@ fn validate_altitude(altitude: Meters) -> Result<(), DiveEnvironmentError> {
 }
 
 fn validate_salinity(salinity: PartsPerThousand) -> Result<(), DiveEnvironmentError> {
-    if !salinity.is_finite() || !salinity.contains(PartsPerThousand::new(0.0)..=MAX_SALINITY_PPT) {
+    if !salinity.is_finite() || !salinity.contains(MIN_SALINITY_PPT..=MAX_SALINITY_PPT) {
         Err(DiveEnvironmentError::SalinityOutOfRange(salinity))
     } else {
         Ok(())
