@@ -1,7 +1,8 @@
 use super::gas_name;
 
-use dps_environment::DiveEnvironment;
 use crate::constants::AIR_NARCOTIC;
+
+use dps_environment::DiveEnvironment;
 use dps_units::{Meters, Percent};
 
 use std::fmt;
@@ -171,10 +172,11 @@ impl approx::RelativeEq for END {
 mod tests {
     use super::*;
 
-    use dps_environment::DiveEnvironment;
     use crate::EANx;
     use crate::constants::{AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
     use crate::eanx::InvalidEANxError;
+
+    use dps_environment::DiveEnvironment;
     use dps_units::{Meters, Percent};
 
     use approx::assert_relative_eq;

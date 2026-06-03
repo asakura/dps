@@ -1,8 +1,9 @@
 use super::error::InvalidEANxError;
 use super::gas_name;
 
-use dps_environment::DiveEnvironment;
 use crate::constants::EAN_MIN_O2;
+
+use dps_environment::DiveEnvironment;
 use dps_units::{Bar, Meters, Percent};
 
 use std::fmt;
@@ -211,6 +212,7 @@ mod tests {
     use super::*;
 
     use crate::eanx::InvalidEANxError;
+
     use dps_units::{Bar, Percent};
 
     use core::assert_matches;

@@ -56,6 +56,7 @@ mod tests {
         #[rstest]
         fn surface_pressure_not_positive_contains_value() {
             let msg = DiveEnvironmentError::SurfacePressureNotPositive(Bar::new(-1.0)).to_string();
+
             assert!(msg.contains("surface pressure"));
             assert!(msg.contains("-1.0 bar"));
         }
@@ -64,6 +65,7 @@ mod tests {
         fn water_density_not_positive_contains_value() {
             let msg =
                 DiveEnvironmentError::WaterDensityNotPositive(MetersPerBar::new(0.0)).to_string();
+
             assert!(msg.contains("water density"));
             assert!(msg.contains("0.0 m/bar"));
         }
@@ -71,6 +73,7 @@ mod tests {
         #[rstest]
         fn altitude_out_of_range_contains_value() {
             let msg = DiveEnvironmentError::AltitudeOutOfRange(Meters::new(-1.0)).to_string();
+
             assert!(msg.contains("altitude"));
             assert!(msg.contains("-1.0 m"));
         }
@@ -79,6 +82,7 @@ mod tests {
         fn salinity_out_of_range_contains_value() {
             let msg =
                 DiveEnvironmentError::SalinityOutOfRange(PartsPerThousand::new(-1.0)).to_string();
+
             assert!(msg.contains("salinity"));
             assert!(msg.contains("-1.0 ‰"));
         }
@@ -86,6 +90,7 @@ mod tests {
         #[rstest]
         fn temperature_out_of_range_contains_value() {
             let msg = DiveEnvironmentError::TemperatureOutOfRange(Celsius::new(-5.0)).to_string();
+
             assert!(msg.contains("temperature"));
             assert!(msg.contains("-5.0 °C"));
         }

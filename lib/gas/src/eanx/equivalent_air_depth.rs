@@ -1,7 +1,8 @@
 use super::gas_name;
 
-use dps_environment::DiveEnvironment;
 use crate::constants::AIR_N2;
+
+use dps_environment::DiveEnvironment;
 use dps_units::{Meters, Percent};
 
 use std::fmt;
@@ -171,10 +172,11 @@ impl approx::RelativeEq for EAD {
 mod tests {
     use super::*;
 
-    use dps_environment::DiveEnvironment;
     use crate::EANx;
     use crate::constants::{AIR_N2, AIR_O2};
     use crate::eanx::InvalidEANxError;
+
+    use dps_environment::DiveEnvironment;
     use dps_units::{Meters, Percent};
 
     use approx::assert_relative_eq;

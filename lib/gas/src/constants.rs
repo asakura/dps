@@ -43,8 +43,7 @@ pub const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW); // non-O₂
 // is negligible and excluded.
 
 pub const AR_NARCOTIC_POTENCY: f64 = 1.5;
-pub const AIR_NARCOTIC: Percent =
-    Percent::literal(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW);
+pub const AIR_NARCOTIC: Percent = Percent::literal(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW);
 
 // Gas density
 //

@@ -161,8 +161,9 @@ impl approx::RelativeEq for PPO2 {
 mod tests {
     use super::*;
 
-    use dps_environment::DiveEnvironment;
     use crate::{EANx, eanx::InvalidEANxError};
+
+    use dps_environment::DiveEnvironment;
     use dps_units::{Bar, Meters, Percent};
 
     use approx::assert_relative_eq;

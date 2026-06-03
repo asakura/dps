@@ -663,9 +663,10 @@ impl<M: BlendMethod + PartialEq> approx::RelativeEq for EANxBlend<M> {
 mod tests {
     use super::*;
 
-    use dps_environment::DiveEnvironment;
     use crate::blend::Psa;
     use crate::constants::AIR_O2;
+
+    use dps_environment::DiveEnvironment;
     use dps_units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
     use approx::assert_relative_eq;

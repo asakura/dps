@@ -60,12 +60,14 @@ mod tests {
     fn custom_env_serialises_to_key_value() -> Result<(), DiveEnvironmentError> {
         let env = DiveEnvironment::new(Bar::new(0.95), MetersPerBar::new(10.1))?;
         assert_eq!(env.to_string(), "surface_pressure=0.95,water_density=10.1");
+
         Ok(())
     }
 
     #[rstest]
     fn ocean_preset_falls_through_to_key_value() {
         let s = DiveEnvironment::ocean(Ocean::RedSea).to_string();
+
         assert!(s.starts_with("surface_pressure="));
         assert!(s.contains(",water_density="));
     }

@@ -1,7 +1,8 @@
 use super::gas_name;
 
-use dps_environment::DiveEnvironment;
 use crate::constants::AIR_NARCOTIC;
+
+use dps_environment::DiveEnvironment;
 use dps_units::{Meters, Percent};
 
 use std::fmt;
@@ -184,6 +185,7 @@ mod tests {
     use crate::EANx;
     use crate::constants::AIR_O2;
     use crate::eanx::InvalidEANxError;
+
     use dps_units::{Meters, Percent};
 
     use approx::assert_relative_eq;
