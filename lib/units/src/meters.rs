@@ -1,6 +1,8 @@
 use crate::unit_newtype;
 
-/// Depth in metres. Backed by f64 so mul/div never truncate.
+/// Depth in metres ($\pu{m}$). Backed by `f64` so mul/div never truncate.
+///
+/// Recreational limits are typically $\pu{40 m}$; technical dives can exceed $\pu{300 m}$.
 ///
 /// ```
 /// use dps_units::Meters;

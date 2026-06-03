@@ -1,6 +1,8 @@
 use crate::unit_newtype;
 
-/// Pressure in bar.
+/// Pressure in $\pu{bar}$.
+///
+/// $\pu{1 bar} = \pu{100000 Pa}$. Standard sea-level surface pressure is $\pu{1.01325 bar}$.
 ///
 /// ```
 /// use dps_units::Bar;

@@ -1,8 +1,10 @@
-//! Temperature in degrees Celsius.
+//! Temperature in degrees Celsius ($^\circ\text{C}$).
 
 use crate::unit_newtype;
 
-/// Temperature in degrees Celsius (°C).
+/// Temperature in degrees Celsius ($^\circ\text{C}$).
+///
+/// Practical dive range: polar water at $\pu{-2 ^\circ C}$ to tropical reefs at $\pu{30 ^\circ C}$.
 ///
 /// ```
 /// use dps_units::Celsius;

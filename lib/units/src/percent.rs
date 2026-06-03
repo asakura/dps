@@ -1,6 +1,6 @@
 use super::{UnitError, error::ParseError};
 
-/// Fractional proportion in [0.0, 1.0], displayed as a percentage.
+/// Fractional proportion in $[0, 1]$, displayed as a percentage.
 ///
 /// ```
 /// # use approx::assert_relative_eq;

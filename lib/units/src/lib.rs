@@ -17,23 +17,24 @@
 //!
 //! ## Core Units
 //!
-//! - [`Bar`][]: Pressure, used for both ambient and tank pressure.
-//! - [`Meters`][]: Depth and distance.
-//! - [`Percent`][]: Fractional proportions (e.g., gas mix fractions).
-//! - [`Celsius`][]: Temperature.
+//! - [`Bar`][]: Pressure in $\pu{bar}$, used for both ambient and tank pressure.
+//! - [`Meters`][]: Depth and distance in $\pu{m}$.
+//! - [`Percent`][]: Fractional proportions in $[0, 1]$ (e.g., gas mix fractions).
+//! - [`Celsius`][]: Temperature in $^\circ\text{C}$.
 //!
 //! ## Derived Units
 //!
-//! - [`MetersPerBar`][]: Depth-to-pressure conversion factor (water density).
-//! - [`CnsRatePerMinute`][]: CNS O₂ toxicity accumulation rate.
-//! - [`OTUPerMinute`][]: Oxygen Tolerance Unit accumulation rate.
-//! - [`GramsPerLitre`][]: Gas density.
+//! - [`MetersPerBar`][]: Depth-to-pressure conversion factor in $\pu{m/bar}$.
+//! - [`CnsRatePerMinute`][]: CNS O₂ toxicity accumulation rate in $\text{CNS\\%/min}$.
+//! - [`OTUPerMinute`][]: Oxygen Tolerance Unit accumulation rate in $\text{OTU/min}$.
+//! - [`GramsPerLitre`][]: Gas density in $\pu{g/L}$.
 //!
 //! ## Unit Interactions
 //!
 //! The units are designed to work together through standard operator
-//! implementations. For example, dividing a depth by a conversion factor
-//! yields pressure:
+//! implementations. Dividing depth by a conversion factor yields gauge pressure
+//! ($P_\text{gauge} = d / \rho$), and multiplying goes the other way
+//! ($d = P_\text{gauge} \times \rho$):
 //!
 //! ```
 //! use dps_units::{Bar, Meters, MetersPerBar};
@@ -44,8 +45,6 @@
 //!
 //! assert_eq!(gauge_pressure, Bar::new(3.0));
 //! ```
-//!
-//! Similarly, multiplying pressure by the conversion factor yields depth:
 //!
 //! ```
 //! use dps_units::{Bar, Meters, MetersPerBar};
@@ -82,7 +81,7 @@ pub use self::percent::Percent;
 
 use std::ops::{Div, Mul};
 
-/// Meters / `MetersPerBar` → Bar  (depth → gauge pressure)
+/// $\text{Meters} / \text{MetersPerBar} \to \text{Bar}$ — depth ($\pu{m}$) ÷ column factor ($\pu{m/bar}$) → gauge pressure ($\pu{bar}$).
 ///
 /// ```
 /// use dps_units::{Bar, Meters, MetersPerBar};
@@ -97,7 +96,7 @@ impl Div<MetersPerBar> for Meters {
     }
 }
 
-/// Bar × `MetersPerBar` → Meters  (gauge pressure → depth)
+/// $\text{Bar} \times \text{MetersPerBar} \to \text{Meters}$ — gauge pressure ($\pu{bar}$) × column factor ($\pu{m/bar}$) → depth ($\pu{m}$).
 ///
 /// ```
 /// use dps_units::{Bar, Meters, MetersPerBar};

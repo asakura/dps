@@ -1,6 +1,9 @@
 use crate::unit_newtype;
 
-/// Gas density in grams per litre (g/L).
+/// Gas density in grams per litre ($\pu{g/L}$).
+///
+/// At $\pu{1.01325 bar}$ and $\pu{15 ^\circ C}$: air $\approx \pu{1.225 g/L}$,
+/// oxygen $\approx \pu{1.354 g/L}$, helium $\approx \pu{0.168 g/L}$.
 ///
 /// ```
 /// # use approx::assert_relative_eq;

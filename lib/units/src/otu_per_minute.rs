@@ -1,9 +1,13 @@
 use crate::unit_newtype;
 
-/// Oxygen Tolerance Unit accumulation rate in OTU/min.
+/// Oxygen Tolerance Unit accumulation rate in $\text{OTU/min}$.
 ///
-/// Computed via the NOAA formula: `(ppO₂ − 0.5)^0.83` when `ppO₂ > 0.5 bar`,
-/// else `0.0`. The daily limit is approximately 850 OTU.
+/// Computed via the NOAA formula:
+/// $$
+/// \text{OTU/min} = \left(\text{ppO}_2 - \pu{0.5 bar}\right)^{0.83}
+/// \quad \text{when } \text{ppO}_2 > \pu{0.5 bar}, \text{ else } 0
+/// $$
+/// The daily limit is approximately $\pu{850 OTU}$.
 ///
 /// ```
 /// # use approx::assert_relative_eq;

@@ -1,10 +1,12 @@
-//! Salinity (and other concentrations) in parts per thousand.
+//! Salinity (and other concentrations) in parts per thousand (‰).
 
 use crate::unit_newtype;
 
 /// Concentration in parts per thousand (‰).
 ///
-/// Used for water salinity throughout the `environment` module.
+/// Used for water salinity throughout the `environment` module. Open-ocean
+/// salinity spans $\pu{28 ‰}$ (Arctic) to $\pu{41 ‰}$ (Red Sea); fresh water
+/// is $\approx \pu{0 ‰}$.
 ///
 /// ```
 /// use dps_units::PartsPerThousand;

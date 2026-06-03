@@ -1,6 +1,9 @@
 use crate::unit_newtype;
 
-/// Depth-to-pressure conversion factor for seawater (metres per bar).
+/// Depth-to-pressure conversion factor for water ($\pu{m/bar}$).
+///
+/// ISO standard seawater ($\pu{35 ‰}$, $\pu{15 ^\circ C}$) gives $\pu{9.950 m/bar}$;
+/// fresh water ($\pu{0 ‰}$) gives $\approx \pu{10.197 m/bar}$.
 ///
 /// ```
 /// use dps_units::MetersPerBar;

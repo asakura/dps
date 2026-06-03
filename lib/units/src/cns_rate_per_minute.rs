@@ -4,7 +4,7 @@ use crate::unit_newtype;
 ///
 /// Computed from the NOAA single-dive CNS table. Multiply by exposure time in
 /// minutes to get the percentage of the CNS limit consumed. A value of
-/// [`f64::INFINITY`] indicates a ppO₂ above 1.6 bar (not recommended).
+/// [`f64::INFINITY`] indicates a ppO₂ above $\pu{1.6 bar}$ (not recommended).
 ///
 /// ```
 /// # use approx::assert_relative_eq;
