@@ -1,6 +1,6 @@
 use dps_units::Percent;
 
-pub(super) const EAN_MIN_O2: Percent = Percent::literal(0.10);
+pub const EAN_MIN_O2: Percent = Percent::literal(0.10);
 
 // Dry air mole fractions (NOAA standard atmosphere)
 //
@@ -16,10 +16,10 @@ pub(super) const EAN_MIN_O2: Percent = Percent::literal(0.10);
 // unstable as of Rust 1.88 (tracking issue rust-lang/rust#67792).  Once
 // `#![feature(const_trait_impl)]` is stabilised the _RAW layer can be removed
 // and the derivations rewritten as e.g. `f64::from(AIR_O2)`.
-pub(super) const AIR_O2_RAW: f64 = 0.209_46;
-pub(super) const AIR_AR_RAW: f64 = 0.009_34;
+pub const AIR_O2_RAW: f64 = 0.209_46;
+pub const AIR_AR_RAW: f64 = 0.009_34;
 const AIR_CO2_RAW: f64 = 0.000_407;
-pub(super) const AIR_OTHER_RAW: f64 = 0.000_027_4;
+pub const AIR_OTHER_RAW: f64 = 0.000_027_4;
 const AIR_N2_RAW: f64 = 1.0 - AIR_O2_RAW - AIR_AR_RAW - AIR_CO2_RAW - AIR_OTHER_RAW;
 
 #[cfg_attr(
@@ -29,12 +29,12 @@ const AIR_N2_RAW: f64 = 1.0 - AIR_O2_RAW - AIR_AR_RAW - AIR_CO2_RAW - AIR_OTHER_
         reason = "derived constants use AIR_O2_RAW for const arithmetic until const_trait_impl stabilises; AIR_O2 replaces it once f64::from(Percent) is usable in const context"
     )
 )]
-pub(super) const AIR_O2: Percent = Percent::literal(AIR_O2_RAW);
-pub(super) const AIR_AR: Percent = Percent::literal(AIR_AR_RAW);
-pub(super) const AIR_CO2: Percent = Percent::literal(AIR_CO2_RAW); // NOAA GML 2017 annual mean (≈ 406.6 ppm); fixed for model consistency
-pub(super) const AIR_OTHER: Percent = Percent::literal(AIR_OTHER_RAW); // Ne, He, CH₄, Kr, H₂, N₂O, Xe, …
-pub(super) const AIR_N2: Percent = Percent::literal(AIR_N2_RAW);
-pub(super) const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW); // non-O₂ total
+pub const AIR_O2: Percent = Percent::literal(AIR_O2_RAW);
+pub const AIR_AR: Percent = Percent::literal(AIR_AR_RAW);
+pub const AIR_CO2: Percent = Percent::literal(AIR_CO2_RAW); // NOAA GML 2017 annual mean (≈ 406.6 ppm); fixed for model consistency
+pub const AIR_OTHER: Percent = Percent::literal(AIR_OTHER_RAW); // Ne, He, CH₄, Kr, H₂, N₂O, Xe, …
+pub const AIR_N2: Percent = Percent::literal(AIR_N2_RAW);
+pub const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW); // non-O₂ total
 
 // Narcosis
 //
@@ -42,20 +42,20 @@ pub(super) const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW); // n
 // partial pressure. CO₂ narcosis from inspired gas at air-trace concentrations
 // is negligible and excluded.
 
-pub(super) const AR_NARCOTIC_POTENCY: f64 = 1.5;
-pub(super) const AIR_NARCOTIC: Percent =
+pub const AR_NARCOTIC_POTENCY: f64 = 1.5;
+pub const AIR_NARCOTIC: Percent =
     Percent::literal(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW);
 
 // Gas density
 //
 // ρ [g/L] = P [Pa] × M [g/mol] / (R [Pa·L/(mol·K)] × T [K])
 
-pub(super) const GAS_CONSTANT: f64 = 8314.46; // Pa·L/(mol·K)
-pub(super) const STANDARD_TEMP_K: f64 = 293.15; // 20 °C reference temperature
+pub const GAS_CONSTANT: f64 = 8314.46; // Pa·L/(mol·K)
+pub const STANDARD_TEMP_K: f64 = 293.15; // 20 °C reference temperature
 
 // CNS clock
 
-pub(super) fn cns_limit_minutes(ppo2: f64) -> f64 {
+pub fn cns_limit_minutes(ppo2: f64) -> f64 {
     if ppo2 <= 0.50 {
         return f64::INFINITY; // no CNS effect below 0.5 bar
     }

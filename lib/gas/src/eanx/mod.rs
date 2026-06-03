@@ -528,7 +528,7 @@ impl<M: BlendMethod> fmt::Display for EANxBlend<M> {
     }
 }
 
-pub(super) fn gas_name(fo2: Percent) -> impl fmt::Display {
+pub fn gas_name(fo2: Percent) -> impl fmt::Display {
     struct GasName(Percent);
 
     impl fmt::Display for GasName {
