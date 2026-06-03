@@ -9,6 +9,7 @@ use crate::unit_newtype;
 /// assert_eq!(seawater.to_string(), "10.0 m/bar");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct MetersPerBar(f64);
 
 unit_newtype!(MetersPerBar, "m/bar");

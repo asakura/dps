@@ -26,6 +26,7 @@ use crate::unit_newtype;
 /// assert_eq!(ratio, 3.0);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Meters(f64);
 
 unit_newtype!(Meters, "m");

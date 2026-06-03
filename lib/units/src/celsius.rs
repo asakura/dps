@@ -20,6 +20,7 @@ use crate::unit_newtype;
 /// assert_eq!(f64::from(b), 20.0);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Celsius(f64);
 
 unit_newtype!(Celsius, "°C");

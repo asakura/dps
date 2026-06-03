@@ -26,6 +26,7 @@ use crate::unit_newtype;
 /// assert_eq!(d.max(GramsPerLitre::new(2.0)), GramsPerLitre::new(2.0));
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct GramsPerLitre(f64);
 
 unit_newtype!(GramsPerLitre, "g/L");

@@ -26,6 +26,7 @@ use crate::unit_newtype;
 /// assert_eq!(rate.max(OTUPerMinute::new(1.0)), OTUPerMinute::new(1.0));
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct OTUPerMinute(f64);
 
 unit_newtype!(OTUPerMinute, "OTU/min");

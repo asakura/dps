@@ -15,6 +15,7 @@ use std::{fmt, str::FromStr};
 /// assert!(Percent::new(1.1).is_err());
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Percent(f64);
 
 impl Percent {
