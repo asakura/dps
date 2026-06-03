@@ -4,7 +4,7 @@ use std::{fmt, str::FromStr};
 
 /// Fractional proportion in [0.0, 1.0], displayed as a percentage.
 ///
-/// ```no_run
+/// ```
 /// # use approx::assert_relative_eq;
 /// use dps_units::Percent;
 /// let p = Percent::new(0.32).unwrap();
@@ -25,7 +25,7 @@ impl Percent {
     ///
     /// Returns [`UnitError::OutOfRange`] if `val` is outside `[0.0, 1.0]`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_units::Percent;
     /// assert!(Percent::new(0.32).is_ok());
     /// assert!(Percent::new(0.0).is_ok());
@@ -47,7 +47,10 @@ impl Percent {
     ///
     /// This method returns a unitless value, bypassing type safety. Use only when
     /// strictly necessary for external API compatibility.
-    #[deprecated(since = "0.1.0", note = "returns unitless value; use only for external API compatibility")]
+    #[deprecated(
+        since = "0.1.0",
+        note = "returns unitless value; use only for external API compatibility"
+    )]
     pub const fn as_f64(self) -> f64 {
         self.0
     }
@@ -69,7 +72,7 @@ impl Percent {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```
     /// use dps_units::Percent;
     /// const P: Percent = Percent::literal(0.32);
     /// assert_eq!(P.to_string(), "32%");
@@ -124,7 +127,7 @@ impl std::ops::Sub for Percent {
 
 /// Ratio of two fractions; the result is dimensionless.
 ///
-/// ```no_run
+/// ```
 /// use dps_units::Percent;
 /// # use approx::assert_relative_eq;
 /// let n2 = Percent::new(0.7808).unwrap();
@@ -263,7 +266,11 @@ mod tests {
 
         #[rstest]
         fn sums_iterator() {
-            let vals = vec![Percent::literal(0.1), Percent::literal(0.2), Percent::literal(0.3)];
+            let vals = vec![
+                Percent::literal(0.1),
+                Percent::literal(0.2),
+                Percent::literal(0.3),
+            ];
             assert_relative_eq!(vals.into_iter().sum::<Percent>(), Percent::literal(0.6));
         }
     }
@@ -273,7 +280,10 @@ mod tests {
 
         #[rstest]
         fn adds_values() {
-            assert_relative_eq!(Percent::literal(0.1) + Percent::literal(0.2), Percent::literal(0.3));
+            assert_relative_eq!(
+                Percent::literal(0.1) + Percent::literal(0.2),
+                Percent::literal(0.3)
+            );
         }
     }
 
@@ -282,7 +292,10 @@ mod tests {
 
         #[rstest]
         fn subtracts_values() {
-            assert_relative_eq!(Percent::literal(0.5) - Percent::literal(0.2), Percent::literal(0.3));
+            assert_relative_eq!(
+                Percent::literal(0.5) - Percent::literal(0.2),
+                Percent::literal(0.3)
+            );
         }
     }
 

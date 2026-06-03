@@ -2,7 +2,7 @@ use crate::unit_newtype;
 
 /// Pressure in bar.
 ///
-/// ```no_run
+/// ```
 /// use dps_units::Bar;
 ///
 /// let p = Bar::new(1.5);

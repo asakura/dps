@@ -11,6 +11,51 @@
 )]
 
 //! Newtype wrappers for physical units used in dive calculations.
+//!
+//! This crate provides a collection of newtype wrappers around `f64` to provide
+//! type safety and prevent accidental mixing of different units.
+//!
+//! ## Core Units
+//!
+//! - [`Bar`]: Pressure, used for both ambient and tank pressure.
+//! - [`Meters`]: Depth and distance.
+//! - [`Percent`]: Fractional proportions (e.g., gas mix fractions).
+//! - [`Celsius`]: Temperature.
+//!
+//! ## Derived Units
+//!
+//! - [`MetersPerBar`]: Depth-to-pressure conversion factor (water density).
+//! - [`CnsRatePerMinute`]: CNS O₂ toxicity accumulation rate.
+//! - [`OTUPerMinute`]: Oxygen Tolerance Unit accumulation rate.
+//! - [`GramsPerLitre`]: Gas density.
+//!
+//! ## Unit Interactions
+//!
+//! The units are designed to work together through standard operator
+//! implementations. For example, dividing a depth by a conversion factor
+//! yields pressure:
+//!
+//! ```
+//! use dps_units::{Bar, Meters, MetersPerBar};
+//!
+//! let depth = Meters::new(30.0);
+//! let density = MetersPerBar::new(10.0); // Seawater
+//! let gauge_pressure: Bar = depth / density;
+//!
+//! assert_eq!(gauge_pressure, Bar::new(3.0));
+//! ```
+//!
+//! Similarly, multiplying pressure by the conversion factor yields depth:
+//!
+//! ```
+//! use dps_units::{Bar, Meters, MetersPerBar};
+//!
+//! let gauge_pressure = Bar::new(3.0);
+//! let density = MetersPerBar::new(10.0);
+//! let depth: Meters = gauge_pressure * density;
+//!
+//! assert_eq!(depth, Meters::new(30.0));
+//! ```
 
 mod bar;
 mod celsius;
@@ -57,7 +102,10 @@ macro_rules! unit_newtype {
             ///
             /// This method returns a unitless value, bypassing type safety. Use only when
             /// strictly necessary for external API compatibility.
-            #[deprecated(since = "0.1.0", note = "returns unitless value; use only for external API compatibility")]
+            #[deprecated(
+                since = "0.1.0",
+                note = "returns unitless value; use only for external API compatibility"
+            )]
             pub const fn as_f64(self) -> f64 {
                 self.0
             }
@@ -425,7 +473,7 @@ macro_rules! unit_newtype {
 
 /// Meters / `MetersPerBar` → Bar  (depth → gauge pressure)
 ///
-/// ```no_run
+/// ```
 /// use dps_units::{Bar, Meters, MetersPerBar};
 /// let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
 /// assert_eq!(gauge, Bar::new(3.0));
@@ -440,7 +488,7 @@ impl Div<MetersPerBar> for Meters {
 
 /// Bar × `MetersPerBar` → Meters  (gauge pressure → depth)
 ///
-/// ```no_run
+/// ```
 /// use dps_units::{Bar, Meters, MetersPerBar};
 /// let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
 /// assert_eq!(depth, Meters::new(30.0));

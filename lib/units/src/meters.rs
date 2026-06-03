@@ -2,7 +2,7 @@ use crate::unit_newtype;
 
 /// Depth in metres. Backed by f64 so mul/div never truncate.
 ///
-/// ```no_run
+/// ```
 /// use dps_units::Meters;
 ///
 /// let a = Meters::new(30.0);
