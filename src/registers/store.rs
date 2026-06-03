@@ -315,6 +315,8 @@ mod tests {
 
     use rstest::{fixture, rstest};
 
+    use core::assert_matches;
+
     #[derive(Debug, thiserror::Error)]
     enum TestError {
         #[error(transparent)]
@@ -351,10 +353,7 @@ mod tests {
             let mut store = RegisterStore::default();
             store.write(reg('a')?, RegisterValue::EANx(ean32?));
 
-            assert!(matches!(
-                store.read(reg('a')?),
-                Some(RegisterValue::EANx(_))
-            ));
+            assert_matches!(store.read(reg('a')?), Some(RegisterValue::EANx(_)));
 
             Ok(())
         }

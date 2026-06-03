@@ -653,6 +653,8 @@ mod tests {
     use approx::assert_relative_eq;
     use rstest::rstest;
 
+    use core::assert_matches;
+
     mod presets {
         use super::*;
 
@@ -751,34 +753,34 @@ mod tests {
 
         #[rstest]
         fn rejects_zero_surface_pressure() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::new(Bar::new(0.0), MetersPerBar::new(10.0)),
                 Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
-            ));
+            );
         }
 
         #[rstest]
         fn rejects_negative_water_density() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::new(Bar::new(1.0), MetersPerBar::new(-1.0)),
                 Err(DiveEnvironmentError::WaterDensityNotPositive(_))
-            ));
+            );
         }
 
         #[rstest]
         fn rejects_nan_surface_pressure() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::new(Bar::new(f64::NAN), MetersPerBar::new(10.0)),
                 Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
-            ));
+            );
         }
 
         #[rstest]
         fn rejects_nan_water_density() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::new(Bar::new(1.0), MetersPerBar::new(f64::NAN)),
                 Err(DiveEnvironmentError::WaterDensityNotPositive(_))
-            ));
+            );
         }
     }
 
@@ -820,23 +822,23 @@ mod tests {
 
         #[rstest]
         fn out_of_range_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::at_altitude(Meters::new(-1.0)),
                 Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-            ));
+            );
 
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::at_altitude(Meters::new(9_000.0)),
                 Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-            ));
+            );
         }
 
         #[rstest]
         fn nan_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::at_altitude(Meters::new(f64::NAN)),
                 Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-            ));
+            );
         }
     }
 
@@ -876,53 +878,53 @@ mod tests {
 
         #[rstest]
         fn out_of_range_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::with_salinity(PartsPerThousand::new(-1.0)),
                 Err(DiveEnvironmentError::SalinityOutOfRange(_))
-            ));
+            );
 
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::with_salinity(PartsPerThousand::new(400.0)),
                 Err(DiveEnvironmentError::SalinityOutOfRange(_))
-            ));
+            );
         }
 
         #[rstest]
         fn nan_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::with_salinity(PartsPerThousand::new(f64::NAN)),
                 Err(DiveEnvironmentError::SalinityOutOfRange(_))
-            ));
+            );
         }
 
         #[rstest]
         fn temperature_out_of_range_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::with_salinity_at_temperature(
                     PartsPerThousand::new(35.0),
                     Celsius::new(-5.0)
                 ),
                 Err(DiveEnvironmentError::TemperatureOutOfRange(_))
-            ));
+            );
 
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::with_salinity_at_temperature(
                     PartsPerThousand::new(35.0),
                     Celsius::new(50.0)
                 ),
                 Err(DiveEnvironmentError::TemperatureOutOfRange(_))
-            ));
+            );
         }
 
         #[rstest]
         fn temperature_nan_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::with_salinity_at_temperature(
                     PartsPerThousand::new(35.0),
                     Celsius::new(f64::NAN)
                 ),
                 Err(DiveEnvironmentError::TemperatureOutOfRange(_))
-            ));
+            );
         }
     }
 
@@ -946,10 +948,10 @@ mod tests {
 
         #[rstest]
         fn with_altitude_out_of_range_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::standard().with_altitude(Meters::new(-1.0)),
                 Err(DiveEnvironmentError::AltitudeOutOfRange(_))
-            ));
+            );
         }
 
         #[rstest]
@@ -967,10 +969,10 @@ mod tests {
 
         #[rstest]
         fn with_surface_pressure_zero_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::standard().with_surface_pressure(Bar::new(0.0)),
                 Err(DiveEnvironmentError::SurfacePressureNotPositive(_))
-            ));
+            );
         }
 
         #[rstest]
@@ -988,10 +990,10 @@ mod tests {
 
         #[rstest]
         fn with_water_density_zero_rejected() {
-            assert!(matches!(
+            assert_matches!(
                 DiveEnvironment::standard().with_water_density(MetersPerBar::new(0.0)),
                 Err(DiveEnvironmentError::WaterDensityNotPositive(_))
-            ));
+            );
         }
     }
 

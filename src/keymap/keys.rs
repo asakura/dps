@@ -373,6 +373,8 @@ mod tests {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MediaKeyCode, ModifierKeyCode};
     use rstest::rstest;
 
+    use core::assert_matches;
+
     mod parse_key_event {
         use super::*;
 
@@ -541,18 +543,18 @@ mod tests {
 
         #[rstest]
         fn unclosed_bracket_returns_correct_variant() {
-            assert!(matches!(
+            assert_matches!(
                 parse_key_sequence("<C-d"),
                 Err(KeyMapError::Parse(ParseError::UnclosedAngleBracket(_)))
-            ));
+            );
         }
 
         #[rstest]
         fn unknown_key_returns_correct_variant() {
-            assert!(matches!(
+            assert_matches!(
                 parse_key_sequence("<nope>"),
                 Err(KeyMapError::Parse(ParseError::UnknownKey(_)))
-            ));
+            );
         }
     }
 

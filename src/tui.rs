@@ -570,6 +570,8 @@ mod tests {
     use approx::assert_relative_eq;
     use crossterm::event::{KeyCode, KeyEventState, KeyModifiers, MouseEventKind};
 
+    use core::assert_matches;
+
     #[derive(Debug, thiserror::Error)]
     enum TestError {
         #[error(transparent)]
@@ -687,7 +689,7 @@ mod tests {
 
             let option = tokio::time::timeout(Duration::from_millis(500), tui.next_event()).await?;
 
-            assert!(matches!(option, Some(Event::Init)));
+            assert_matches!(option, Some(Event::Init));
 
             tui.stop()?;
 
@@ -841,7 +843,7 @@ mod tests {
             let json = serde_json::to_string(&event)?;
             let decoded: Event = serde_json::from_str(&json)?;
 
-            assert!(matches!(decoded, Event::Key(_)));
+            assert_matches!(decoded, Event::Key(_));
 
             Ok(())
         }
@@ -859,7 +861,7 @@ mod tests {
             let json = serde_json::to_string(&event)?;
             let decoded: Event = serde_json::from_str(&json)?;
 
-            assert!(matches!(decoded, Event::Mouse(_)));
+            assert_matches!(decoded, Event::Mouse(_));
 
             Ok(())
         }

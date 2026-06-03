@@ -189,6 +189,8 @@ mod tests {
     use ratatui::style::{Color, Modifier, Style};
     use rstest::{fixture, rstest};
 
+    use core::assert_matches;
+
     #[derive(Debug, thiserror::Error)]
     enum TestError {
         #[error(transparent)]
@@ -493,10 +495,10 @@ mod tests {
 
             let result = Config::from_dirs(dir.path(), &std::env::temp_dir());
 
-            assert!(matches!(
+            assert_matches!(
                 result,
                 Err(crate::config::ConfigError::UnknownTheme(ref s)) if s.contains("doesNotExist")
-            ));
+            );
 
             Ok(())
         }

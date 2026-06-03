@@ -76,6 +76,8 @@ mod tests {
 
     use rstest::rstest;
 
+    use core::assert_matches;
+
     #[rstest]
     fn parses_standard() -> Result<(), DiveEnvironmentError> {
         let env = "standard".parse::<DiveEnvironment>()?;
@@ -100,10 +102,10 @@ mod tests {
 
     #[rstest]
     fn invalid_returns_error() {
-        assert!(matches!(
+        assert_matches!(
             "invalid".parse::<DiveEnvironment>(),
             Err(DiveEnvironmentError::Parse(_))
-        ));
+        );
     }
 
     #[rstest]

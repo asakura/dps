@@ -147,13 +147,15 @@ mod tests {
 
     use rstest::rstest;
 
+    use core::assert_matches;
+
     mod new {
         use super::*;
 
         #[rstest]
         fn active_is_mod_tab_on_construction() {
             let pane = TabPane::new();
-            assert!(matches!(pane.active, ActiveTab::Mod));
+            assert_matches!(pane.active, ActiveTab::Mod);
         }
     }
 
@@ -166,7 +168,7 @@ mod tests {
 
             pane.update(Action::Tab(TabMotion::Next), &mut RegisterStore::default())?;
 
-            assert!(matches!(pane.active, ActiveTab::PpO2));
+            assert_matches!(pane.active, ActiveTab::PpO2);
 
             Ok(())
         }
@@ -178,7 +180,7 @@ mod tests {
             pane.active = ActiveTab::PpO2;
             pane.update(Action::Tab(TabMotion::Prev), &mut RegisterStore::default())?;
 
-            assert!(matches!(pane.active, ActiveTab::Mod));
+            assert_matches!(pane.active, ActiveTab::Mod);
 
             Ok(())
         }
@@ -193,7 +195,7 @@ mod tests {
                 &mut RegisterStore::default(),
             )?;
 
-            assert!(matches!(pane.active, ActiveTab::Mod));
+            assert_matches!(pane.active, ActiveTab::Mod);
 
             Ok(())
         }
@@ -207,7 +209,7 @@ mod tests {
                 &mut RegisterStore::default(),
             )?;
 
-            assert!(matches!(pane.active, ActiveTab::PpO2));
+            assert_matches!(pane.active, ActiveTab::PpO2);
 
             Ok(())
         }
@@ -221,7 +223,7 @@ mod tests {
                 &mut RegisterStore::default(),
             )?;
 
-            assert!(matches!(pane.active, ActiveTab::Mod));
+            assert_matches!(pane.active, ActiveTab::Mod);
 
             Ok(())
         }

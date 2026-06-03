@@ -213,6 +213,8 @@ mod tests {
     use crate::gas::eanx::InvalidEANxError;
     use crate::units::{Bar, Percent};
 
+    use core::assert_matches;
+
     mod minimum_operating_depth {
         use super::*;
 
@@ -229,10 +231,10 @@ mod tests {
         fn try_from_rejects_fo2_below_minimum() -> Result<(), InvalidEANxError> {
             let fo2 = Percent::new(0.09)?;
 
-            assert!(matches!(
+            assert_matches!(
                 MiniMOD::try_from((fo2, Bar::new(0.16))),
                 Err(InvalidEANxError::O2TooLow(_))
-            ));
+            );
 
             Ok(())
         }

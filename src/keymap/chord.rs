@@ -11,6 +11,7 @@
 //! [`ChordResult`]:
 //!
 //! ```no_run
+//! # use core::assert_matches;
 //! use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 //! use dps::action::{Action, Movement};
 //! use dps::keymap::{ChordEngine, ChordResult, KeySeq, ModeMapBuilder, SequenceEngine};
@@ -29,13 +30,13 @@
 //! let mut engine = SequenceEngine::default();
 //!
 //! // First 'g' is a prefix — keep accumulating.
-//! assert!(matches!(engine.advance(press(KeyCode::Char('g')), &bindings), ChordResult::Prefix));
+//! assert_matches!(engine.advance(press(KeyCode::Char('g')), &bindings), ChordResult::Prefix);
 //!
 //! // Second 'g' completes the chord.
-//! assert!(matches!(
+//! assert_matches!(
 //!     engine.advance(press(KeyCode::Char('g')), &bindings),
 //!     ChordResult::Exact(Action::Move(Movement::GotoTop), _),
-//! ));
+//! );
 //! ```
 
 use super::ModeMap;
@@ -131,6 +132,7 @@ pub trait ChordEngine {
 /// Single-key binding:
 ///
 /// ```no_run
+/// # use core::assert_matches;
 /// use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 /// use dps::action::Action;
 /// use dps::keymap::{ChordEngine, ChordResult, KeySeq, ModeMapBuilder, SequenceEngine};
@@ -144,16 +146,17 @@ pub trait ChordEngine {
 /// let bindings = builder.build();
 ///
 /// let mut engine = SequenceEngine::default();
-/// assert!(matches!(
+/// assert_matches!(
 ///     engine.advance(press(KeyCode::Char('q')), &bindings),
 ///     ChordResult::Exact(Action::Quit, _),
-/// ));
+/// );
 /// ```
 ///
 /// Chord break with automatic retry — `'j'` breaks `"gg"` and is immediately
 /// retried against the binding map, where it matches `Action::Move(Down)`:
 ///
 /// ```no_run
+/// # use core::assert_matches;
 /// use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 /// use dps::action::{Action, Movement};
 /// use dps::keymap::{ChordEngine, ChordResult, KeySeq, ModeMapBuilder, SequenceEngine};
@@ -177,10 +180,10 @@ pub trait ChordEngine {
 /// engine.advance(press(KeyCode::Char('g')), &bindings); // Prefix
 ///
 /// // 'j' breaks "gg"; retried alone it matches "j" → Down.
-/// assert!(matches!(
+/// assert_matches!(
 ///     engine.advance(press(KeyCode::Char('j')), &bindings),
 ///     ChordResult::Exact(Action::Move(Movement::Down), _),
-/// ));
+/// );
 /// ```
 #[derive(Debug, Default)]
 pub struct SequenceEngine {
@@ -311,6 +314,8 @@ mod tests {
 
     use crossterm::event::KeyCode;
     use rstest::{fixture, rstest};
+
+    use core::assert_matches;
 
     fn bindings(pairs: &[(&[KeyCode], Action)]) -> ModeMap {
         let mut builder = ModeMapBuilder::new();
@@ -444,18 +449,18 @@ mod tests {
 
         #[rstest]
         fn exact_match_returns_exact(mut engine: SequenceEngine, q_bindings: &ModeMap) {
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('q')), q_bindings),
                 ChordResult::Exact(Action::Quit, _)
-            ));
+            );
         }
 
         #[rstest]
         fn unrecognised_key_returns_no_match(mut engine: SequenceEngine, empty_bindings: &ModeMap) {
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('x')), empty_bindings),
                 ChordResult::NoMatch
-            ));
+            );
         }
     }
 
@@ -464,20 +469,20 @@ mod tests {
 
         #[rstest]
         fn first_key_returns_prefix(mut engine: SequenceEngine, gg_bindings: &ModeMap) {
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('g')), gg_bindings),
                 ChordResult::Prefix
-            ));
+            );
         }
 
         #[rstest]
         fn completing_chord_returns_exact(mut engine: SequenceEngine, gg_bindings: &ModeMap) {
             engine.advance(press(KeyCode::Char('g')), gg_bindings);
 
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('g')), gg_bindings),
                 ChordResult::Exact(Action::Move(Movement::GotoTop), _)
-            ));
+            );
         }
 
         #[rstest]
@@ -485,18 +490,18 @@ mod tests {
             mut engine: SequenceEngine,
             abc_bindings: &ModeMap,
         ) {
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('a')), abc_bindings),
                 ChordResult::Prefix
-            ));
-            assert!(matches!(
+            );
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('b')), abc_bindings),
                 ChordResult::Prefix
-            ));
-            assert!(matches!(
+            );
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('c')), abc_bindings),
                 ChordResult::Exact(Action::Move(Movement::GotoTop), _)
-            ));
+            );
         }
 
         #[rstest]
@@ -508,10 +513,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('g')), gg_bindings); // exact → buffer cleared
 
             // Fresh 'g' is a prefix again, not a misfire.
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('g')), gg_bindings),
                 ChordResult::Prefix
-            ));
+            );
         }
     }
 
@@ -526,10 +531,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('g')), gg_j_bindings); // Prefix
 
             // 'j' breaks "gg"; retried alone it matches → Exact(Down).
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), gg_j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), _)
-            ));
+            );
         }
 
         #[rstest]
@@ -540,16 +545,16 @@ mod tests {
             engine.advance(press(KeyCode::Char('g')), gg_jk_bindings); // Prefix of "gg"
 
             // 'j' breaks "gg"; retried alone it is a prefix of "jk".
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), gg_jk_bindings),
                 ChordResult::Prefix
-            ));
+            );
 
             // 'k' completes "jk".
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('k')), gg_jk_bindings),
                 ChordResult::Exact(Action::Move(Movement::ScrollUp), _)
-            ));
+            );
         }
 
         #[rstest]
@@ -557,10 +562,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('g')), gg_bindings); // Prefix
 
             // 'q' breaks "gg"; retry of 'q' also has no binding → NoMatch.
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('q')), gg_bindings),
                 ChordResult::NoMatch
-            ));
+            );
         }
     }
 
@@ -574,10 +579,10 @@ mod tests {
         ) {
             engine.advance(press(KeyCode::Char('5')), j_bindings); // count digit → Prefix
 
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 5)
-            ));
+            );
         }
 
         #[rstest]
@@ -585,10 +590,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('1')), j_bindings);
             engine.advance(press(KeyCode::Char('2')), j_bindings);
 
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 12)
-            ));
+            );
         }
 
         #[rstest]
@@ -599,10 +604,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('1')), j_bindings);
             engine.advance(press(KeyCode::Char('0')), j_bindings); // extends count to 10
 
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 10)
-            ));
+            );
         }
 
         #[rstest]
@@ -611,10 +616,10 @@ mod tests {
             zero_j_bindings: &ModeMap,
         ) {
             // '0' with no prior count digit must fire its binding, not accumulate count.
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('0')), zero_j_bindings),
                 ChordResult::Exact(Action::Move(Movement::GotoTop), 1)
-            ));
+            );
         }
 
         #[rstest]
@@ -623,10 +628,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('j')), j_bindings); // fires with count=5, clears
 
             // Next 'j' must have count=1 (no prior count).
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 1)
-            ));
+            );
         }
 
         #[rstest]
@@ -635,10 +640,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('x')), j_bindings); // unbound → NoMatch, clears
 
             // Next 'j' must have count=1 (no prior count).
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 1)
-            ));
+            );
         }
 
         #[rstest]
@@ -650,10 +655,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('g')), gg_j_bindings); // prefix of "gg"
 
             // 'j' breaks "gg"; retried as 'j' alone it matches — count must survive.
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), gg_j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 3)
-            ));
+            );
         }
     }
 
@@ -683,10 +688,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('d')), dd_bindings); // prefix
 
             let result = engine.advance(press(KeyCode::Char('d')), dd_bindings);
-            assert!(matches!(
+            assert_matches!(
                 result,
                 ChordResult::Exact(Action::Edit(EditOp::Delete(Some(_))), 1)
-            ));
+            );
             if let ChordResult::Exact(Action::Edit(EditOp::Delete(reg)), _) = result {
                 assert_eq!(reg, RegisterName::try_from('a').ok());
             }
@@ -703,10 +708,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('d')), dd_bindings); // prefix
 
             let result = engine.advance(press(KeyCode::Char('d')), dd_bindings);
-            assert!(matches!(
+            assert_matches!(
                 result,
                 ChordResult::Exact(Action::Edit(EditOp::Delete(Some(_))), 3)
-            ));
+            );
             if let ChordResult::Exact(Action::Edit(EditOp::Delete(reg)), _) = result {
                 assert_eq!(reg, RegisterName::try_from('a').ok());
             }
@@ -720,10 +725,10 @@ mod tests {
 
             // Next dd must have no register.
             engine.advance(press(KeyCode::Char('d')), dd_bindings);
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('d')), dd_bindings),
                 ChordResult::Exact(Action::Edit(EditOp::Delete(None)), 1)
-            ));
+            );
         }
 
         #[rstest]
@@ -732,10 +737,10 @@ mod tests {
             engine.advance(press(KeyCode::Char('a')), j_bindings);
 
             // 'j' fires Move(Down) — register 'a' is silently discarded.
-            assert!(matches!(
+            assert_matches!(
                 engine.advance(press(KeyCode::Char('j')), j_bindings),
                 ChordResult::Exact(Action::Move(Movement::Down), 1)
-            ));
+            );
         }
     }
 }
