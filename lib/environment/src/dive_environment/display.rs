@@ -1,7 +1,7 @@
 //! [`Display`](std::fmt::Display) implementation for [`DiveEnvironment`](super::DiveEnvironment).
 //!
 //! ```
-//! use dps::environment::DiveEnvironment;
+//! use dps_environment::DiveEnvironment;
 //! assert_eq!(DiveEnvironment::standard().to_string(), "standard");
 //! ```
 
@@ -15,7 +15,7 @@ use std::fmt;
 /// `"surface_pressure=P,water_density=D"` key-value format with raw `f64` values.
 ///
 /// ```
-/// use dps::environment::DiveEnvironment;
+/// use dps_environment::DiveEnvironment;
 ///
 /// assert_eq!(DiveEnvironment::standard().to_string(),   "standard");
 /// assert_eq!(DiveEnvironment::freshwater().to_string(), "freshwater");
@@ -41,8 +41,8 @@ impl fmt::Display for DiveEnvironment {
 mod tests {
     use super::*;
 
-    use crate::environment::{DiveEnvironmentError, Ocean};
-    use crate::units::{Bar, MetersPerBar};
+    use crate::{DiveEnvironmentError, Ocean};
+    use dps_units::{Bar, MetersPerBar};
 
     use rstest::rstest;
 

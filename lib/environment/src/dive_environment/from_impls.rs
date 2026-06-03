@@ -2,13 +2,13 @@
 //! [`DiveEnvironment`](super::DiveEnvironment).
 //!
 //! ```
-//! use dps::environment::{DiveEnvironment, Ocean};
+//! use dps_environment::{DiveEnvironment, Ocean};
 //! assert_eq!(DiveEnvironment::from(Ocean::Caribbean), DiveEnvironment::ocean(Ocean::Caribbean));
 //! ```
 
 use super::DiveEnvironment;
 
-use crate::environment::{Lake, Ocean};
+use crate::{Lake, Ocean};
 
 /// Converts a named [`Ocean`] into a sea-level [`DiveEnvironment`].
 ///
@@ -17,7 +17,7 @@ use crate::environment::{Lake, Ocean};
 /// # Examples
 ///
 /// ```
-/// use dps::environment::{DiveEnvironment, Ocean};
+/// use dps_environment::{DiveEnvironment, Ocean};
 ///
 /// assert_eq!(
 ///     DiveEnvironment::from(Ocean::RedSea),
@@ -37,7 +37,7 @@ impl From<Ocean> for DiveEnvironment {
 /// # Examples
 ///
 /// ```
-/// use dps::environment::{DiveEnvironment, Lake};
+/// use dps_environment::{DiveEnvironment, Lake};
 ///
 /// assert_eq!(
 ///     DiveEnvironment::from(Lake::Titicaca),

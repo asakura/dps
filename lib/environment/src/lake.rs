@@ -1,13 +1,13 @@
-//! Named freshwater lake presets for [`DiveEnvironment`](crate::environment::DiveEnvironment).
+//! Named freshwater lake presets for [`DiveEnvironment`](crate::DiveEnvironment).
 //!
 //! Each [`Lake`] variant encodes the altitude and typical water temperature of a
 //! notable freshwater dive site. All variants are treated as fresh water (salinity
 //! $\approx \pu{0 ‰}$). Pass a variant to
-//! [`DiveEnvironment::lake`](crate::environment::DiveEnvironment::lake) to obtain an
+//! [`DiveEnvironment::lake`](crate::DiveEnvironment::lake) to obtain an
 //! environment with the correct surface pressure and freshwater density.
 //!
 //! ```
-//! use dps::environment::{DiveEnvironment, Lake};
+//! use dps_environment::{DiveEnvironment, Lake};
 //!
 //! let titicaca = DiveEnvironment::lake(Lake::Titicaca);
 //! // High altitude → lower surface pressure than sea level
@@ -16,13 +16,13 @@
 //! assert!(titicaca.water_density() > DiveEnvironment::standard().water_density());
 //! ```
 
-use crate::units::{Celsius, Meters};
+use dps_units::{Celsius, Meters};
 
 /// Notable freshwater dive sites, keyed by altitude and typical water temperature.
 ///
 /// All variants are freshwater (salinity $\approx \pu{0 ‰}$). Use
-/// [`crate::environment::DiveEnvironment::lake`] to obtain a
-/// [`crate::environment::DiveEnvironment`] for a given lake.
+/// [`crate::DiveEnvironment::lake`] to obtain a
+/// [`crate::DiveEnvironment`] for a given lake.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Lake {
     // Extreme altitude > 5 000 m
@@ -74,8 +74,8 @@ impl Lake {
     /// Altitude above sea level.
     ///
     /// ```
-    /// use dps::environment::Lake;
-    /// use dps::units::Meters;
+    /// use dps_environment::Lake;
+    /// use dps_units::Meters;
     ///
     /// assert_eq!(Lake::Titicaca.altitude(), Meters::new(3_812.0));
     /// assert_eq!(Lake::Cenotes.altitude(), Meters::new(0.0));
@@ -103,8 +103,8 @@ impl Lake {
     /// Typical water temperature in $^\circ\text{C}$.
     ///
     /// ```
-    /// use dps::environment::Lake;
-    /// use dps::units::Celsius;
+    /// use dps_environment::Lake;
+    /// use dps_units::Celsius;
     ///
     /// assert_eq!(Lake::Titicaca.typical_temperature(), Celsius::new(12.0));
     /// assert_eq!(Lake::CraterLake.typical_temperature(), Celsius::new(4.0));
@@ -132,7 +132,7 @@ impl Lake {
 mod tests {
     use super::*;
 
-    use crate::units::Meters;
+    use dps_units::Meters;
 
     use approx::assert_relative_eq;
     use rstest::rstest;

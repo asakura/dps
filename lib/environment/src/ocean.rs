@@ -1,12 +1,12 @@
-//! Named ocean and sea presets for [`DiveEnvironment`](crate::environment::DiveEnvironment).
+//! Named ocean and sea presets for [`DiveEnvironment`](crate::DiveEnvironment).
 //!
 //! Each [`Ocean`] variant encodes the representative surface salinity and temperature
 //! of a major diving body of water. Pass a variant to
-//! [`DiveEnvironment::ocean`](crate::environment::DiveEnvironment::ocean) to obtain a
+//! [`DiveEnvironment::ocean`](crate::DiveEnvironment::ocean) to obtain a
 //! correctly configured environment.
 //!
 //! ```
-//! use dps::environment::{DiveEnvironment, Ocean};
+//! use dps_environment::{DiveEnvironment, Ocean};
 //!
 //! // Red Sea (40 ‰) is saltier and denser than ISO standard seawater (35 ‰)
 //! let env = DiveEnvironment::ocean(Ocean::RedSea);
@@ -17,11 +17,11 @@
 //! assert!(baltic.water_density() > DiveEnvironment::standard().water_density());
 //! ```
 
-use crate::units::{Celsius, PartsPerThousand};
+use dps_units::{Celsius, PartsPerThousand};
 
 /// Major oceans and seas, keyed by representative surface salinity and temperature.
 ///
-/// Use [`crate::environment::DiveEnvironment::ocean`] to obtain a [`crate::environment::DiveEnvironment`]
+/// Use [`crate::DiveEnvironment::ocean`] to obtain a [`crate::DiveEnvironment`]
 /// for a given body of water.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Ocean {
@@ -68,8 +68,8 @@ impl Ocean {
     /// Representative surface salinity in parts per thousand ($\text{‰}$).
     ///
     /// ```
-    /// use dps::environment::Ocean;
-    /// use dps::units::PartsPerThousand;
+    /// use dps_environment::Ocean;
+    /// use dps_units::PartsPerThousand;
     ///
     /// assert_eq!(Ocean::RedSea.salinity(), PartsPerThousand::new(40.0));
     /// assert_eq!(Ocean::BalticSea.salinity(), PartsPerThousand::new(7.0));
@@ -93,8 +93,8 @@ impl Ocean {
     /// Representative surface temperature in $^\circ\text{C}$.
     ///
     /// ```
-    /// use dps::environment::Ocean;
-    /// use dps::units::Celsius;
+    /// use dps_environment::Ocean;
+    /// use dps_units::Celsius;
     ///
     /// assert_eq!(Ocean::Mediterranean.typical_temperature(), Celsius::new(18.0));
     /// assert_eq!(Ocean::Arctic.typical_temperature(), Celsius::new(2.0));

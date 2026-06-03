@@ -14,13 +14,13 @@
 //!   environments without error handling.
 //! - **Fallible constructors** — [`DiveEnvironment::new`], [`DiveEnvironment::at_altitude`],
 //!   [`DiveEnvironment::with_salinity`], and friends: validate their inputs and return
-//!   [`DiveEnvironmentError`](crate::environment::DiveEnvironmentError) for out-of-range values.
+//!   [`DiveEnvironmentError`](crate::DiveEnvironmentError) for out-of-range values.
 //! - **Builder refinements** — [`DiveEnvironment::with_altitude`],
 //!   [`DiveEnvironment::with_surface_pressure`], [`DiveEnvironment::with_water_density`]:
 //!   modify one field on an existing environment.
 //!
 //! ```
-//! use dps::environment::{DiveEnvironment, Ocean, Lake};
+//! use dps_environment::{DiveEnvironment, Ocean, Lake};
 //!
 //! // Named preset: Red Sea at sea level
 //! let env = DiveEnvironment::ocean(Ocean::RedSea);
@@ -56,17 +56,17 @@ use super::physics::{
 };
 use super::{Lake, Ocean};
 
-use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
+use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
 /// Dive environment parameters for depth↔pressure conversion.
 ///
 /// Encapsulates surface pressure (varies with altitude) and water density
-/// (varies with salinity and temperature). All [`crate::gas::EANxBlend`]
+/// (varies with salinity and temperature). All [`dps_gas::EANxBlend`]
 /// calculations use these values instead of fixed constants.
 ///
 /// Use [`DiveEnvironment::standard`] for typical sea-level saltwater diving,
 /// or one of the other constructors for altitude or freshwater environments.
-/// Attach to a blend with [`crate::gas::EANxBlend::with_environment`].
+/// Attach to a blend with [`dps_gas::EANxBlend::with_environment`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DiveEnvironment {
     surface_pressure: Bar,
@@ -82,8 +82,8 @@ impl DiveEnvironment {
     /// dive computers.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::{Bar, MetersPerBar};
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::{Bar, MetersPerBar};
     /// use approx::assert_relative_eq;
     ///
     /// let env = DiveEnvironment::standard();
@@ -109,7 +109,7 @@ impl DiveEnvironment {
     /// Suitable for quarry, river, and cave diving at sea level.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
+    /// use dps_environment::DiveEnvironment;
     ///
     /// let env = DiveEnvironment::freshwater();
     /// // fresh water is less dense than standard seawater — more metres per bar
@@ -130,7 +130,7 @@ impl DiveEnvironment {
     /// and temperature.
     ///
     /// ```
-    /// use dps::environment::{DiveEnvironment, Ocean};
+    /// use dps_environment::{DiveEnvironment, Ocean};
     ///
     /// let red_sea = DiveEnvironment::ocean(Ocean::RedSea);
     /// // Red Sea (41 ‰) is saltier than ISO standard (35 ‰) — denser, fewer m/bar
@@ -152,7 +152,7 @@ impl DiveEnvironment {
     /// temperature.
     ///
     /// ```
-    /// use dps::environment::{DiveEnvironment, Lake};
+    /// use dps_environment::{DiveEnvironment, Lake};
     ///
     /// let titicaca = DiveEnvironment::lake(Lake::Titicaca);
     /// // high altitude → lower surface pressure than sea level
@@ -184,8 +184,8 @@ impl DiveEnvironment {
     /// - [`DiveEnvironmentError::WaterDensityNotPositive`] if `water_density ≤ 0` or non-finite.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::{Bar, MetersPerBar};
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::{Bar, MetersPerBar};
     ///
     /// let env = DiveEnvironment::new(Bar::new(0.95), MetersPerBar::new(10.1)).unwrap();
     /// assert_eq!(env.surface_pressure(), Bar::new(0.95));
@@ -222,8 +222,8 @@ impl DiveEnvironment {
     /// $[\pu{0.0 m}, \pu{8849.0 m}]$ or non-finite.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::Meters;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::Meters;
     ///
     /// let high = DiveEnvironment::at_altitude(Meters::new(1_000.0)).unwrap();
     /// assert!(high.surface_pressure() < DiveEnvironment::standard().surface_pressure());
@@ -250,8 +250,8 @@ impl DiveEnvironment {
     /// $[\pu{0.0 m}, \pu{8849.0 m}]$ or non-finite.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::Meters;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::Meters;
     ///
     /// let alpine = DiveEnvironment::freshwater_at_altitude(Meters::new(1_000.0)).unwrap();
     /// assert!(alpine.surface_pressure() < DiveEnvironment::standard().surface_pressure());
@@ -275,8 +275,8 @@ impl DiveEnvironment {
     /// $[\pu{0.0 ‰}, \pu{350.0 ‰}]$ or non-finite.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::PartsPerThousand;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::PartsPerThousand;
     ///
     /// let brackish = DiveEnvironment::with_salinity(PartsPerThousand::new(10.0)).unwrap();
     /// // 10 ‰ is denser than fresh water but less dense than standard seawater
@@ -303,8 +303,8 @@ impl DiveEnvironment {
     /// - [`DiveEnvironmentError::TemperatureOutOfRange`] if `temperature` is outside $[\pu{-2.0 ^\circ C}, \pu{40.0 ^\circ C}]$.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::{Celsius, PartsPerThousand};
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::{Celsius, PartsPerThousand};
     /// use approx::assert_relative_eq;
     ///
     /// let iso = DiveEnvironment::with_salinity_at_temperature(
@@ -343,8 +343,8 @@ impl DiveEnvironment {
     /// $[\pu{0.0 m}, \pu{8849.0 m}]$ or non-finite.
     ///
     /// ```
-    /// use dps::environment::{DiveEnvironment, Ocean};
-    /// use dps::units::Meters;
+    /// use dps_environment::{DiveEnvironment, Ocean};
+    /// use dps_units::Meters;
     ///
     /// let elevated = DiveEnvironment::ocean(Ocean::RedSea)
     ///     .with_altitude(Meters::new(500.0))
@@ -371,8 +371,8 @@ impl DiveEnvironment {
     /// [`DiveEnvironmentError::SurfacePressureNotPositive`] if `p ≤ 0` or non-finite.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::Bar;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::Bar;
     ///
     /// let custom = DiveEnvironment::standard()
     ///     .with_surface_pressure(Bar::new(0.90))
@@ -403,8 +403,8 @@ impl DiveEnvironment {
     /// [`DiveEnvironmentError::WaterDensityNotPositive`] if `d ≤ 0` or non-finite.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::MetersPerBar;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::MetersPerBar;
     ///
     /// let custom = DiveEnvironment::standard()
     ///     .with_water_density(MetersPerBar::new(10.2))
@@ -431,8 +431,8 @@ impl DiveEnvironment {
     /// Surface pressure at the dive site.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::Bar;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::Bar;
     /// use approx::assert_relative_eq;
     ///
     /// // ISO sea-level pressure: 1.013 25 bar
@@ -450,8 +450,8 @@ impl DiveEnvironment {
     /// Water density expressed as metres per bar of gauge pressure.
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::MetersPerBar;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::MetersPerBar;
     /// use approx::assert_relative_eq;
     ///
     /// // ISO seawater (1025 kg/m³): ~9.948 m per bar
@@ -475,8 +475,8 @@ impl DiveEnvironment {
     /// $$
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::Meters;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::Meters;
     /// use approx::assert_relative_eq;
     ///
     /// let env = DiveEnvironment::standard();
@@ -500,12 +500,12 @@ impl DiveEnvironment {
     /// \text{depth} = (P_\text{abs} - P_\text{surface}) \times \text{water density}
     /// $$
     ///
-    /// Returns [`Meters::new(0.0)`](crate::units::Meters) when `absolute_pressure ≤ surface_pressure`
+    /// Returns [`Meters::new(0.0)`](dps_units::Meters) when `absolute_pressure ≤ surface_pressure`
     /// (at or above the surface).
     ///
     /// ```
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::Meters;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::Meters;
     /// use approx::assert_relative_eq;
     ///
     /// let env = DiveEnvironment::standard();
@@ -559,7 +559,7 @@ fn validate_temperature(temperature: Celsius) -> Result<(), DiveEnvironmentError
 /// # Examples
 ///
 /// ```ignore
-/// use dps::units::{Celsius, PartsPerThousand};
+/// use dps_units::{Celsius, PartsPerThousand};
 ///
 /// // ISO reference point: 35 ‰ salinity, 15 °C → exactly 1025 kg/m³
 /// assert_eq!(
@@ -591,7 +591,7 @@ fn density_kg_m3(salinity: PartsPerThousand, temperature: Celsius) -> f64 {
 ///
 /// ```ignore
 /// use approx::assert_relative_eq;
-/// use dps::units::{MetersPerBar, PartsPerThousand, Celsius};
+/// use dps_units::{MetersPerBar, PartsPerThousand, Celsius};
 ///
 /// // ISO standard seawater (35 ‰, 15 °C) → ≈ 9.948 m/bar
 /// let seawater = water_density_from(PartsPerThousand::new(35.0), Celsius::new(15.0));
@@ -619,7 +619,7 @@ fn water_density_from(salinity: PartsPerThousand, temperature: Celsius) -> Meter
 ///
 /// ```ignore
 /// # use approx::assert_relative_eq;
-/// use dps::units::{Bar, Meters};
+/// use dps_units::{Bar, Meters};
 ///
 /// // Sea level → exactly 1.01325 bar
 /// assert_relative_eq!(
@@ -647,8 +647,8 @@ fn altitude_to_pressure_bar(altitude: Meters) -> Bar {
 mod tests {
     use super::DiveEnvironment;
 
-    use crate::environment::{DiveEnvironmentError, Lake, Ocean};
-    use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
+    use crate::{DiveEnvironmentError, Lake, Ocean};
+    use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
     use approx::assert_relative_eq;
     use rstest::rstest;

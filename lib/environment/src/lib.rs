@@ -1,3 +1,15 @@
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        reason = "Tests legitimately combine Result return types with panic-inducing assertions"
+    )
+)]
+#![allow(
+    rustdoc::private_doc_tests,
+    reason = "Module-level doc examples reference crate paths that are private to rustdoc"
+)]
+
 //! Depth↔pressure conversion for variable dive environments.
 //!
 //! Standard dive tables are built on two fixed constants: $\pu{1.01325 bar}$ at the
@@ -84,8 +96,8 @@
 //! [`DiveEnvironment::with_water_density`] let you adjust a preset in place.
 //!
 //! ```
-//! use dps::environment::{DiveEnvironment, Ocean, Lake};
-//! use dps::units::{Bar, Meters, MetersPerBar};
+//! use dps_environment::{DiveEnvironment, Ocean, Lake};
+//! use dps_units::{Bar, Meters, MetersPerBar};
 //!
 //! // Named ocean preset at sea level
 //! let red_sea = DiveEnvironment::ocean(Ocean::RedSea);

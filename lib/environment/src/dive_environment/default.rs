@@ -1,7 +1,7 @@
 //! [`Default`] implementation for [`DiveEnvironment`](super::DiveEnvironment).
 //!
 //! ```
-//! use dps::environment::DiveEnvironment;
+//! use dps_environment::DiveEnvironment;
 //! assert_eq!(DiveEnvironment::default(), DiveEnvironment::standard());
 //! ```
 
@@ -12,7 +12,7 @@ use super::DiveEnvironment;
 /// # Examples
 ///
 /// ```
-/// use dps::environment::DiveEnvironment;
+/// use dps_environment::DiveEnvironment;
 ///
 /// assert_eq!(DiveEnvironment::default(), DiveEnvironment::standard());
 /// ```

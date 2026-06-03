@@ -2,13 +2,13 @@
 //! [`DiveEnvironment`](super::DiveEnvironment).
 //!
 //! ```
-//! use dps::environment::DiveEnvironment;
+//! use dps_environment::DiveEnvironment;
 //! assert_eq!("standard".parse::<DiveEnvironment>().unwrap(), DiveEnvironment::standard());
 //! ```
 
 use super::{DiveEnvironment, DiveEnvironmentError};
 
-use crate::units::{Bar, MetersPerBar};
+use dps_units::{Bar, MetersPerBar};
 
 use std::str::FromStr;
 
@@ -18,7 +18,7 @@ use std::str::FromStr;
 /// format produced by [`Display`](std::fmt::Display).
 ///
 /// ```
-/// use dps::environment::DiveEnvironment;
+/// use dps_environment::DiveEnvironment;
 ///
 /// assert!("invalid".parse::<DiveEnvironment>().is_err());
 /// assert!("standard".parse::<DiveEnvironment>().is_ok());
@@ -42,7 +42,7 @@ pub struct ParseDiveEnvironmentError;
 /// # Examples
 ///
 /// ```
-/// use dps::environment::DiveEnvironment;
+/// use dps_environment::DiveEnvironment;
 ///
 /// assert_eq!("standard".parse::<DiveEnvironment>().unwrap(),   DiveEnvironment::standard());
 /// assert_eq!("freshwater".parse::<DiveEnvironment>().unwrap(), DiveEnvironment::freshwater());

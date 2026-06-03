@@ -1,13 +1,13 @@
 //! Physical constants for water density and altitude pressure.
 //!
 //! These constants underpin all depth↔pressure calculations in
-//! [`DiveEnvironment`](crate::environment::DiveEnvironment). For instance,
+//! [`DiveEnvironment`](crate::DiveEnvironment). For instance,
 //! the ICAO standard atmosphere constant fixes sea-level surface pressure at
 //! exactly $\pu{1.01325 bar}$:
 //!
 //! ```
-//! use dps::environment::DiveEnvironment;
-//! use dps::units::Bar;
+//! use dps_environment::DiveEnvironment;
+//! use dps_units::Bar;
 //! use approx::assert_relative_eq;
 //!
 //! assert_relative_eq!(
@@ -17,7 +17,7 @@
 //! );
 //! ```
 
-use crate::units::{Bar, Celsius, Meters, PartsPerThousand};
+use dps_units::{Bar, Celsius, Meters, PartsPerThousand};
 
 /// ISO standard atmosphere sea-level pressure.
 pub(super) const SEA_LEVEL_PRESSURE_BAR: Bar = Bar::new(1.013_25);

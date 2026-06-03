@@ -1,12 +1,12 @@
-//! Error type for fallible [`DiveEnvironment`](crate::environment::DiveEnvironment) constructors.
+//! Error type for fallible [`DiveEnvironment`](crate::DiveEnvironment) constructors.
 //!
 //! [`DiveEnvironmentError`] is returned whenever a constructor, builder, or [`FromStr`](std::str::FromStr)
 //! receives an out-of-range, non-finite, or unparseable value. Each variant carries the offending
 //! value so callers can report it without re-inspecting the input.
 //!
 //! ```
-//! use dps::environment::{DiveEnvironment, DiveEnvironmentError};
-//! use dps::units::Meters;
+//! use dps_environment::{DiveEnvironment, DiveEnvironmentError};
+//! use dps_units::Meters;
 //!
 //! assert!(matches!(
 //!     DiveEnvironment::at_altitude(Meters::new(-1.0)),
@@ -16,7 +16,7 @@
 
 use super::from_str::ParseDiveEnvironmentError;
 
-use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
+use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
 /// Error returned by fallible [`DiveEnvironment`](super::DiveEnvironment) constructors and [`FromStr`](std::str::FromStr).
 #[derive(Debug, Clone, Copy, thiserror::Error)]
@@ -46,7 +46,7 @@ pub enum DiveEnvironmentError {
 mod tests {
     use super::*;
 
-    use crate::units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
+    use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
     use rstest::rstest;
 
