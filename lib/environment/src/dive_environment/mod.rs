@@ -294,7 +294,7 @@ impl DiveEnvironment {
 
     /// Sea-level environment for the given salinity and water temperature.
     ///
-    /// Passing `(35.0 ‰, 15.0 °C)` reproduces the ISO standard seawater reference
+    /// Passing $\pu{35.0 ‰}$ salinity at $\pu{15.0 ^\circ C}$ reproduces the ISO standard seawater reference
     /// and gives the same water density as [`DiveEnvironment::standard`].
     ///
     /// # Errors
@@ -447,7 +447,7 @@ impl DiveEnvironment {
         self.surface_pressure
     }
 
-    /// Water density expressed as metres per bar of gauge pressure.
+    /// Water density expressed as $\text{m/bar}$ of gauge pressure.
     ///
     /// ```
     /// use dps_environment::DiveEnvironment;
@@ -582,8 +582,13 @@ fn density_kg_m3(salinity: PartsPerThousand, temperature: Celsius) -> f64 {
 
 /// Converts salinity and temperature to the water-column height that equals one bar of pressure.
 ///
-/// Divides the Pa→bar conversion factor by the product of [`density_kg_m3`] and standard gravity
-/// to produce a [`MetersPerBar`] value — the depth change corresponding to one bar of gauge
+/// $$
+/// D(S, T) = \frac{10^5}{\rho(S, T) \times g} \; [\text{m/bar}]
+/// $$
+///
+/// Divides the $\text{Pa} \to \text{bar}$ conversion factor ($10^5$) by the product of
+/// [`density_kg_m3`] and standard gravity ($g = \pu{9.80665 m/s^2}$) to produce a
+/// [`MetersPerBar`] value — the depth change corresponding to one bar of gauge
 /// pressure in this water body. Denser water (higher salinity, lower temperature) produces a
 /// smaller value; lighter water produces a larger one.
 ///
