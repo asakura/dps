@@ -7,7 +7,10 @@ use crate::theme::Theme;
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, Serialize};
 
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, hash_map},
+    ops::Index,
+};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -70,11 +73,244 @@ pub(super) struct ThemeConfig {
     hint: ThemeSlotConfig,
 }
 
+/// Raw map of theme-name → [`ThemeConfig`], deserialized from the config file.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub(super) struct ThemeConfigMap(HashMap<String, ThemeConfig>);
+
+impl ThemeConfigMap {
+    pub(super) fn entry(&mut self, key: String) -> hash_map::Entry<'_, String, ThemeConfig> {
+        self.0.entry(key)
+    }
+}
+
+impl<'a> IntoIterator for &'a ThemeConfigMap {
+    type Item = (&'a String, &'a ThemeConfig);
+    type IntoIter = hash_map::Iter<'a, String, ThemeConfig>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
 /// One named palette entry: an open map of colour name → CSS hex value (`#rrggbb`).
 ///
 /// Any colour names may be used; only those referenced by the active theme's
 /// slot mappings need to be present.
 pub(super) type PaletteConfig = HashMap<String, String>;
+
+/// Raw map of palette-name → [`PaletteConfig`], deserialized from the config file.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub(super) struct PaletteConfigMap(HashMap<String, PaletteConfig>);
+
+impl PaletteConfigMap {
+    pub(super) fn get(&self, key: &str) -> Option<&PaletteConfig> {
+        self.0.get(key)
+    }
+
+    pub(super) fn entry(&mut self, key: String) -> hash_map::Entry<'_, String, PaletteConfig> {
+        self.0.entry(key)
+    }
+}
+
+impl<'a> IntoIterator for &'a PaletteConfigMap {
+    type Item = (&'a String, &'a PaletteConfig);
+    type IntoIter = hash_map::Iter<'a, String, PaletteConfig>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+/// Resolved colour themes keyed by the name used in the config file.
+///
+/// Produced by [`super::Config::from_dirs`]; all themes are fully resolved at load time.
+///
+/// # Examples
+///
+/// ```
+/// use dps::config::ThemeMap;
+/// use dps::theme::Theme;
+///
+/// let map = ThemeMap::from([("frappe".to_string(), Theme::default())]);
+/// assert!(map.contains_key("frappe"));
+/// ```
+#[derive(Clone, Debug, Default)]
+pub struct ThemeMap(HashMap<String, Theme>);
+
+impl ThemeMap {
+    /// Returns a reference to the [`Theme`] for the given name, or `None`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::config::ThemeMap;
+    /// use dps::theme::Theme;
+    ///
+    /// let map = ThemeMap::from([("frappe".to_string(), Theme::default())]);
+    /// assert!(map.get("frappe").is_some());
+    /// assert!(map.get("missing").is_none());
+    /// ```
+    #[must_use]
+    pub fn get(&self, key: &str) -> Option<&Theme> {
+        self.0.get(key)
+    }
+
+    /// Returns `true` if a theme with the given name is present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::config::ThemeMap;
+    /// use dps::theme::Theme;
+    ///
+    /// let map = ThemeMap::from([("frappe".to_string(), Theme::default())]);
+    /// assert!(map.contains_key("frappe"));
+    /// assert!(!map.contains_key("missing"));
+    /// ```
+    #[must_use]
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.0.contains_key(key)
+    }
+
+    /// Inserts a theme, returning the previous value if the name was already present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::config::ThemeMap;
+    /// use dps::theme::Theme;
+    ///
+    /// let mut map = ThemeMap::default();
+    /// map.insert("frappe".to_string(), Theme::default());
+    /// assert!(map.contains_key("frappe"));
+    /// ```
+    pub fn insert(&mut self, key: String, value: Theme) -> Option<Theme> {
+        self.0.insert(key, value)
+    }
+
+    /// Returns the number of themes in the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::config::ThemeMap;
+    /// use dps::theme::Theme;
+    ///
+    /// let map = ThemeMap::from([("a".to_string(), Theme::default())]);
+    /// assert_eq!(map.len(), 1);
+    /// ```
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Returns `true` if the map contains no themes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::config::ThemeMap;
+    ///
+    /// assert!(ThemeMap::default().is_empty());
+    /// ```
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Returns an iterator over name–theme pairs by reference.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::config::ThemeMap;
+    /// use dps::theme::Theme;
+    ///
+    /// let map = ThemeMap::from([("frappe".to_string(), Theme::default())]);
+    /// assert_eq!(map.iter().count(), 1);
+    /// ```
+    #[must_use]
+    pub fn iter(&self) -> hash_map::Iter<'_, String, Theme> {
+        self.0.iter()
+    }
+}
+
+/// Returns a reference to the theme with the given name.
+///
+/// # Panics
+///
+/// Panics if the name is not present in the map.
+///
+/// # Examples
+///
+/// ```
+/// use dps::config::ThemeMap;
+/// use dps::theme::Theme;
+///
+/// let map = ThemeMap::from([("frappe".to_string(), Theme::default())]);
+/// let _ = &map["frappe"];
+/// ```
+impl Index<&str> for ThemeMap {
+    type Output = Theme;
+    fn index(&self, key: &str) -> &Self::Output {
+        &self.0[key]
+    }
+}
+
+/// Creates a [`ThemeMap`] from an array of name–theme pairs.
+///
+/// # Examples
+///
+/// ```
+/// use dps::config::ThemeMap;
+/// use dps::theme::Theme;
+///
+/// let map = ThemeMap::from([("frappe".to_string(), Theme::default())]);
+/// assert_eq!(map.len(), 1);
+/// ```
+impl<const N: usize> From<[(String, Theme); N]> for ThemeMap {
+    fn from(arr: [(String, Theme); N]) -> Self {
+        Self(HashMap::from(arr))
+    }
+}
+
+/// Collects name–theme pairs into a [`ThemeMap`].
+///
+/// # Examples
+///
+/// ```
+/// use dps::config::ThemeMap;
+/// use dps::theme::Theme;
+///
+/// let map: ThemeMap = [("frappe".to_string(), Theme::default())].into_iter().collect();
+/// assert_eq!(map.len(), 1);
+/// ```
+impl FromIterator<(String, Theme)> for ThemeMap {
+    fn from_iter<I: IntoIterator<Item = (String, Theme)>>(iter: I) -> Self {
+        Self(HashMap::from_iter(iter))
+    }
+}
+
+/// Iterates over name–theme pairs by reference.
+///
+/// # Examples
+///
+/// ```
+/// use dps::config::ThemeMap;
+/// use dps::theme::Theme;
+///
+/// let map = ThemeMap::from([("frappe".to_string(), Theme::default())]);
+/// let mut count = 0;
+/// for (_name, _theme) in &map { count += 1; }
+/// assert_eq!(count, 1);
+/// ```
+impl<'a> IntoIterator for &'a ThemeMap {
+    type Item = (&'a String, &'a Theme);
+    type IntoIter = hash_map::Iter<'a, String, Theme>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
 
 /// Resolves every entry in `themes` against its matching palette, returning a
 /// map of name → fully constructed [`Theme`].
@@ -86,11 +322,11 @@ pub(super) type PaletteConfig = HashMap<String, String>;
 /// Returns `Err` if any theme references a missing palette, or if any colour
 /// name in a slot mapping is absent from the palette.
 pub(super) fn resolve_theme(
-    themes: &HashMap<String, ThemeConfig>,
-    palettes: &HashMap<String, PaletteConfig>,
-) -> Result<HashMap<String, Theme>, Error> {
+    themes: &ThemeConfigMap,
+    palettes: &PaletteConfigMap,
+) -> Result<ThemeMap, Error> {
     themes
-        .iter()
+        .into_iter()
         .map(|(name, tc)| {
             let pc = palettes
                 .get(name)
@@ -525,9 +761,9 @@ mod tests {
 
         #[test]
         fn returns_theme_for_each_entry() -> TestResult {
-            let themes: HashMap<String, ThemeConfig> =
+            let themes: ThemeConfigMap =
                 serde_json::from_str(&format!(r#"{{"t": {}}}"#, full_theme_json("text")?))?;
-            let palettes: HashMap<String, PaletteConfig> =
+            let palettes: PaletteConfigMap =
                 serde_json::from_str(r##"{"t": {"text": "#c6d0f5"}}"##)?;
             let resolved = resolve_theme(&themes, &palettes)?;
 
@@ -541,19 +777,19 @@ mod tests {
 
         #[test]
         fn missing_palette_is_err() -> TestResult<(), serde_json::Error> {
-            let themes: HashMap<String, ThemeConfig> =
+            let themes: ThemeConfigMap =
                 serde_json::from_str(&format!(r#"{{"t": {}}}"#, full_theme_json("text")?))?;
 
-            assert!(resolve_theme(&themes, &HashMap::new()).is_err());
+            assert!(resolve_theme(&themes, &PaletteConfigMap::default()).is_err());
 
             Ok(())
         }
 
         #[test]
         fn unknown_colour_name_is_err() -> TestResult<(), serde_json::Error> {
-            let themes: HashMap<String, ThemeConfig> =
+            let themes: ThemeConfigMap =
                 serde_json::from_str(&format!(r#"{{"t": {}}}"#, full_theme_json("nosuch")?))?;
-            let palettes: HashMap<String, PaletteConfig> =
+            let palettes: PaletteConfigMap =
                 serde_json::from_str(r##"{"t": {"text": "#c6d0f5"}}"##)?;
 
             assert!(resolve_theme(&themes, &palettes).is_err());
