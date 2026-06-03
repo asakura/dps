@@ -396,7 +396,6 @@ mod tests {
         cli::{Args, Cli},
         config::{AppConfig, ThemeMap},
         keymap::{KeyBindingsBuilder, KeyMapError, KeySeq, parse_key_sequence},
-        theme::Theme,
         tui::Tui,
     };
 
@@ -451,6 +450,7 @@ mod tests {
 
     fn config_with_bindings(bindings: &[(&str, Action)]) -> Result<Config, KeyMapError> {
         let mut builder = KeyBindingsBuilder::new();
+
         for (seq_str, action) in bindings {
             builder.bind(
                 Mode::Normal,
@@ -458,10 +458,11 @@ mod tests {
                 action.clone(),
             );
         }
+
         Ok(Config {
             config: AppConfig::default(),
             keybindings: builder.build(),
-            themes: ThemeMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
+            themes: ThemeMap::default(),
             default_theme: "catpuccineFrappe".to_string(),
         })
     }
