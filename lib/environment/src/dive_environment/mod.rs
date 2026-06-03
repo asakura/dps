@@ -57,6 +57,21 @@ use super::{Lake, Ocean};
 
 use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
+use strum::IntoEnumIterator;
+
+/// Records which named preset, if any, was used to construct a
+/// [`DiveEnvironment`].  Stored alongside the computed float values so that
+/// `Display` and `to_clipboard_string` can emit the canonical preset name
+/// without re-deriving it by value comparison — which fails when two presets
+/// happen to produce identical floats under the linear density model.
+#[derive(Debug, Clone, Copy)]
+enum DiveEnvironmentTag {
+    Standard,
+    Freshwater,
+    Ocean(Ocean),
+    Lake(Lake),
+}
+
 /// Dive environment parameters for depth↔pressure conversion.
 ///
 /// Encapsulates surface pressure (varies with altitude) and water density
@@ -66,11 +81,22 @@ use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 /// Use [`DiveEnvironment::standard`] for typical sea-level saltwater diving,
 /// or one of the other constructors for altitude or freshwater environments.
 /// Attach to a blend with [`dps_gas::EANxBlend::with_environment`].
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DiveEnvironment {
     surface_pressure: Bar,
     water_density: MetersPerBar,
+    /// Preset tag: drives `Display`/`to_clipboard_string` for named presets.
+    /// `None` for environments built via fallible constructors or builders.
+    /// Excluded from `PartialEq` — equality is purely value-based.
+    #[cfg_attr(feature = "serde", serde(skip))]
+    tag: Option<DiveEnvironmentTag>,
+}
+
+impl PartialEq for DiveEnvironment {
+    fn eq(&self, other: &Self) -> bool {
+        self.surface_pressure == other.surface_pressure && self.water_density == other.water_density
+    }
 }
 
 impl DiveEnvironment {
@@ -101,6 +127,7 @@ impl DiveEnvironment {
             water_density: MetersPerBar::new(
                 PA_PER_BAR / (ISO_SEAWATER_DENSITY * STANDARD_GRAVITY),
             ),
+            tag: Some(DiveEnvironmentTag::Standard),
         }
     }
 
@@ -121,6 +148,7 @@ impl DiveEnvironment {
         Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
             water_density: water_density_from(PartsPerThousand::new(0.0), FRESHWATER_TEMP_C),
+            tag: Some(DiveEnvironmentTag::Freshwater),
         }
     }
 
@@ -142,6 +170,7 @@ impl DiveEnvironment {
         Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
             water_density: water_density_from(ocean.salinity(), ocean.typical_temperature()),
+            tag: Some(DiveEnvironmentTag::Ocean(ocean)),
         }
     }
 
@@ -168,6 +197,7 @@ impl DiveEnvironment {
                 PartsPerThousand::new(0.0),
                 lake.typical_temperature(),
             ),
+            tag: Some(DiveEnvironmentTag::Lake(lake)),
         }
     }
 
@@ -208,6 +238,7 @@ impl DiveEnvironment {
         Ok(Self {
             surface_pressure,
             water_density,
+            tag: None,
         })
     }
 
@@ -236,6 +267,7 @@ impl DiveEnvironment {
         Ok(Self {
             surface_pressure: altitude_to_pressure_bar(altitude),
             water_density: Self::standard().water_density,
+            tag: None,
         })
     }
 
@@ -264,6 +296,7 @@ impl DiveEnvironment {
         Ok(Self {
             surface_pressure: altitude_to_pressure_bar(altitude),
             water_density: Self::freshwater().water_density,
+            tag: None,
         })
     }
 
@@ -289,6 +322,7 @@ impl DiveEnvironment {
         Ok(Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
             water_density: water_density_from(salinity, FRESHWATER_TEMP_C),
+            tag: None,
         })
     }
 
@@ -327,6 +361,7 @@ impl DiveEnvironment {
         Ok(Self {
             surface_pressure: SEA_LEVEL_PRESSURE_BAR,
             water_density: water_density_from(salinity, temperature),
+            tag: None,
         })
     }
 
@@ -360,6 +395,7 @@ impl DiveEnvironment {
 
         Ok(Self {
             surface_pressure: altitude_to_pressure_bar(altitude),
+            tag: None,
             ..self
         })
     }
@@ -392,6 +428,7 @@ impl DiveEnvironment {
 
         Ok(Self {
             surface_pressure,
+            tag: None,
             ..self
         })
     }
@@ -422,6 +459,7 @@ impl DiveEnvironment {
 
         Ok(Self {
             water_density,
+            tag: None,
             ..self
         })
     }
@@ -537,7 +575,20 @@ impl DiveEnvironment {
     /// ```
     #[must_use]
     pub fn to_clipboard_string(&self) -> String {
-        use strum::IntoEnumIterator;
+        // Tagged environments (built via a preset constructor) emit their
+        // canonical name directly, bypassing the value-equality scan that
+        // would otherwise conflate presets whose floats coincide.
+        match self.tag {
+            Some(DiveEnvironmentTag::Standard) => return "standard".to_owned(),
+            Some(DiveEnvironmentTag::Freshwater) => return "freshwater".to_owned(),
+            Some(DiveEnvironmentTag::Ocean(ocean)) => return format!("ocean:{ocean}"),
+            Some(DiveEnvironmentTag::Lake(lake)) => return format!("lake:{lake}"),
+            None => {}
+        }
+
+        // Fallback for untagged environments (custom constructors / builder
+        // refinements): identify by value so exact-preset matches still get
+        // the human-readable name.
 
         if *self == Self::standard() {
             return "standard".to_owned();
@@ -561,6 +612,7 @@ impl DiveEnvironment {
 
         let mut b1 = ryu::Buffer::new();
         let mut b2 = ryu::Buffer::new();
+
         format!(
             "surface_pressure={},water_density={}",
             b1.format(f64::from(self.surface_pressure)),

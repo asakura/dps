@@ -5,7 +5,7 @@
 //! assert_eq!(DiveEnvironment::standard().to_string(), "standard");
 //! ```
 
-use super::DiveEnvironment;
+use super::{DiveEnvironment, DiveEnvironmentTag};
 use crate::{Lake, Ocean};
 
 use strum::IntoEnumIterator;
@@ -26,6 +26,16 @@ use std::fmt;
 /// ```
 impl fmt::Display for DiveEnvironment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Tagged environments emit their canonical preset name directly.
+        match self.tag {
+            Some(DiveEnvironmentTag::Standard) => return f.write_str("standard"),
+            Some(DiveEnvironmentTag::Freshwater) => return f.write_str("freshwater"),
+            Some(DiveEnvironmentTag::Ocean(ocean)) => return write!(f, "ocean:{ocean}"),
+            Some(DiveEnvironmentTag::Lake(lake)) => return write!(f, "lake:{lake}"),
+            None => {}
+        }
+
+        // Fallback for untagged environments: scan by value.
         if *self == Self::standard() {
             return f.write_str("standard");
         }
