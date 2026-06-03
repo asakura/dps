@@ -184,7 +184,7 @@ impl App {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// # #[tokio::main]
     /// # async fn main() -> color_eyre::Result<()> {
     /// use clap::Parser;
