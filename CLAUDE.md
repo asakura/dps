@@ -30,7 +30,7 @@
 - Every fallible public API returns `Result<T, E>` with a concrete error type
   (not `Box<dyn Error>` or `anyhow::Error`).
 - Error types use `thiserror::Error`. Each module boundary owns one error enum
-  consolidating its errors (see `src/units/error.rs`, `src/keymap/error.rs`).
+  consolidating its errors (see `lib/units/src/error.rs`, `src/keymap/error.rs`).
 - Errors form a tree: module-level enums wrap lower-level errors via `#[from]`
   or `map_err`, so each layer imports one type.
 - `.unwrap()` is allowed only in doc examples (`/// ``` ... ````) where panic
