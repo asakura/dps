@@ -519,6 +519,54 @@ impl DiveEnvironment {
     pub fn depth(self, absolute_pressure: Bar) -> Meters {
         (absolute_pressure - self.surface_pressure).max(Bar::new(0.0)) * self.water_density
     }
+
+    /// Returns a lossless string representation suitable for copy-pasting.
+    ///
+    /// Named presets use their short names; custom environments use a
+    /// `"surface_pressure=P,water_density=D"` format with bit-perfect `f64`
+    /// values. Guaranteed to roundtrip perfectly via [`FromStr`](std::str::FromStr).
+    ///
+    /// ```
+    /// use dps_environment::DiveEnvironment;
+    ///
+    /// let env = DiveEnvironment::standard();
+    /// assert_eq!(env.to_clipboard_string(), "standard");
+    ///
+    /// let custom = DiveEnvironment::freshwater().with_surface_pressure(dps_units::Bar::new(0.95)).unwrap();
+    /// assert_eq!(custom.to_clipboard_string(), "surface_pressure=0.95,water_density=10.239239857502753");
+    /// ```
+    #[must_use]
+    pub fn to_clipboard_string(&self) -> String {
+        use strum::IntoEnumIterator;
+
+        if *self == Self::standard() {
+            return "standard".to_owned();
+        }
+
+        if *self == Self::freshwater() {
+            return "freshwater".to_owned();
+        }
+
+        for ocean in Ocean::iter() {
+            if *self == Self::ocean(ocean) {
+                return format!("ocean:{ocean}");
+            }
+        }
+
+        for lake in Lake::iter() {
+            if *self == Self::lake(lake) {
+                return format!("lake:{lake}");
+            }
+        }
+
+        let mut b1 = ryu::Buffer::new();
+        let mut b2 = ryu::Buffer::new();
+        format!(
+            "surface_pressure={},water_density={}",
+            b1.format(f64::from(self.surface_pressure)),
+            b2.format(f64::from(self.water_density)),
+        )
+    }
 }
 
 fn validate_altitude(altitude: Meters) -> Result<(), DiveEnvironmentError> {

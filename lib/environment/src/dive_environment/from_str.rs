@@ -194,6 +194,18 @@ mod tests {
     }
 
     #[rstest]
+    fn to_clipboard_string_roundtrips() -> Result<(), DiveEnvironmentError> {
+        let env = DiveEnvironment::freshwater()
+            .with_surface_pressure(Bar::new(0.950_000_000_000_000_1))?;
+        let s = env.to_clipboard_string();
+        let parsed: DiveEnvironment = s.parse()?;
+
+        assert_eq!(parsed, env);
+
+        Ok(())
+    }
+
+    #[rstest]
     fn ocean_roundtrips() -> Result<(), DiveEnvironmentError> {
         let env = DiveEnvironment::ocean(Ocean::RedSea);
 

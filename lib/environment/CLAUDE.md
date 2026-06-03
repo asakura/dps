@@ -22,7 +22,8 @@ the `dps-environment` crate.
 
 ## Serialization Contract
 
-- **Symmetrical Roundtrips**: `Display` and `FromStr` must be perfect inverses.
+- **Roundtrip Guarantee**: `DiveEnvironment` must roundtrip perfectly from
+  `to_clipboard_string()` through `FromStr`.
 - **Format Support**: Support both named presets (`ocean:RedSea`) and custom
   values (`surface_pressure=P,water_density=D`) for clipboard-safe serialization.
 - **Serde Support**: Provide optional `serde` implementations for all public
