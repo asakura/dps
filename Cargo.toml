@@ -19,6 +19,9 @@ vergen = { version = "9.1", features = ["build"] }
 vergen-gix = "9.1"
 
 [dependencies]
+dps-units = { path = "lib/units", features = ["serde"] }
+dps-environment = { path = "lib/environment", features = ["serde"] }
+dps-gas = { path = "lib/gas", features = ["serde"] }
 approx = "0.5"
 arboard = "3.6"
 better-panic = "0.3"
@@ -50,26 +53,14 @@ rstest = "0.26"
 temp-env = "0.3"
 tempfile = "3.27"
 
-[profile.dev]
-debug = 1
+[workspace]
+members = [
+    "lib/environment",
+    "lib/gas",
+    "lib/units",
+]
 
-[profile.test]
-debug = 1
-split-debuginfo = "unpacked"
-
-[profile.mutants]
-inherits = "test"
-debug = "none"
-opt-level = 0
-
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = 3
-panic = "abort"
-strip = "symbols"
-
-[lints.rust]
+[workspace.lints.rust]
 # Safety — forbid means even #![allow(...)] can't override
 unsafe_code = "forbid"
 non_ascii_idents = "forbid"
@@ -86,10 +77,10 @@ missing_debug_implementations = "deny"
 missing_copy_implementations = "deny"
 unfulfilled_lint_expectations = "deny"
 
-[lints.rustdoc]
+[workspace.lints.rustdoc]
 all = { level = "deny", priority = -1 }
 
-[lints.clippy]
+[workspace.lints.clippy]
 # All lint groups
 all = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
@@ -134,3 +125,25 @@ cast_possible_wrap = "allow"
 
 # Nursery lints that have too many false positives
 cognitive_complexity = "allow"      # use clippy.toml threshold instead
+
+[lints]
+workspace = true
+
+[profile.dev]
+debug = 1
+
+[profile.test]
+debug = 1
+split-debuginfo = "unpacked"
+
+[profile.mutants]
+inherits = "test"
+debug = "none"
+opt-level = 0
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = "symbols"

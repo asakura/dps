@@ -721,6 +721,9 @@ dependencies = [
  "color-eyre",
  "crossterm",
  "directories",
+ "dps-environment",
+ "dps-gas",
+ "dps-units",
  "futures",
  "human-panic",
  "json5",
@@ -744,6 +747,40 @@ dependencies = [
  "tracing-subscriber",
  "vergen",
  "vergen-gix",
+]
+
+[[package]]
+name = "dps-environment"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "dps-units",
+ "rstest",
+ "serde",
+ "strum 0.28.0",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "dps-gas"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "dps-environment",
+ "dps-units",
+ "rstest",
+ "serde",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "dps-units"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "rstest",
+ "serde",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

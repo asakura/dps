@@ -14,7 +14,7 @@ use std::env;
 pub enum Error {
     /// Gas domain error (blend validation, membrane fractions, …).
     #[error(transparent)]
-    Gas(#[from] crate::gas::GasError),
+    Gas(#[from] dps_gas::GasError),
     /// Configuration error (key parsing, file loading, …).
     #[error(transparent)]
     Config(#[from] crate::config::ConfigError),
@@ -26,7 +26,7 @@ pub enum Error {
     Action(#[from] crate::action::ActionError),
     /// Unit parse error (bad suffix, non-numeric value, …).
     #[error(transparent)]
-    Unit(#[from] crate::units::UnitError),
+    Unit(#[from] dps_units::UnitError),
     /// Key-sequence parse error (empty sequence, unknown key, …).
     #[error(transparent)]
     KeyMap(#[from] crate::keymap::KeyMapError),
