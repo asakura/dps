@@ -394,7 +394,7 @@ mod tests {
     use crate::{
         action::Movement,
         cli::{Args, Cli},
-        config::AppConfig,
+        config::{AppConfig, ThemeMap},
         keymap::{KeyBindingsBuilder, KeyMapError, KeySeq, parse_key_sequence},
         theme::Theme,
         tui::Tui,
@@ -405,8 +405,6 @@ mod tests {
     use crossterm::event::{KeyCode, KeyModifiers};
     use ratatui::Frame;
     use rstest::rstest;
-
-    use std::collections::HashMap;
 
     #[derive(Debug, thiserror::Error)]
     enum TestError {
@@ -463,7 +461,7 @@ mod tests {
         Ok(Config {
             config: AppConfig::default(),
             keybindings: builder.build(),
-            themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
+            themes: ThemeMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
             default_theme: "catpuccineFrappe".to_string(),
         })
     }
