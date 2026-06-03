@@ -55,6 +55,16 @@ impl Percent {
         self.0
     }
 
+    /// Returns a lossless string representation suitable for copy-pasting.
+    ///
+    /// Guaranteed to roundtrip perfectly via [`FromStr`](std::str::FromStr).
+    /// Format: "32.11%"
+    #[must_use]
+    pub fn to_clipboard_string(&self) -> String {
+        let mut buffer = ::ryu::Buffer::new();
+        ::std::format!("{}%", buffer.format(self.0 * 100.0))
+    }
+
     /// Constructs a `Percent` from a compile-time-known fraction, panicking if
     /// out of range.
     ///
@@ -333,7 +343,26 @@ mod tests {
         use super::*;
 
         #[rstest]
-        fn roundtrip() -> Result<(), UnitError> {
+        fn roundtrip_clipboard() -> Result<(), UnitError> {
+            let v = Percent::new(0.3211)?;
+
+            // clipboard string must be bit-perfect
+            assert_eq!(v.to_clipboard_string().parse::<Percent>()?, v);
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn display_is_lossy_for_precision() -> Result<(), UnitError> {
+            let v = Percent::new(0.3211)?;
+
+            assert_eq!(v.to_string(), "32.1%");
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn roundtrip_simple() -> Result<(), UnitError> {
             let v = Percent::new(0.32)?;
 
             assert_eq!(v.to_string().parse::<Percent>()?, v);

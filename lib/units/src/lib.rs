@@ -110,6 +110,15 @@ macro_rules! unit_newtype {
                 self.0
             }
 
+            /// Returns a lossless string representation suitable for copy-pasting.
+            ///
+            /// Guaranteed to roundtrip perfectly via [`FromStr`](std::str::FromStr).
+            #[must_use]
+            pub fn to_clipboard_string(&self) -> String {
+                let mut buffer = ::ryu::Buffer::new();
+                ::std::format!("{} {}", buffer.format(self.0), $suffix)
+            }
+
             /// Returns the greater of two values.
             #[must_use]
             pub const fn max(self, other: Self) -> Self {
@@ -145,7 +154,7 @@ macro_rules! unit_newtype {
 
         impl ::std::fmt::Display for $ty {
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                write!(f, "{:.1} {}", self.0, $suffix)
+                ::std::write!(f, "{:.1} {}", self.0, $suffix)
             }
         }
 
@@ -374,12 +383,19 @@ macro_rules! unit_newtype {
                 use super::*;
 
                 #[rstest]
-                fn roundtrip() -> Result<(), $crate::UnitError> {
-                    let v = $ty::new(1.5);
+                fn roundtrip_clipboard() -> Result<(), $crate::UnitError> {
+                    let v = $ty::new(1.555);
 
-                    assert_eq!(v.to_string().parse::<$ty>()?, v);
+                    // clipboard string must be bit-perfect
+                    assert_eq!(v.to_clipboard_string().parse::<$ty>()?, v);
 
                     ::std::result::Result::Ok(())
+                }
+
+                #[rstest]
+                fn display_is_lossy_for_precision() {
+                    let v = $ty::new(1.55);
+                    assert_eq!(v.to_string(), ::std::concat!("1.6 ", $suffix));
                 }
 
                 #[rstest]

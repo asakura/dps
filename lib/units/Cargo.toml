@@ -18,6 +18,7 @@ workspace = true
 
 [dependencies]
 approx = "0.5"
+ryu = "1.0"
 thiserror = "2.0"
 
 [dependencies.serde]
