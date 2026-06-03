@@ -1,11 +1,12 @@
 //! Parse errors for unit types.
 //!
 //! ```
+//! # use core::assert_matches;
 //! use dps_units::{Bar, Meters, Percent};
-//! assert!("invalid".parse::<Bar>().is_err());
-//! assert!("1.5 bar".parse::<Bar>().is_ok());
-//! assert!("invalid".parse::<Percent>().is_err());
-//! assert!("32%".parse::<Percent>().is_ok());
+//! assert_matches!("invalid".parse::<Bar>(), Err(_));
+//! assert_matches!("1.5 bar".parse::<Bar>(), Ok(_));
+//! assert_matches!("invalid".parse::<Percent>(), Err(_));
+//! assert_matches!("32%".parse::<Percent>(), Ok(_));
 //! ```
 
 /// Module-level parse error for unit types.
@@ -15,9 +16,10 @@
 /// # Examples
 ///
 /// ```
+/// # use core::assert_matches;
 /// use dps_units::{Bar, UnitError};
 ///
-/// assert!(matches!("bad".parse::<Bar>(), Err(UnitError::Parse(_))));
+/// assert_matches!("bad".parse::<Bar>(), Err(UnitError::Parse(_)));
 /// ```
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum Error {
@@ -37,12 +39,13 @@ pub enum Error {
 /// # Examples
 ///
 /// ```
+/// # use core::assert_matches;
 /// use dps_units::{Bar, Celsius, Meters, Percent, UnitError};
 ///
-/// assert!(matches!("nope".parse::<Bar>(), Err(UnitError::Parse(_))));
-/// assert!(matches!("nope".parse::<Celsius>(), Err(UnitError::Parse(_))));
-/// assert!(matches!("nope".parse::<Meters>(), Err(UnitError::Parse(_))));
-/// assert!(matches!("nope".parse::<Percent>(), Err(UnitError::Parse(_))));
+/// assert_matches!("nope".parse::<Bar>(), Err(UnitError::Parse(_)));
+/// assert_matches!("nope".parse::<Celsius>(), Err(UnitError::Parse(_)));
+/// assert_matches!("nope".parse::<Meters>(), Err(UnitError::Parse(_)));
+/// assert_matches!("nope".parse::<Percent>(), Err(UnitError::Parse(_)));
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ParseError {

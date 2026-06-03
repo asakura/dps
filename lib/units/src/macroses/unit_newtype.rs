@@ -361,21 +361,22 @@ macro_rules! unit_newtype {
             use super::*;
 
             use ::rstest::rstest;
+            use core::assert_matches;
 
             mod new {
                 use super::*;
 
                 #[rstest]
                 fn rejects_out_of_range() {
-                    assert!($ty::new($min - 0.1).is_err());
-                    assert!($ty::new($max + 0.1).is_err());
+                    assert_matches!($ty::new($min - 0.1), Err(_));
+                    assert_matches!($ty::new($max + 0.1), Err(_));
                 }
 
                 #[rstest]
                 fn accepts_in_range() {
-                    assert!($ty::new($min).is_ok());
-                    assert!($ty::new($max).is_ok());
-                    assert!($ty::new(($min + $max) / 2.0).is_ok());
+                    assert_matches!($ty::new($min), Ok(_));
+                    assert_matches!($ty::new($max), Ok(_));
+                    assert_matches!($ty::new(($min + $max) / 2.0), Ok(_));
                 }
             }
 
@@ -402,8 +403,8 @@ macro_rules! unit_newtype {
 
                 #[rstest]
                 fn rejects_out_of_range() {
-                    assert!($ty::try_from($min - 0.1).is_err());
-                    assert!($ty::try_from($max + 0.1).is_err());
+                    assert_matches!($ty::try_from($min - 0.1), Err(_));
+                    assert_matches!($ty::try_from($max + 0.1), Err(_));
                 }
             }
         }
