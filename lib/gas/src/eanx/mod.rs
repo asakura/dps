@@ -44,10 +44,37 @@ use std::{fmt, str::FromStr};
 /// let density = psa32.gas_density_at(Meters::new(30.0));
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    serde(
+        try_from = "EANxBlendShadow<M>",
+        bound(deserialize = "M: ::serde::Deserialize<'de>")
+    )
+)]
 pub struct EANxBlend<M: BlendMethod> {
     fo2: Percent,
     method: M,
     env: DiveEnvironment,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct EANxBlendShadow<M> {
+    fo2: Percent,
+    method: M,
+    env: DiveEnvironment,
+}
+
+#[cfg(feature = "serde")]
+impl<M: BlendMethod> TryFrom<EANxBlendShadow<M>> for EANxBlend<M> {
+    type Error = String;
+
+    fn try_from(shadow: EANxBlendShadow<M>) -> Result<Self, Self::Error> {
+        Self::new(shadow.fo2, shadow.method)
+            .map(|blend| blend.with_environment(shadow.env))
+            .map_err(|e| e.to_string())
+    }
 }
 
 /// Type alias for the most common case: partial-pressure blended nitrox.

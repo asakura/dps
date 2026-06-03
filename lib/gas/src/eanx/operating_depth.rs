@@ -22,10 +22,40 @@ use std::fmt;
 /// assert_eq!(m.summary().to_string(), "EANx 32  MOD 33.4 m  @ ppO₂ 1.4 bar");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "MODShadow"))]
 pub struct MOD {
     depth: Meters,
     fo2: Percent,
     ppo2_max: Bar,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct MODShadow {
+    depth: Meters,
+    fo2: Percent,
+    ppo2_max: Bar,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<MODShadow> for MOD {
+    type Error = String;
+
+    fn try_from(shadow: MODShadow) -> Result<Self, Self::Error> {
+        if shadow.fo2 < EAN_MIN_O2 {
+            return Err(format!(
+                "O₂ fraction {} is below the 10 % minimum",
+                shadow.fo2
+            ));
+        }
+
+        Ok(Self {
+            depth: shadow.depth,
+            fo2: shadow.fo2,
+            ppo2_max: shadow.ppo2_max,
+        })
+    }
 }
 
 impl MOD {
@@ -179,6 +209,8 @@ impl approx::RelativeEq for MOD {
 
 /// Full-detail display: `{gas name}  MOD {depth}  @ ppO₂ {ppo2_max}`.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct MODSummary(MOD);
 
 impl MODSummary {

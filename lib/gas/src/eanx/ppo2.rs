@@ -19,10 +19,31 @@ use std::fmt;
 /// assert_eq!(p.summary().to_string(), "EANx 32  ppO₂ 1.4 bar  @ 33.8 m");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "PPO2Shadow"))]
 pub struct PPO2 {
     ppo2: Bar,
     fo2: Percent,
     depth: Meters,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct PPO2Shadow {
+    ppo2: Bar,
+    fo2: Percent,
+    depth: Meters,
+}
+
+#[cfg(feature = "serde")]
+impl From<PPO2Shadow> for PPO2 {
+    fn from(shadow: PPO2Shadow) -> Self {
+        Self {
+            ppo2: shadow.ppo2,
+            fo2: shadow.fo2,
+            depth: shadow.depth,
+        }
+    }
 }
 
 impl PPO2 {
@@ -107,6 +128,8 @@ impl From<PPO2> for Bar {
 
 /// Full-detail display: `{gas name}  ppO₂ {ppo2}  @ {depth}`.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Ppo2Summary(PPO2);
 
 impl Ppo2Summary {

@@ -22,10 +22,31 @@ use std::fmt;
 /// assert_eq!(e.summary().to_string(), "Air  EAD 30.0 m  @ 30.0 m");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "EADShadow"))]
 pub struct EAD {
     ead: Meters,
     fo2: Percent,
     actual_depth: Meters,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct EADShadow {
+    ead: Meters,
+    fo2: Percent,
+    actual_depth: Meters,
+}
+
+#[cfg(feature = "serde")]
+impl From<EADShadow> for EAD {
+    fn from(shadow: EADShadow) -> Self {
+        Self {
+            ead: shadow.ead,
+            fo2: shadow.fo2,
+            actual_depth: shadow.actual_depth,
+        }
+    }
 }
 
 impl EAD {
@@ -118,6 +139,8 @@ impl From<EAD> for Meters {
 
 /// Full-detail display: `{gas name}  EAD {ead}  @ {actual_depth}`.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct EADSummary(EAD);
 
 impl EADSummary {

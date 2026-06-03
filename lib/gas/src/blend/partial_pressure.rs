@@ -19,6 +19,7 @@ use crate::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
 /// assert!((c.n2() / c.ar() - air_ratio).abs() < 0.01);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct PartialPressure;
 
 impl sealed::Sealed for PartialPressure {}

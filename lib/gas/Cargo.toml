@@ -30,6 +30,7 @@ optional = true
 [dev-dependencies]
 approx = "0.5"
 rstest = "0.26"
+serde_json = "1.0"
 
 [features]
 serde = ["dep:serde", "dps-units/serde", "dps-environment/serde"]

@@ -25,6 +25,8 @@ use crate::constants::{AIR_DILUENT, AIR_OTHER};
 /// let mix40 = EANxBlend::new(Percent::new(0.40).unwrap(), mem).unwrap();
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "MembraneShadow"))]
 pub struct Membrane {
     // These are *diluent-normalised* ratios, not absolute mole fractions.
     //
@@ -42,6 +44,35 @@ pub struct Membrane {
     far: f64,
     fco2: f64,
     fother: f64,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct MembraneShadow {
+    fn2: f64,
+    far: f64,
+    fco2: f64,
+    fother: f64,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<MembraneShadow> for Membrane {
+    type Error = &'static str;
+
+    fn try_from(shadow: MembraneShadow) -> Result<Self, Self::Error> {
+        let sum = shadow.fn2 + shadow.far + shadow.fco2 + shadow.fother;
+
+        if (sum - 1.0).abs() > 1e-6 {
+            return Err("Membrane diluent ratios must sum to 1.0");
+        }
+
+        Ok(Self {
+            fn2: shadow.fn2,
+            far: shadow.far,
+            fco2: shadow.fco2,
+            fother: shadow.fother,
+        })
+    }
 }
 
 impl Membrane {

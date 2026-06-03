@@ -35,12 +35,45 @@ const MW_OTHER: f64 = 20.1797; // Neon — dominant trace noble gas by mole frac
 /// assert!((c.sum() - 1.0).abs() < 1e-12);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "GasComponentsShadow"))]
 pub struct GasComponents {
     o2: f64,
     n2: f64,
     ar: f64,
     co2: f64,
     other: f64,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct GasComponentsShadow {
+    o2: f64,
+    n2: f64,
+    ar: f64,
+    co2: f64,
+    other: f64,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<GasComponentsShadow> for GasComponents {
+    type Error = &'static str;
+
+    fn try_from(shadow: GasComponentsShadow) -> Result<Self, Self::Error> {
+        let sum = shadow.o2 + shadow.n2 + shadow.ar + shadow.co2 + shadow.other;
+
+        if (sum - 1.0).abs() > 1e-6 {
+            return Err("GasComponents fractions must sum to 1.0");
+        }
+
+        Ok(Self {
+            o2: shadow.o2,
+            n2: shadow.n2,
+            ar: shadow.ar,
+            co2: shadow.co2,
+            other: shadow.other,
+        })
+    }
 }
 
 impl GasComponents {

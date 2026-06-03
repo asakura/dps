@@ -45,6 +45,7 @@ const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 /// assert!(ean32.far() > pp.far());
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Psa;
 
 impl sealed::Sealed for Psa {}

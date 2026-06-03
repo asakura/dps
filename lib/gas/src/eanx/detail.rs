@@ -23,6 +23,11 @@ use std::fmt;
 /// //   other    0.002 %
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    serde(transparent, bound(deserialize = "M: ::serde::Deserialize<'de>"))
+)]
 pub struct EANxDetail<M: BlendMethod>(EANxBlend<M>);
 
 impl<M: BlendMethod> EANxDetail<M> {

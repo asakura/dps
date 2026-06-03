@@ -22,10 +22,31 @@ use std::fmt;
 /// assert_eq!(m.summary().to_string(), "Air  MND 30.0 m  @ END 30.0 m");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "MNDShadow"))]
 pub struct MND {
     mnd: Meters,
     fo2: Percent,
     end_limit: Meters,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct MNDShadow {
+    mnd: Meters,
+    fo2: Percent,
+    end_limit: Meters,
+}
+
+#[cfg(feature = "serde")]
+impl From<MNDShadow> for MND {
+    fn from(shadow: MNDShadow) -> Self {
+        Self {
+            mnd: shadow.mnd,
+            fo2: shadow.fo2,
+            end_limit: shadow.end_limit,
+        }
+    }
 }
 
 impl MND {
@@ -128,6 +149,8 @@ impl From<MND> for Meters {
 
 /// Full-detail display: `{gas name}  MND {mnd}  @ END {end_limit}`.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct MNDSummary(MND);
 
 impl MNDSummary {

@@ -22,10 +22,40 @@ use std::fmt;
 /// assert_eq!(m.summary().to_string(), "Hypoxic 10  MiniMOD 5.8 m  @ ppO₂ 0.16 bar");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "MiniMODShadow"))]
 pub struct MiniMOD {
     depth: Meters,
     fo2: Percent,
     ppo2_min: Bar,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct MiniMODShadow {
+    depth: Meters,
+    fo2: Percent,
+    ppo2_min: Bar,
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<MiniMODShadow> for MiniMOD {
+    type Error = String;
+
+    fn try_from(shadow: MiniMODShadow) -> Result<Self, Self::Error> {
+        if shadow.fo2 < EAN_MIN_O2 {
+            return Err(format!(
+                "O₂ fraction {} is below the 10 % minimum",
+                shadow.fo2
+            ));
+        }
+
+        Ok(Self {
+            depth: shadow.depth,
+            fo2: shadow.fo2,
+            ppo2_min: shadow.ppo2_min,
+        })
+    }
 }
 
 impl MiniMOD {
@@ -157,6 +187,8 @@ impl From<MiniMOD> for Meters {
 
 /// Full-detail display: `{gas name}  MiniMOD {depth}  @ ppO₂ {ppo2_min}`.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct MiniMODSummary(MiniMOD);
 
 impl MiniMODSummary {
