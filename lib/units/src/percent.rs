@@ -41,6 +41,17 @@ impl Percent {
         }
     }
 
+    /// Returns the underlying `f64` value.
+    ///
+    /// # Warning
+    ///
+    /// This method returns a unitless value, bypassing type safety. Use only when
+    /// strictly necessary for external API compatibility.
+    #[deprecated(since = "0.1.0", note = "returns unitless value; use only for external API compatibility")]
+    pub const fn as_f64(self) -> f64 {
+        self.0
+    }
+
     /// Constructs a `Percent` from a compile-time-known fraction, panicking if
     /// out of range.
     ///
@@ -80,6 +91,34 @@ impl Percent {
 impl From<Percent> for f64 {
     fn from(p: Percent) -> Self {
         p.0
+    }
+}
+
+impl Default for Percent {
+    fn default() -> Self {
+        Self(0.0)
+    }
+}
+
+impl std::iter::Sum for Percent {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        Self(iter.map(|v| v.0).sum())
+    }
+}
+
+impl std::ops::Add for Percent {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl std::ops::Sub for Percent {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        Self(self.0 - rhs.0)
     }
 }
 
@@ -207,6 +246,43 @@ mod tests {
             let p = Percent::new(0.40)?;
             assert_relative_eq!(f64::from(p), 0.40);
             Ok(())
+        }
+    }
+
+    mod default {
+        use super::*;
+
+        #[rstest]
+        fn default_is_zero() {
+            assert_eq!(Percent::default(), Percent::literal(0.0));
+        }
+    }
+
+    mod sum {
+        use super::*;
+
+        #[rstest]
+        fn sums_iterator() {
+            let vals = vec![Percent::literal(0.1), Percent::literal(0.2), Percent::literal(0.3)];
+            assert_relative_eq!(vals.into_iter().sum::<Percent>(), Percent::literal(0.6));
+        }
+    }
+
+    mod add {
+        use super::*;
+
+        #[rstest]
+        fn adds_values() {
+            assert_relative_eq!(Percent::literal(0.1) + Percent::literal(0.2), Percent::literal(0.3));
+        }
+    }
+
+    mod sub {
+        use super::*;
+
+        #[rstest]
+        fn subtracts_values() {
+            assert_relative_eq!(Percent::literal(0.5) - Percent::literal(0.2), Percent::literal(0.3));
         }
     }
 

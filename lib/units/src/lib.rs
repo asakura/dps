@@ -51,6 +51,17 @@ macro_rules! unit_newtype {
                 Self(val)
             }
 
+            /// Returns the underlying `f64` value.
+            ///
+            /// # Warning
+            ///
+            /// This method returns a unitless value, bypassing type safety. Use only when
+            /// strictly necessary for external API compatibility.
+            #[deprecated(since = "0.1.0", note = "returns unitless value; use only for external API compatibility")]
+            pub const fn as_f64(self) -> f64 {
+                self.0
+            }
+
             /// Returns the greater of two values.
             #[must_use]
             pub const fn max(self, other: Self) -> Self {
@@ -115,6 +126,18 @@ macro_rules! unit_newtype {
         impl ::std::convert::From<$ty> for f64 {
             fn from(v: $ty) -> Self {
                 v.0
+            }
+        }
+
+        impl ::std::default::Default for $ty {
+            fn default() -> Self {
+                Self(0.0)
+            }
+        }
+
+        impl ::std::iter::Sum for $ty {
+            fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+                Self(iter.map(|v| v.0).sum())
             }
         }
 
@@ -347,6 +370,25 @@ macro_rules! unit_newtype {
                 #[rstest]
                 fn f64_from() {
                     ::approx::assert_relative_eq!(f64::from($ty::new(5.0)), 5.0);
+                }
+            }
+
+            mod default {
+                use super::*;
+
+                #[rstest]
+                fn default_is_zero() {
+                    assert_eq!($ty::default(), $ty::new(0.0));
+                }
+            }
+
+            mod sum {
+                use super::*;
+
+                #[rstest]
+                fn sums_iterator() {
+                    let vals = vec![$ty::new(1.0), $ty::new(2.0), $ty::new(3.0)];
+                    assert_eq!(vals.into_iter().sum::<$ty>(), $ty::new(6.0));
                 }
             }
 
