@@ -22,12 +22,33 @@ pub struct KeyBindings(Box<[(Mode, ModeMap)]>);
 
 impl KeyBindings {
     /// Returns the binding map for `mode`, or `None` if none is registered.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::{KeyBindings, KeyBindingsBuilder, Mode};
+    ///
+    /// let bindings = KeyBindingsBuilder::new().build();
+    /// assert!(bindings.get(&Mode::Normal).is_none());
+    /// ```
     #[must_use]
     pub fn get(&self, mode: &Mode) -> Option<&ModeMap> {
         self.0.iter().find(|(m, _)| m == mode).map(|(_, map)| map)
     }
 
     /// Returns an iterator over `(&Mode, &ModeMap)` pairs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::{KeyBindingsBuilder, KeySeq, Mode, keys::parse_key_sequence};
+    /// use dps::action::{Action, Movement};
+    ///
+    /// let mut b = KeyBindingsBuilder::new();
+    /// b.bind(Mode::Normal, KeySeq::from(parse_key_sequence("j").unwrap()), Action::Move(Movement::Down));
+    /// let bindings = b.build();
+    /// assert_eq!(bindings.iter().count(), 1);
+    /// ```
     pub fn iter(&self) -> impl Iterator<Item = (&Mode, &ModeMap)> {
         self.0.iter().map(|(m, map)| (m, map))
     }
@@ -56,12 +77,31 @@ pub struct KeyBindingsBuilder {
 
 impl KeyBindingsBuilder {
     /// Creates an empty builder.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::KeyBindingsBuilder;
+    ///
+    /// let _builder = KeyBindingsBuilder::new();
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Binds `seq` to `action` in `mode`, overwriting any existing binding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::{KeyBindingsBuilder, KeySeq, Mode, keys::parse_key_sequence};
+    /// use dps::action::{Action, Movement};
+    ///
+    /// let mut b = KeyBindingsBuilder::new();
+    /// b.bind(Mode::Normal, KeySeq::from(parse_key_sequence("j").unwrap()), Action::Move(Movement::Down));
+    /// assert!(b.build().get(&Mode::Normal).is_some());
+    /// ```
     pub fn bind(&mut self, mode: Mode, seq: KeySeq, action: Action) -> &mut Self {
         self.explicit.entry(mode).or_default().bind(seq, action);
 
@@ -69,6 +109,22 @@ impl KeyBindingsBuilder {
     }
 
     /// Binds `seq` to `action` in `mode` only if `seq` is not already bound.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::{KeyBindingsBuilder, KeySeq, Mode, keys::parse_key_sequence};
+    /// use dps::action::{Action, Movement};
+    ///
+    /// let mut b = KeyBindingsBuilder::new();
+    /// b.bind(Mode::Normal, KeySeq::from(parse_key_sequence("j").unwrap()), Action::Move(Movement::Down));
+    /// b.bind_default(Mode::Normal, KeySeq::from(parse_key_sequence("j").unwrap()), Action::Move(Movement::Up));
+    /// // existing binding is kept
+    /// assert_eq!(
+    ///     b.build().get(&Mode::Normal).unwrap().get(&parse_key_sequence("j").unwrap()),
+    ///     Some(&Action::Move(Movement::Down)),
+    /// );
+    /// ```
     pub fn bind_default(&mut self, mode: Mode, seq: KeySeq, action: Action) -> &mut Self {
         self.explicit
             .entry(mode)
@@ -79,6 +135,19 @@ impl KeyBindingsBuilder {
     }
 
     /// Copies every binding from `defaults` that is not already present in `self`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::{KeyBindingsBuilder, KeySeq, Mode, keys::parse_key_sequence};
+    /// use dps::action::{Action, Movement};
+    ///
+    /// let mut defaults = KeyBindingsBuilder::new();
+    /// defaults.bind(Mode::Normal, KeySeq::from(parse_key_sequence("j").unwrap()), Action::Move(Movement::Down));
+    ///
+    /// let bindings = KeyBindingsBuilder::new().merge_defaults(&defaults).build();
+    /// assert!(bindings.get(&Mode::Normal).is_some());
+    /// ```
     pub fn merge_defaults(&mut self, defaults: &Self) -> &mut Self {
         for (mode, def_map) in &defaults.explicit {
             self.explicit
@@ -97,6 +166,14 @@ impl KeyBindingsBuilder {
     }
 
     /// Returns an immutable [`KeyBindings`] using `<Space>` as the leader key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::KeyBindingsBuilder;
+    ///
+    /// let _bindings = KeyBindingsBuilder::new().build();
+    /// ```
     #[must_use]
     pub fn build(&mut self) -> KeyBindings {
         self.build_with_leader("<Space>")
@@ -109,6 +186,14 @@ impl KeyBindingsBuilder {
     /// (override priority); default pending entries are added with
     /// [`bind_default`](ModeMapBuilder::bind_default) (fill-in priority).
     /// Modes are stored in sorted order so iteration is deterministic.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dps::keymap::KeyBindingsBuilder;
+    ///
+    /// let _bindings = KeyBindingsBuilder::new().build_with_leader(",");
+    /// ```
     #[must_use]
     pub fn build_with_leader(&mut self, leader: &str) -> KeyBindings {
         let pending = std::mem::take(&mut self.pending);
