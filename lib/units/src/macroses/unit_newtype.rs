@@ -104,6 +104,12 @@ macro_rules! unit_newtype {
 
         $crate::impl_percent_scaling!($ty);
 
+        impl ::std::convert::From<f64> for $ty {
+            fn from(v: f64) -> Self {
+                Self(v)
+            }
+        }
+
         #[cfg(test)]
         mod unit_newtype_tests {
             use super::*;
@@ -241,6 +247,15 @@ macro_rules! unit_newtype {
                     );
                 }
             }
+
+            mod from_f64 {
+                use super::*;
+
+                #[rstest]
+                fn converts() {
+                    ::approx::assert_relative_eq!($ty::from(1.5_f64), $ty(1.5));
+                }
+            }
         }
     };
     (
@@ -333,6 +348,14 @@ macro_rules! unit_newtype {
 
         $crate::impl_percent_scaling!($ty);
 
+        impl ::std::convert::TryFrom<f64> for $ty {
+            type Error = $crate::UnitError;
+
+            fn try_from(v: f64) -> ::std::result::Result<Self, Self::Error> {
+                Self::new(v)
+            }
+        }
+
         #[cfg(test)]
         mod unit_newtype_bounded_tests {
             use super::*;
@@ -363,6 +386,24 @@ macro_rules! unit_newtype {
                 fn accepts_in_range() {
                     let _ = $ty::literal($min);
                     let _ = $ty::literal($max);
+                }
+            }
+
+            mod try_from_f64 {
+                use super::*;
+
+                #[rstest]
+                fn accepts_in_range() -> ::std::result::Result<(), $crate::UnitError> {
+                    $ty::try_from($min)?;
+                    $ty::try_from($max)?;
+                    $ty::try_from(($min + $max) / 2.0)?;
+                    ::std::result::Result::Ok(())
+                }
+
+                #[rstest]
+                fn rejects_out_of_range() {
+                    assert!($ty::try_from($min - 0.1).is_err());
+                    assert!($ty::try_from($max + 0.1).is_err());
                 }
             }
         }

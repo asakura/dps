@@ -12,12 +12,6 @@
 #[macro_export]
 macro_rules! unit_newtype_common {
     ($ty:ident) => {
-        impl ::std::convert::From<f64> for $ty {
-            fn from(v: f64) -> Self {
-                Self(v)
-            }
-        }
-
         impl ::std::convert::From<$ty> for f64 {
             fn from(v: $ty) -> Self {
                 v.0
@@ -124,13 +118,8 @@ macro_rules! unit_newtype_common {
                 use super::*;
 
                 #[rstest]
-                fn from_f64() {
-                    ::approx::assert_relative_eq!($ty::from(5.0_f64), $ty::from(5.0));
-                }
-
-                #[rstest]
                 fn f64_from() {
-                    ::approx::assert_relative_eq!(f64::from($ty::from(5.0)), 5.0);
+                    ::approx::assert_relative_eq!(f64::from($ty(0.5)), 0.5);
                 }
             }
 
@@ -139,7 +128,7 @@ macro_rules! unit_newtype_common {
 
                 #[rstest]
                 fn default_is_zero() {
-                    assert_eq!($ty::default(), $ty::from(0.0));
+                    assert_eq!($ty::default(), $ty(0.0));
                 }
             }
 
@@ -148,8 +137,8 @@ macro_rules! unit_newtype_common {
 
                 #[rstest]
                 fn sums_iterator() {
-                    let vals = vec![$ty::from(1.0), $ty::from(2.0), $ty::from(3.0)];
-                    assert_eq!(vals.into_iter().sum::<$ty>(), $ty::from(6.0));
+                    let vals = vec![$ty(0.1), $ty(0.2), $ty(0.3)];
+                    ::approx::assert_relative_eq!(vals.into_iter().sum::<$ty>(), $ty(0.6));
                 }
             }
 
@@ -158,7 +147,7 @@ macro_rules! unit_newtype_common {
 
                 #[rstest]
                 fn adds_values() {
-                    ::approx::assert_relative_eq!($ty::from(1.0) + $ty::from(2.0), $ty::from(3.0));
+                    ::approx::assert_relative_eq!($ty(0.1) + $ty(0.2), $ty(0.3));
                 }
             }
 
@@ -167,7 +156,7 @@ macro_rules! unit_newtype_common {
 
                 #[rstest]
                 fn subtracts_values() {
-                    ::approx::assert_relative_eq!($ty::from(5.0) - $ty::from(2.0), $ty::from(3.0));
+                    ::approx::assert_relative_eq!($ty(0.5) - $ty(0.2), $ty(0.3));
                 }
             }
 
@@ -176,12 +165,12 @@ macro_rules! unit_newtype_common {
 
                 #[rstest]
                 fn ty_mul_f64() {
-                    ::approx::assert_relative_eq!($ty::from(5.0) * 2.0_f64, $ty::from(10.0));
+                    ::approx::assert_relative_eq!($ty(0.4) * 2.0_f64, $ty(0.8));
                 }
 
                 #[rstest]
                 fn f64_mul_ty() {
-                    ::approx::assert_relative_eq!(2.0_f64 * $ty::from(5.0), $ty::from(10.0));
+                    ::approx::assert_relative_eq!(2.0_f64 * $ty(0.4), $ty(0.8));
                 }
             }
 
@@ -190,13 +179,13 @@ macro_rules! unit_newtype_common {
 
                 #[rstest]
                 fn ty_div_f64() {
-                    ::approx::assert_relative_eq!($ty::from(10.0) / 2.0_f64, $ty::from(5.0));
+                    ::approx::assert_relative_eq!($ty(0.8) / 2.0_f64, $ty(0.4));
                 }
 
                 #[rstest]
                 fn ratio_div() {
-                    let ratio: f64 = $ty::from(10.0) / $ty::from(2.0);
-                    ::approx::assert_relative_eq!(ratio, 5.0);
+                    let ratio: f64 = $ty(0.6) / $ty(0.2);
+                    ::approx::assert_relative_eq!(ratio, 3.0);
                 }
             }
 
@@ -205,7 +194,7 @@ macro_rules! unit_newtype_common {
 
                 #[rstest]
                 fn negates_value() {
-                    ::approx::assert_relative_eq!(-$ty::from(5.0), $ty::from(-5.0));
+                    ::approx::assert_relative_eq!(-$ty(0.5), $ty(-0.5));
                 }
             }
         }

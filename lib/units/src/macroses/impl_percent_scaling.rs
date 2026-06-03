@@ -33,8 +33,8 @@ macro_rules! impl_percent_scaling {
                 #[rstest]
                 fn multiplies_self() {
                     ::approx::assert_relative_eq!(
-                        Percent::from(0.5) * Percent::from(0.5),
-                        Percent::from(0.25)
+                        Percent::literal(0.5) * Percent::literal(0.5),
+                        Percent::literal(0.25)
                     );
                 }
             }
@@ -77,7 +77,7 @@ macro_rules! impl_percent_scaling {
                 #[rstest]
                 fn multiplies_percent() {
                     ::approx::assert_relative_eq!(
-                        $ty::from(10.0) * $crate::Percent::from(0.5),
+                        $ty::from(10.0) * $crate::Percent::literal(0.5),
                         $ty::from(5.0)
                     );
                 }
@@ -85,7 +85,7 @@ macro_rules! impl_percent_scaling {
                 #[rstest]
                 fn multiplies_percent_commutative() {
                     ::approx::assert_relative_eq!(
-                        $crate::Percent::from(0.5) * $ty::from(10.0),
+                        $crate::Percent::literal(0.5) * $ty::from(10.0),
                         $ty::from(5.0)
                     );
                 }
@@ -97,7 +97,7 @@ macro_rules! impl_percent_scaling {
                 #[rstest]
                 fn divides_percent() {
                     ::approx::assert_relative_eq!(
-                        $ty::from(5.0) / $crate::Percent::from(0.5),
+                        $ty::from(5.0) / $crate::Percent::literal(0.5),
                         $ty::from(10.0)
                     );
                 }
