@@ -85,7 +85,8 @@ impl fmt::Debug for App {
 }
 
 impl App {
-    /// Creates an `App` with the given tick and frame rates, loading config from disk.
+    /// Creates an `App` with the given tick and frame rates, loading config
+    /// from disk.
     ///
     /// `tick_rate` controls how many [`Action::Tick`] events fire per second.
     /// `frame_rate` caps the render rate in Hz.  Both are forwarded to [`Tui`]
