@@ -68,6 +68,7 @@ use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 /// or one of the other constructors for altitude or freshwater environments.
 /// Attach to a blend with [`dps_gas::EANxBlend::with_environment`].
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DiveEnvironment {
     surface_pressure: Bar,
     water_density: MetersPerBar,

@@ -6,6 +6,9 @@
 //! ```
 
 use super::DiveEnvironment;
+use crate::{Lake, Ocean};
+
+use strum::IntoEnumIterator;
 
 use std::fmt;
 
@@ -15,25 +18,40 @@ use std::fmt;
 /// `"surface_pressure=P,water_density=D"` key-value format with raw `f64` values.
 ///
 /// ```
-/// use dps_environment::DiveEnvironment;
+/// use dps_environment::{DiveEnvironment, Ocean};
 ///
 /// assert_eq!(DiveEnvironment::standard().to_string(),   "standard");
 /// assert_eq!(DiveEnvironment::freshwater().to_string(), "freshwater");
+/// assert_eq!(DiveEnvironment::ocean(Ocean::RedSea).to_string(), "ocean:RedSea");
 /// ```
 impl fmt::Display for DiveEnvironment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if *self == Self::standard() {
-            f.write_str("standard")
-        } else if *self == Self::freshwater() {
-            f.write_str("freshwater")
-        } else {
-            write!(
-                f,
-                "surface_pressure={},water_density={}",
-                f64::from(self.surface_pressure),
-                f64::from(self.water_density),
-            )
+            return f.write_str("standard");
         }
+
+        if *self == Self::freshwater() {
+            return f.write_str("freshwater");
+        }
+
+        for ocean in Ocean::iter() {
+            if *self == Self::ocean(ocean) {
+                return write!(f, "ocean:{ocean}");
+            }
+        }
+
+        for lake in Lake::iter() {
+            if *self == Self::lake(lake) {
+                return write!(f, "lake:{lake}");
+            }
+        }
+
+        write!(
+            f,
+            "surface_pressure={},water_density={}",
+            f64::from(self.surface_pressure),
+            f64::from(self.water_density),
+        )
     }
 }
 
@@ -41,7 +59,7 @@ impl fmt::Display for DiveEnvironment {
 mod tests {
     use super::*;
 
-    use crate::{DiveEnvironmentError, Ocean};
+    use crate::DiveEnvironmentError;
     use dps_units::{Bar, MetersPerBar};
 
     use rstest::rstest;
@@ -65,10 +83,18 @@ mod tests {
     }
 
     #[rstest]
-    fn ocean_preset_falls_through_to_key_value() {
-        let s = DiveEnvironment::ocean(Ocean::RedSea).to_string();
+    fn ocean_preset_serialises_to_named_format() {
+        assert_eq!(
+            DiveEnvironment::ocean(Ocean::BalticSea).to_string(),
+            "ocean:BalticSea"
+        );
+    }
 
-        assert!(s.starts_with("surface_pressure="));
-        assert!(s.contains(",water_density="));
+    #[rstest]
+    fn lake_preset_serialises_to_named_format() {
+        assert_eq!(
+            DiveEnvironment::lake(Lake::Titicaca).to_string(),
+            "lake:Titicaca"
+        );
     }
 }

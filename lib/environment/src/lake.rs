@@ -24,6 +24,8 @@ use dps_units::{Celsius, Meters};
 /// [`crate::DiveEnvironment::lake`] to obtain a
 /// [`crate::DiveEnvironment`] for a given lake.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(strum::Display, strum::EnumString, strum::VariantNames, strum::EnumIter)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Lake {
     // Extreme altitude > 5 000 m
     /// Ojos del Salado crater lake, Argentina/Chile — $\pu{6390 m}$, ${\approx}\pu{0 ^\circ C}$.

@@ -24,6 +24,8 @@ use dps_units::{Celsius, PartsPerThousand};
 /// Use [`crate::DiveEnvironment::ocean`] to obtain a [`crate::DiveEnvironment`]
 /// for a given body of water.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(strum::Display, strum::EnumString, strum::VariantNames, strum::EnumIter)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Ocean {
     // Five oceans
     /// Pacific Ocean — $\pu{34.5 ‰}$, $\pu{17 ^\circ C}$.
