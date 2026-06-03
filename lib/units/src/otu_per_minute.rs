@@ -6,7 +6,7 @@ use crate::unit_newtype;
 /// else `0.0`. The daily limit is approximately 850 OTU.
 ///
 /// ```no_run
-/// use dps::units::OTUPerMinute;
+/// use dps_units::OTUPerMinute;
 ///
 /// let rate = OTUPerMinute::new(0.918);
 /// assert_eq!(rate, OTUPerMinute::new(0.918));

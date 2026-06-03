@@ -1,3 +1,8 @@
+#![allow(
+    rustdoc::private_doc_tests,
+    reason = "Module-level doc examples reference crate paths that are private to rustdoc"
+)]
+
 //! Newtype wrappers for physical units used in dive calculations.
 
 mod bar;
@@ -79,20 +84,16 @@ macro_rules! unit_newtype {
         }
 
         impl ::std::str::FromStr for $ty {
-            type Err = $crate::units::UnitError;
+            type Err = $crate::UnitError;
 
             fn from_str(s: &str) -> ::std::result::Result<Self, Self::Err> {
                 let num_str = s
                     .strip_suffix(::std::concat!(" ", $suffix))
                     .ok_or_else(|| {
-                        $crate::units::UnitError::Parse($crate::units::error::ParseError::$ty(
-                            s.to_owned(),
-                        ))
+                        $crate::UnitError::Parse($crate::error::ParseError::$ty(s.to_owned()))
                     })?;
                 let val: f64 = num_str.parse().map_err(|_| {
-                    $crate::units::UnitError::Parse($crate::units::error::ParseError::$ty(
-                        num_str.to_owned(),
-                    ))
+                    $crate::UnitError::Parse($crate::error::ParseError::$ty(num_str.to_owned()))
                 })?;
                 ::std::result::Result::Ok(Self(val))
             }
@@ -166,18 +167,18 @@ macro_rules! unit_newtype {
             }
         }
 
-        impl ::std::ops::Mul<$crate::units::Percent> for $ty {
+        impl ::std::ops::Mul<$crate::Percent> for $ty {
             type Output = Self;
 
-            fn mul(self, rhs: $crate::units::Percent) -> Self {
+            fn mul(self, rhs: $crate::Percent) -> Self {
                 Self(self.0 * f64::from(rhs))
             }
         }
 
-        impl ::std::ops::Div<$crate::units::Percent> for $ty {
+        impl ::std::ops::Div<$crate::Percent> for $ty {
             type Output = Self;
 
-            fn div(self, rhs: $crate::units::Percent) -> Self {
+            fn div(self, rhs: $crate::Percent) -> Self {
                 Self(self.0 / f64::from(rhs))
             }
         }
@@ -295,7 +296,7 @@ macro_rules! unit_newtype {
                 use super::*;
 
                 #[rstest]
-                fn roundtrip() -> Result<(), $crate::units::UnitError> {
+                fn roundtrip() -> Result<(), $crate::UnitError> {
                     let v = $ty::new(1.5);
 
                     assert_eq!(v.to_string().parse::<$ty>()?, v);
@@ -309,9 +310,9 @@ macro_rules! unit_newtype {
                 fn missing_suffix_reports_full_input(#[case] input: &str, #[case] expected: &str) {
                     assert_eq!(
                         input.parse::<$ty>(),
-                        Err($crate::units::UnitError::Parse(
-                            $crate::units::error::ParseError::$ty(expected.to_owned())
-                        )),
+                        Err($crate::UnitError::Parse($crate::error::ParseError::$ty(
+                            expected.to_owned()
+                        ))),
                     );
                 }
 
@@ -321,9 +322,9 @@ macro_rules! unit_newtype {
 
                     assert_eq!(
                         input.parse::<$ty>(),
-                        Err($crate::units::UnitError::Parse(
-                            $crate::units::error::ParseError::$ty("abc".to_owned())
-                        )),
+                        Err($crate::UnitError::Parse($crate::error::ParseError::$ty(
+                            "abc".to_owned()
+                        ))),
                     );
                 }
             }
@@ -376,7 +377,7 @@ macro_rules! unit_newtype {
 /// Meters / `MetersPerBar` → Bar  (depth → gauge pressure)
 ///
 /// ```no_run
-/// use dps::units::{Bar, Meters, MetersPerBar};
+/// use dps_units::{Bar, Meters, MetersPerBar};
 /// let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
 /// assert_eq!(gauge, Bar::new(3.0));
 /// ```
@@ -391,7 +392,7 @@ impl Div<MetersPerBar> for Meters {
 /// Bar × `MetersPerBar` → Meters  (gauge pressure → depth)
 ///
 /// ```no_run
-/// use dps::units::{Bar, Meters, MetersPerBar};
+/// use dps_units::{Bar, Meters, MetersPerBar};
 /// let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
 /// assert_eq!(depth, Meters::new(30.0));
 /// ```
@@ -406,15 +407,17 @@ impl Mul<MetersPerBar> for Bar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
 
-    #[test]
+    use approx::assert_relative_eq;
+    use rstest::rstest;
+
+    #[rstest]
     fn meters_div_meters_per_bar_gives_bar() {
         let gauge: Bar = Meters::new(30.0) / MetersPerBar::new(10.0);
         assert_relative_eq!(gauge, Bar::new(3.0));
     }
 
-    #[test]
+    #[rstest]
     fn bar_mul_meters_per_bar_gives_meters() {
         let depth: Meters = Bar::new(3.0) * MetersPerBar::new(10.0);
         assert_relative_eq!(depth, Meters::new(30.0));

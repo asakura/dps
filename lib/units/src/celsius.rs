@@ -5,7 +5,7 @@ use crate::unit_newtype;
 /// Temperature in degrees Celsius (°C).
 ///
 /// ```
-/// use dps::units::Celsius;
+/// use dps_units::Celsius;
 ///
 /// let t = Celsius::new(25.0);
 /// assert_eq!(t, Celsius::new(25.0));

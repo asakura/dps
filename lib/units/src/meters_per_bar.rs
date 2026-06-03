@@ -3,7 +3,7 @@ use crate::unit_newtype;
 /// Depth-to-pressure conversion factor for seawater (metres per bar).
 ///
 /// ```no_run
-/// use dps::units::MetersPerBar;
+/// use dps_units::MetersPerBar;
 /// let seawater = MetersPerBar::new(10.0);
 /// assert_eq!(seawater, MetersPerBar::new(10.0));
 /// assert_eq!(seawater.to_string(), "10.0 m/bar");

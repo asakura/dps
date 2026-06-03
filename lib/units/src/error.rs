@@ -1,7 +1,7 @@
 //! Parse errors for unit types.
 //!
 //! ```
-//! use dps::units::{Bar, Meters, Percent};
+//! use dps_units::{Bar, Meters, Percent};
 //! assert!("invalid".parse::<Bar>().is_err());
 //! assert!("1.5 bar".parse::<Bar>().is_ok());
 //! assert!("invalid".parse::<Percent>().is_err());
@@ -15,7 +15,7 @@
 /// # Examples
 ///
 /// ```
-/// use dps::units::{Bar, UnitError};
+/// use dps_units::{Bar, UnitError};
 ///
 /// assert!(matches!("bad".parse::<Bar>(), Err(UnitError::Parse(_))));
 /// ```
@@ -37,7 +37,7 @@ pub enum Error {
 /// # Examples
 ///
 /// ```
-/// use dps::units::{Bar, Celsius, Meters, Percent, UnitError};
+/// use dps_units::{Bar, Celsius, Meters, Percent, UnitError};
 ///
 /// assert!(matches!("nope".parse::<Bar>(), Err(UnitError::Parse(_))));
 /// assert!(matches!("nope".parse::<Celsius>(), Err(UnitError::Parse(_))));

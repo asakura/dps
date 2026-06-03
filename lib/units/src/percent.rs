@@ -6,7 +6,7 @@ use std::{fmt, str::FromStr};
 ///
 /// ```no_run
 /// # use approx::assert_relative_eq;
-/// use dps::units::Percent;
+/// use dps_units::Percent;
 /// let p = Percent::new(0.32).unwrap();
 /// assert_relative_eq!(f64::from(p), 0.32);
 /// assert_eq!(p.to_string(), "32%");
@@ -25,7 +25,7 @@ impl Percent {
     /// Returns [`UnitError::OutOfRange`] if `val` is outside `[0.0, 1.0]`.
     ///
     /// ```no_run
-    /// use dps::units::Percent;
+    /// use dps_units::Percent;
     /// assert!(Percent::new(0.32).is_ok());
     /// assert!(Percent::new(0.0).is_ok());
     /// assert!(Percent::new(1.0).is_ok());
@@ -58,7 +58,7 @@ impl Percent {
     /// # Examples
     ///
     /// ```no_run
-    /// use dps::units::Percent;
+    /// use dps_units::Percent;
     /// const P: Percent = Percent::literal(0.32);
     /// assert_eq!(P.to_string(), "32%");
     /// ```
@@ -85,7 +85,7 @@ impl From<Percent> for f64 {
 /// Ratio of two fractions; the result is dimensionless.
 ///
 /// ```no_run
-/// use dps::units::Percent;
+/// use dps_units::Percent;
 /// # use approx::assert_relative_eq;
 /// let n2 = Percent::new(0.7808).unwrap();
 /// let diluent = Percent::new(0.7906).unwrap();
@@ -129,7 +129,7 @@ impl fmt::Display for Percent {
 /// # Examples
 ///
 /// ```
-/// use dps::units::Percent;
+/// use dps_units::Percent;
 /// use approx::assert_relative_eq;
 ///
 /// assert_relative_eq!(f64::from("32%".parse::<Percent>().unwrap()), 0.32);
@@ -178,8 +178,8 @@ impl approx::RelativeEq for Percent {
 mod tests {
     use super::*;
 
-    use crate::units::UnitError;
-    use crate::units::error::ParseError;
+    use crate::UnitError;
+    use crate::error::ParseError;
 
     use approx::assert_relative_eq;
     use rstest::rstest;

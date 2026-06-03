@@ -3,7 +3,7 @@ use crate::unit_newtype;
 /// Pressure in bar.
 ///
 /// ```no_run
-/// use dps::units::Bar;
+/// use dps_units::Bar;
 ///
 /// let p = Bar::new(1.5);
 /// assert_eq!(p, Bar::new(1.5));

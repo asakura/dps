@@ -7,7 +7,7 @@ use crate::unit_newtype;
 /// Used for water salinity throughout the `environment` module.
 ///
 /// ```
-/// use dps::units::PartsPerThousand;
+/// use dps_units::PartsPerThousand;
 ///
 /// let s = PartsPerThousand::new(35.0);
 /// assert_eq!(s, PartsPerThousand::new(35.0));

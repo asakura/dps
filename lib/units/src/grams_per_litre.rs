@@ -3,7 +3,7 @@ use crate::unit_newtype;
 /// Gas density in grams per litre (g/L).
 ///
 /// ```no_run
-/// use dps::units::GramsPerLitre;
+/// use dps_units::GramsPerLitre;
 ///
 /// let d = GramsPerLitre::new(1.188);
 /// assert_eq!(d, GramsPerLitre::new(1.188));

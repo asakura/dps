@@ -7,7 +7,7 @@ use crate::unit_newtype;
 /// [`f64::INFINITY`] indicates a ppO₂ above 1.6 bar (not recommended).
 ///
 /// ```no_run
-/// use dps::units::CnsRatePerMinute;
+/// use dps_units::CnsRatePerMinute;
 ///
 /// // At 1.4 bar limit (150 min): rate = 100/150 ≈ 0.667 CNS%/min
 /// let rate = CnsRatePerMinute::new(100.0 / 150.0);
