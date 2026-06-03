@@ -7,6 +7,27 @@
 - Every public function, method, and trait impl must have a doc comment with
   an `# Examples` section containing a runnable example.
 
+### KaTeX in doc comments
+
+Rustdoc renders `$...$` and `$$...$$` via KaTeX (see `rustdoc-katex.html`).
+Use `$\pu{value unit}$` (mhchem) for physical quantities and `$^\circ\text{C}$`
+for standalone units.
+
+**Backslash-escaping:** CommonMark processes doc comments before KaTeX sees
+them. A `\` followed by ASCII punctuation is consumed as a Markdown escape
+(e.g. `\,` → `,`, `\%` → `%`). Double the backslash to preserve it:
+
+| Write in source | Markdown produces | KaTeX renders |
+|-----------------|-------------------|---------------|
+| `$\,$`          | `$,$`             | comma (wrong) |
+| `$\\,$`         | `$\,$`            | thin space ✓  |
+| `$\text{5\%}$`  | `$\text{5%}$`     | comment (wrong) |
+| `$\text{5\\%}$` | `$\text{5\%}$`    | 5% ✓          |
+
+This applies to all punctuation: `,` `;` `:` `!` `%` `{` `}` `[` `]` etc.
+Letters (`\pu`, `\text`, `\frac`, `\quad`, …) are safe — Markdown only escapes
+punctuation.
+
 ## Tests
 
 - Tests are colocated (`#[cfg(test)] mod tests { ... }` in the same file).
