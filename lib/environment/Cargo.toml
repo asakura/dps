@@ -31,6 +31,7 @@ version = "0.28"
 features = ["derive"]
 
 [dev-dependencies]
+dps-units = { path = "../units", features = ["approx"] }
 approx = "0.5"
 rstest = "0.26"
 

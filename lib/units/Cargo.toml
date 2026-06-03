@@ -17,9 +17,12 @@ doctest = false
 workspace = true
 
 [dependencies]
-approx = "0.5"
 ryu = "1.0"
 thiserror = "2.0"
+
+[dependencies.approx]
+version = "0.5"
+optional = true
 
 [dependencies.serde]
 version = "1.0"
@@ -31,4 +34,5 @@ approx = "0.5"
 rstest = "0.26"
 
 [features]
+approx = ["dep:approx"]
 serde = ["dep:serde"]

@@ -17,7 +17,7 @@ doctest = false
 workspace = true
 
 [dependencies]
-dps-units = { path = "../units" }
+dps-units = { path = "../units", features = ["approx"] }
 dps-environment = { path = "../environment" }
 approx = "0.5"
 thiserror = "2.0"
