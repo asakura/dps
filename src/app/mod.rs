@@ -394,7 +394,7 @@ mod tests {
     use crate::{
         action::Movement,
         cli::{Args, Cli},
-        config::{AppConfig, Styles},
+        config::AppConfig,
         keymap::{KeyBindingsBuilder, KeyMapError, KeySeq, parse_key_sequence},
         theme::Theme,
         tui::Tui,
@@ -463,7 +463,6 @@ mod tests {
         Ok(Config {
             config: AppConfig::default(),
             keybindings: builder.build(),
-            styles: Styles(),
             themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
             default_theme: "catpuccineFrappe".to_string(),
         })

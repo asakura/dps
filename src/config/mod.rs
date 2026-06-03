@@ -58,8 +58,6 @@ struct RawConfig {
     leader: String,
     #[serde(default)]
     keybindings: KeyBindingsBuilder,
-    #[serde(default)]
-    styles: Styles,
     #[serde(default, rename = "defaultTheme")]
     default_theme: String,
     #[serde(default)]
@@ -120,7 +118,6 @@ impl<'a> TryFrom<RawConfigContext<'a>> for Config {
                 data_dir: data_dir.to_path_buf(),
             },
             keybindings: config.keybindings.build_with_leader(&config.leader),
-            styles: config.styles,
             themes,
             default_theme: std::mem::take(&mut config.default_theme),
         })
@@ -146,8 +143,6 @@ pub struct Config {
     pub config: AppConfig,
     /// Key-sequence–to–action mappings loaded from the config file.
     pub keybindings: KeyBindings,
-    /// Reserved for future per-component style overrides.
-    pub styles: Styles,
     /// All colour themes resolved at load time, keyed by the name used in the
     /// config file. The user can switch the active theme at runtime by updating
     /// `default_theme` to a key present in this map.
@@ -179,7 +174,6 @@ impl Default for Config {
         Self {
             config: AppConfig::default(),
             keybindings: KeyBindings::default(),
-            styles: Styles::default(),
             themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
             default_theme: "catpuccineFrappe".to_string(),
         }
@@ -193,10 +187,6 @@ fn parse_config(path: &Path, content: &str) -> Result<RawConfig, ConfigError> {
         _ => json5::from_str(content).map_err(ConfigError::ParseJson),
     }
 }
-
-/// Placeholder for future style configuration.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Styles();
 
 impl Config {
     /// Loads and merges configuration from the given directories.
@@ -280,15 +270,6 @@ impl Config {
         self.themes
             .get(&self.default_theme)
             .unwrap_or_else(|| unreachable!("invariant: default_theme is always a key in themes"))
-    }
-}
-
-impl<'de> Deserialize<'de> for Styles {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(Self())
     }
 }
 
