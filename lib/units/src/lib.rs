@@ -72,7 +72,7 @@ mod percent;
 pub use self::bar::Bar;
 pub use self::celsius::Celsius;
 pub use self::cns_rate_per_minute::CnsRatePerMinute;
-pub use self::error::Error as UnitError;
+pub use self::error::{Error as UnitError, ParseError};
 pub use self::grams_per_litre::GramsPerLitre;
 pub use self::meters::Meters;
 pub use self::meters_per_bar::MetersPerBar;
