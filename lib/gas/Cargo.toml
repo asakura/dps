@@ -10,6 +10,9 @@ readme = "README.md"
 keywords = ["diving", "dive-planning", "scuba", "nitrox"]
 categories = ["science"]
 
+[lib]
+doctest = false
+
 [lints]
 workspace = true
 
