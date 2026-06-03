@@ -1,4 +1,15 @@
 //! Platform-aware configuration and data directory resolution.
+//!
+//! ```
+//! # fn main() -> Result<(), dps::config::ConfigError> {
+//! use dps::config::Config;
+//!
+//! // An empty directory falls back to the embedded defaults.
+//! let config = Config::from_dirs(std::env::temp_dir(), std::env::temp_dir())?;
+//! let _theme = config.active_theme();
+//! # Ok(())
+//! # }
+//! ```
 
 pub mod error;
 mod theme;
@@ -21,12 +32,12 @@ use std::{
 
 const BASE_CONFIG_CONTENT: &str = include_str!("../../.config/config.json5");
 
-const CONFIG_FILES: &[(&str, config::FileFormat)] = [
-    ("config.json5", config::FileFormat::Json5),
-    ("config.json", config::FileFormat::Json),
-    ("config.yaml", config::FileFormat::Yaml),
-    ("config.toml", config::FileFormat::Toml),
-    ("config.ini", config::FileFormat::Ini),
+const CONFIG_FILES: &[&str] = [
+    "config.json5",
+    "config.json",
+    "config.yaml",
+    "config.yml",
+    "config.toml",
 ]
 .as_slice();
 
@@ -152,6 +163,17 @@ pub struct Config {
     pub default_theme: String,
 }
 
+/// Returns the built-in default [`Config`] using the embedded keybindings
+/// and the Catppuccin Frappé theme.
+///
+/// # Examples
+///
+/// ```
+/// use dps::config::Config;
+///
+/// let config = Config::default();
+/// assert_eq!(config.default_theme, "catpuccineFrappe");
+/// ```
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -161,6 +183,14 @@ impl Default for Config {
             themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
             default_theme: "catpuccineFrappe".to_string(),
         }
+    }
+}
+
+fn parse_config(path: &Path, content: &str) -> Result<RawConfig, ConfigError> {
+    match path.extension().and_then(|e| e.to_str()).unwrap_or("json5") {
+        "yaml" | "yml" => serde_saphyr::from_str(content).map_err(ConfigError::ParseYaml),
+        "toml" => toml::from_str(content).map_err(ConfigError::ParseToml),
+        _ => json5::from_str(content).map_err(ConfigError::ParseJson),
     }
 }
 
@@ -186,32 +216,39 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// Returns [`error::Error::Load`] if a config file is present but
-    /// cannot be parsed or deserialised, if theme resolution fails (unknown
-    /// palette colour or missing palette), or if `defaultTheme` does not
-    /// match any resolved theme.
+    /// Returns a parse error ([`error::Error::ParseJson`], [`error::Error::ParseYaml`],
+    /// or [`error::Error::ParseToml`]) if a config file is present but cannot be
+    /// parsed, [`error::Error::ThemeResolution`] if theme resolution fails (unknown
+    /// palette colour or missing palette), or [`error::Error::UnknownTheme`] if
+    /// `defaultTheme` does not match any resolved theme.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # fn main() -> Result<(), dps::config::ConfigError> {
+    /// use dps::config::Config;
+    ///
+    /// // An empty directory produces defaults; no error is returned.
+    /// let config = Config::from_dirs(std::env::temp_dir(), std::env::temp_dir())?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn from_dirs<P: AsRef<Path>>(config_dir: P, data_dir: P) -> Result<Self, ConfigError> {
-        let base_config: RawConfig = json5::from_str(BASE_CONFIG_CONTENT)?;
-        let mut builder = config::Config::builder();
-        let mut found_config = false;
+        let base_config: RawConfig =
+            json5::from_str(BASE_CONFIG_CONTENT).map_err(ConfigError::EmbeddedConfig)?;
 
-        for (file, format) in CONFIG_FILES {
-            let source = config::File::from(config_dir.as_ref().join(file))
-                .format(*format)
-                .required(false);
+        let config_path = CONFIG_FILES
+            .iter()
+            .map(|name| config_dir.as_ref().join(name))
+            .find(|p| p.exists());
 
-            builder = builder.add_source(source);
+        let mut config: RawConfig = if let Some(ref path) = config_path {
+            parse_config(path, &std::fs::read_to_string(path)?)?
+        } else {
+            error!("No configuration file found.");
 
-            if config_dir.as_ref().join(file).exists() {
-                found_config = true;
-            }
-        }
-
-        if !found_config {
-            error!("No configuration file found. Application may not behave as expected");
-        }
-
-        let mut config: RawConfig = builder.build()?.try_deserialize()?;
+            RawConfig::default()
+        };
 
         Self::try_from(RawConfigContext {
             config: &mut config,
@@ -259,41 +296,58 @@ impl<'de> Deserialize<'de> for Styles {
 mod tests {
     use super::*;
 
-    use crate::action::{Action, Movement};
-    use crate::keymap::{Mode, keys::parse_key_sequence};
+    use crate::{
+        action::{Action, Movement},
+        keymap::{Mode, keys::parse_key_sequence},
+    };
 
-    use color_eyre::eyre::eyre;
+    use rstest::rstest;
+
+    #[derive(Debug, thiserror::Error)]
+    enum TestError {
+        #[error(transparent)]
+        Config(#[from] ConfigError),
+        #[error(transparent)]
+        Io(#[from] std::io::Error),
+        #[error(transparent)]
+        KeyMap(#[from] crate::keymap::KeyMapError),
+        #[error("mode has no bindings")]
+        MissingMode,
+        #[error("key '{0}' not bound")]
+        MissingKey(&'static str),
+    }
+
+    type TestResult<T = (), E = TestError> = std::result::Result<T, E>;
 
     mod keybindings {
         use super::*;
-        use rstest::rstest;
 
-        #[test]
-        fn default_keybindings_loaded_from_embedded_config() -> Result<()> {
+        #[rstest]
+        fn default_keybindings_loaded_from_embedded_config() -> TestResult {
             let dir = tempfile::tempdir()?;
             let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
 
             let home = c
                 .keybindings
                 .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+                .ok_or(TestError::MissingMode)?;
 
             assert_eq!(
                 home.get(&parse_key_sequence("j")?)
-                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
+                    .ok_or(TestError::MissingKey("j"))?,
                 &Action::Move(Movement::Down)
             );
             assert_eq!(
                 home.get(&parse_key_sequence("gg")?)
-                    .ok_or_else(|| eyre!("no binding for 'gg'"))?,
+                    .ok_or(TestError::MissingKey("gg"))?,
                 &Action::Move(Movement::GotoTop)
             );
 
             Ok(())
         }
 
-        #[test]
-        fn user_config_adds_binding_and_defaults_merge_in() -> Result<()> {
+        #[rstest]
+        fn user_config_adds_binding_and_defaults_merge_in() -> TestResult {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -306,25 +360,25 @@ mod tests {
             let home = c
                 .keybindings
                 .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+                .ok_or(TestError::MissingMode)?;
 
             assert_eq!(
                 home.get(&parse_key_sequence("x")?)
-                    .ok_or_else(|| eyre!("no binding for 'x'"))?,
+                    .ok_or(TestError::MissingKey("x"))?,
                 &Action::Move(Movement::ScrollUp),
             );
 
             assert_eq!(
                 home.get(&parse_key_sequence("j")?)
-                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
+                    .ok_or(TestError::MissingKey("j"))?,
                 &Action::Move(Movement::Down),
             );
 
             Ok(())
         }
 
-        #[test]
-        fn user_config_override_wins_over_default() -> Result<()> {
+        #[rstest]
+        fn user_config_override_wins_over_default() -> TestResult {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -337,19 +391,19 @@ mod tests {
             let home = c
                 .keybindings
                 .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+                .ok_or(TestError::MissingMode)?;
 
             assert_eq!(
                 home.get(&parse_key_sequence("j")?)
-                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
+                    .ok_or(TestError::MissingKey("j"))?,
                 &Action::Move(Movement::Up),
             );
 
             Ok(())
         }
 
-        #[test]
-        fn from_dirs_loads_file_from_given_directory() -> Result<()> {
+        #[rstest]
+        fn from_dirs_loads_file_from_given_directory() -> TestResult {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -361,17 +415,17 @@ mod tests {
             let home = c
                 .keybindings
                 .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+                .ok_or(TestError::MissingMode)?;
 
             assert_eq!(
                 home.get(&parse_key_sequence("x")?)
-                    .ok_or_else(|| eyre!("no binding for 'x'"))?,
+                    .ok_or(TestError::MissingKey("x"))?,
                 &Action::Move(Movement::ScrollUp),
             );
 
             assert_eq!(
                 home.get(&parse_key_sequence("j")?)
-                    .ok_or_else(|| eyre!("no binding for 'j'"))?,
+                    .ok_or(TestError::MissingKey("j"))?,
                 &Action::Move(Movement::Down),
             );
 
@@ -379,7 +433,7 @@ mod tests {
         }
 
         #[rstest]
-        fn leader_key_substitutes_in_bindings() -> Result<()> {
+        fn leader_key_substitutes_in_bindings() -> TestResult {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -391,19 +445,19 @@ mod tests {
             let home = c
                 .keybindings
                 .get(&Mode::Normal)
-                .ok_or_else(|| eyre!("no Normal bindings in config"))?;
+                .ok_or(TestError::MissingMode)?;
 
             assert_eq!(
                 home.get(&parse_key_sequence("<C-a>j")?)
-                    .ok_or_else(|| eyre!("no binding for <C-a>j"))?,
+                    .ok_or(TestError::MissingKey("<C-a>j"))?,
                 &Action::Quit,
             );
 
             Ok(())
         }
 
-        #[test]
-        fn malformed_config_returns_error() -> Result<()> {
+        #[rstest]
+        fn malformed_config_returns_error() -> TestResult {
             let dir = tempfile::tempdir()?;
 
             std::fs::write(
@@ -412,6 +466,64 @@ mod tests {
             )?;
 
             assert!(Config::from_dirs(dir.path(), &std::env::temp_dir()).is_err());
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn yaml_config_adds_binding_and_defaults_merge_in() -> TestResult {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.yaml"),
+                "keybindings:\n  Normal:\n    x: \"Move(ScrollUp)\"\n",
+            )?;
+
+            let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
+            let home = c
+                .keybindings
+                .get(&Mode::Normal)
+                .ok_or(TestError::MissingMode)?;
+
+            assert_eq!(
+                home.get(&parse_key_sequence("x")?)
+                    .ok_or(TestError::MissingKey("x"))?,
+                &Action::Move(Movement::ScrollUp),
+            );
+            assert_eq!(
+                home.get(&parse_key_sequence("j")?)
+                    .ok_or(TestError::MissingKey("j"))?,
+                &Action::Move(Movement::Down),
+            );
+
+            Ok(())
+        }
+
+        #[rstest]
+        fn toml_config_adds_binding_and_defaults_merge_in() -> TestResult {
+            let dir = tempfile::tempdir()?;
+
+            std::fs::write(
+                dir.path().join("config.toml"),
+                "[keybindings.Normal]\nx = \"Move(ScrollUp)\"\n",
+            )?;
+
+            let c = Config::from_dirs(dir.path(), &std::env::temp_dir())?;
+            let home = c
+                .keybindings
+                .get(&Mode::Normal)
+                .ok_or(TestError::MissingMode)?;
+
+            assert_eq!(
+                home.get(&parse_key_sequence("x")?)
+                    .ok_or(TestError::MissingKey("x"))?,
+                &Action::Move(Movement::ScrollUp),
+            );
+            assert_eq!(
+                home.get(&parse_key_sequence("j")?)
+                    .ok_or(TestError::MissingKey("j"))?,
+                &Action::Move(Movement::Down),
+            );
 
             Ok(())
         }

@@ -1,4 +1,14 @@
-//! Configuration error type.
+//! Configuration error types produced by [`Config::from_dirs`].
+//!
+//! [`Config::from_dirs`]: crate::config::Config::from_dirs
+//!
+//! ```
+//! use dps::config::{Config, ConfigError};
+//!
+//! fn load(dir: &std::path::Path) -> Result<Config, ConfigError> {
+//!     Config::from_dirs(dir, dir)
+//! }
+//! ```
 
 /// Key-sequence parse error.
 pub use crate::keymap::KeyMapError as KeyResolutionError;
@@ -39,12 +49,21 @@ pub enum ThemeResolutionError {
 /// Error from a configuration operation.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// Configuration file load or parse failure.
-    #[error(transparent)]
-    Load(#[from] config::ConfigError),
+    /// Configuration file could not be read.
+    #[error("failed to read config file: {0}")]
+    Read(#[from] std::io::Error),
+    /// Configuration file could not be parsed as JSON or JSON5.
+    #[error("failed to parse config file as JSON5: {0}")]
+    ParseJson(json5::Error),
+    /// Configuration file could not be parsed as YAML.
+    #[error("failed to parse config file as YAML: {0}")]
+    ParseYaml(serde_saphyr::Error),
+    /// Configuration file could not be parsed as TOML.
+    #[error("failed to parse config file as TOML: {0}")]
+    ParseToml(toml::de::Error),
     /// The embedded `config.json5` default could not be parsed.
-    #[error("embedded config.json5 is invalid: {0}")]
-    EmbeddedConfig(#[from] json5::Error),
+    #[error("embedded config.json5 is invalid and could not be parsed: {0}")]
+    EmbeddedConfig(json5::Error),
     /// Theme resolution failed (unknown colour, missing palette, …).
     #[error(transparent)]
     ThemeResolution(#[from] ThemeResolutionError),
