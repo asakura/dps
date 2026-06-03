@@ -1,7 +1,7 @@
 use super::{BlendMethod, sealed};
 
-use crate::gas::components::GasComponents;
-use crate::gas::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
+use crate::components::GasComponents;
+use crate::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
 
 /// Partial-pressure blending: pure O₂ added to air.
 ///
@@ -9,8 +9,8 @@ use crate::gas::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
 /// in the same ratios as in dry air regardless of the target O₂ fraction.
 ///
 /// ```no_run
-/// use dps::gas::{EANxBlend, PartialPressure};
-/// use dps::units::Percent;
+/// use dps_gas::{EANxBlend, PartialPressure};
+/// use dps_units::Percent;
 ///
 /// let ean32 = EANxBlend::new(Percent::new(0.32).unwrap(), PartialPressure).unwrap();
 /// let c = ean32.components();
@@ -45,7 +45,7 @@ impl BlendMethod for PartialPressure {
 mod tests {
     use super::*;
 
-    use crate::gas::constants::{AIR_AR, AIR_CO2, AIR_N2, AIR_O2};
+    use crate::constants::{AIR_AR, AIR_CO2, AIR_N2, AIR_O2};
 
     use approx::assert_relative_eq;
 

@@ -1,19 +1,19 @@
 use super::gas_name;
 
-use crate::environment::DiveEnvironment;
-use crate::gas::constants::AIR_N2;
-use crate::units::{Meters, Percent};
+use dps_environment::DiveEnvironment;
+use crate::constants::AIR_N2;
+use dps_units::{Meters, Percent};
 
 use std::fmt;
 
 /// Equivalent Air Depth at a given actual depth.
 ///
-/// Produced by [`EANxBlend::ead_at`](crate::gas::EANxBlend::ead_at). The blend method is erased at this
+/// Produced by [`EANxBlend::ead_at`](crate::EANxBlend::ead_at). The blend method is erased at this
 /// boundary; only FO₂ (for the gas name) and the N₂ fraction matter.
 ///
 /// ```no_run
-/// use dps::gas::EANx;
-/// use dps::units::{Meters, Percent};
+/// use dps_gas::EANx;
+/// use dps_units::{Meters, Percent};
 /// // Air: EAD always equals actual depth
 /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
 /// let e = air.ead_at(Meters::new(30.0));
@@ -31,8 +31,8 @@ impl EAD {
     /// The equivalent air depth.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
     /// assert_relative_eq!(air.ead_at(Meters::new(30.0)).ead(), Meters::new(30.0), epsilon = 1e-9);
@@ -45,8 +45,8 @@ impl EAD {
     /// The O₂ fraction of the gas that produced this `EAD`.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.ead_at(Meters::new(30.0)).fo2(), Percent::new(0.32).unwrap());
     /// ```
@@ -58,8 +58,8 @@ impl EAD {
     /// The depth at which this EAD was evaluated.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.ead_at(Meters::new(30.0)).actual_depth(), Meters::new(30.0));
     /// ```
@@ -71,8 +71,8 @@ impl EAD {
     /// Full-detail formatter: `{gas name}  EAD {ead}  @ {actual_depth}`.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
     /// assert_eq!(
     ///     air.ead_at(Meters::new(30.0)).summary().to_string(),
@@ -105,8 +105,8 @@ impl fmt::Display for EAD {
 
 impl From<EAD> for Meters {
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let e = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().ead_at(Meters::new(30.0));
     /// assert_eq!(Meters::from(e), e.ead());
     /// ```
@@ -171,11 +171,11 @@ impl approx::RelativeEq for EAD {
 mod tests {
     use super::*;
 
-    use crate::environment::DiveEnvironment;
-    use crate::gas::EANx;
-    use crate::gas::constants::{AIR_N2, AIR_O2};
-    use crate::gas::eanx::InvalidEANxError;
-    use crate::units::{Meters, Percent};
+    use dps_environment::DiveEnvironment;
+    use crate::EANx;
+    use crate::constants::{AIR_N2, AIR_O2};
+    use crate::eanx::InvalidEANxError;
+    use dps_units::{Meters, Percent};
 
     use approx::assert_relative_eq;
 

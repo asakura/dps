@@ -1,20 +1,20 @@
 use super::error::InvalidEANxError;
 use super::gas_name;
 
-use crate::environment::DiveEnvironment;
-use crate::gas::constants::EAN_MIN_O2;
-use crate::units::{Bar, Meters, Percent};
+use dps_environment::DiveEnvironment;
+use crate::constants::EAN_MIN_O2;
+use dps_units::{Bar, Meters, Percent};
 
 use std::fmt;
 
 /// Maximum Operating Depth for a gas mix at a ppO₂ limit.
 ///
-/// Produced by [`EANxBlend::mod_at`](crate::gas::EANxBlend::mod_at). The blend method is erased at this boundary
+/// Produced by [`EANxBlend::mod_at`](crate::EANxBlend::mod_at). The blend method is erased at this boundary
 /// because MOD depends only on FO₂ and `ppO₂_max`.
 ///
 /// ```no_run
-/// use dps::gas::EANx;
-/// use dps::units::{Bar, Percent};
+/// use dps_gas::EANx;
+/// use dps_units::{Bar, Percent};
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// let m = ean32.mod_at(Bar::new(1.4));
 /// assert_eq!(m.to_string(), "33.4 m");
@@ -31,8 +31,8 @@ impl MOD {
     /// The computed depth.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.44), epsilon = 0.01);
@@ -45,8 +45,8 @@ impl MOD {
     /// The O₂ fraction of the gas that produced this MOD.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.mod_at(Bar::new(1.4)).fo2(), Percent::new(0.32).unwrap());
     /// ```
@@ -58,8 +58,8 @@ impl MOD {
     /// The ppO₂ limit used to compute this MOD.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.mod_at(Bar::new(1.4)).ppo2_max(), Bar::new(1.4));
     /// ```
@@ -71,8 +71,8 @@ impl MOD {
     /// Full-detail formatter: `{gas name}  MOD {depth}  @ ppO₂ {ppo2_max}`.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(
     ///     ean32.mod_at(Bar::new(1.4)).summary().to_string(),
@@ -144,8 +144,8 @@ impl fmt::Display for MOD {
 
 impl From<MOD> for Meters {
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Meters, Percent};
     /// let m = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().mod_at(Bar::new(1.4));
     /// assert_eq!(Meters::from(m), m.depth());
     /// ```
@@ -210,8 +210,8 @@ impl fmt::Display for MODSummary {
 mod tests {
     use super::*;
 
-    use crate::gas::eanx::InvalidEANxError;
-    use crate::units::{Bar, Meters, Percent};
+    use crate::eanx::InvalidEANxError;
+    use dps_units::{Bar, Meters, Percent};
 
     use core::assert_matches;
 

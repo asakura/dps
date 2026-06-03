@@ -1,3 +1,15 @@
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        reason = "Tests legitimately combine Result return types with panic-inducing assertions"
+    )
+)]
+#![allow(
+    rustdoc::private_doc_tests,
+    reason = "Module-level doc examples reference crate paths that are private to rustdoc"
+)]
+
 //! Gas mix types and blending models for dive planning.
 //!
 //! # Overview
@@ -19,9 +31,9 @@
 //! # Example
 //!
 //! ```no_run
-//! use dps::environment::DiveEnvironment;
-//! use dps::gas::{EANx, BlendMethod};
-//! use dps::units::{Bar, Meters, Percent};
+//! use dps_environment::DiveEnvironment;
+//! use dps_gas::{EANx, BlendMethod};
+//! use dps_units::{Bar, Meters, Percent};
 //!
 //! let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 //!
@@ -53,7 +65,7 @@ pub use error::Error as GasError;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::units::{Meters, Percent};
+    use dps_units::{Meters, Percent};
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
         let pct = Percent::new(fraction)?;

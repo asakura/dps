@@ -21,22 +21,22 @@ use super::{
     constants::{EAN_MIN_O2, GAS_CONSTANT, STANDARD_TEMP_K},
 };
 
-use crate::environment::DiveEnvironment;
-use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
+use dps_environment::DiveEnvironment;
+use dps_units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
 use std::{fmt, str::FromStr};
 
 /// Enriched Air Nitrox, modelled by O₂ fraction and blending method.
 ///
 /// The blend method determines the full gas composition (N₂, Ar, CO₂, traces)
-/// from the O₂ fraction. See the [module documentation](crate::gas) for a comparison
+/// from the O₂ fraction. See the [module documentation](crate) for a comparison
 /// of the three available methods.
 ///
 /// Use the [`EANx`] type alias for the common partial-pressure case.
 ///
 /// ```no_run
-/// use dps::gas::{EANxBlend, Psa};
-/// use dps::units::{Bar, Meters, Percent};
+/// use dps_gas::{EANxBlend, Psa};
+/// use dps_units::{Bar, Meters, Percent};
 ///
 /// let psa32 = EANxBlend::new(Percent::new(0.32).unwrap(), Psa).unwrap();
 ///
@@ -57,8 +57,8 @@ pub struct EANxBlend<M: BlendMethod> {
 /// nearest whole percent.
 ///
 /// ```no_run
-/// use dps::gas::EANx;
-/// use dps::units::Percent;
+/// use dps_gas::EANx;
+/// use dps_units::Percent;
 /// let try_ean = |f| EANx::try_from(Percent::new(f).unwrap()).unwrap();
 /// assert_eq!(try_ean(0.21).to_string(), "Air");
 /// assert_eq!(try_ean(0.32).to_string(), "EANx 32");
@@ -77,8 +77,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///   physical ceiling for `method` (PSA: ≈ 95.7 %).
     ///
     /// ```no_run
-    /// use dps::gas::{EANxBlend, Psa, InvalidEANxError};
-    /// use dps::units::Percent;
+    /// use dps_gas::{EANxBlend, Psa, InvalidEANxError};
+    /// use dps_units::Percent;
     ///
     /// assert!(EANxBlend::new(Percent::new(0.32).unwrap(), Psa).is_ok());
     /// assert!(matches!(
@@ -113,9 +113,9 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// ISO sea-level defaults.
     ///
     /// ```
-    /// use dps::gas::EANx;
-    /// use dps::environment::{DiveEnvironment, Lake};
-    /// use dps::units::{Bar, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_environment::{DiveEnvironment, Lake};
+    /// use dps_units::{Bar, Percent};
     ///
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     ///
@@ -135,9 +135,9 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Defaults to [`DiveEnvironment::standard`] (ISO sea-level seawater).
     ///
     /// ```
-    /// use dps::gas::EANx;
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::Percent;
     ///
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.env(), DiveEnvironment::standard());
@@ -150,8 +150,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// O₂ fraction.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_relative_eq!(f64::from(ean32.fo2()), 0.32);
@@ -164,8 +164,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Full gas composition derived from the blend method.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
     /// assert_relative_eq!(c.sum(), 1.0, epsilon = 1e-12);
@@ -178,8 +178,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// N₂ fraction.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// // 68 % diluent, split as air — N₂ ≈ 67.3 %
     /// assert!(ean32.fn2() > 0.0 && ean32.fn2() < 0.68);
@@ -192,8 +192,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Ar fraction.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// // Ar is present at air-trace levels in partial-pressure nitrox
     /// assert!(ean32.far() > 0.0 && ean32.far() < 0.01);
@@ -206,8 +206,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// CO₂ fraction.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert!(ean32.fco2() > 0.0 && ean32.fco2() < 0.001);
     /// ```
@@ -219,8 +219,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Trace-gas fraction (Ne, He, Kr, …).
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert!(ean32.fother() >= 0.0 && ean32.fother() < ean32.fco2());
     /// ```
@@ -234,8 +234,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Formula: `ppO₂ = (depth / 9.948 m/bar + 1.013 bar) × FO₂`
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
     /// // Air at 30 m: (30/10 + 1) × 0.21 = 0.84 bar
@@ -251,8 +251,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Formula: `MOD = (ppO₂_max / FO₂ − 1.013 bar) × 9.948 m/bar`
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_relative_eq!(ean32.mod_at(Bar::new(1.4)).depth(), Meters::new(33.44), epsilon = 0.01);
@@ -277,8 +277,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Formula: `depth = (ppO₂_min / FO₂ − 1.013 bar) × 9.948 m/bar`, clamped to 0.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Bar, Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// // Hypoxic 10 % mix: minimum depth at ppO₂ 0.16 bar ≈ 5.84 m
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
@@ -308,8 +308,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// N₂ + 1.5 × Ar are narcotic; O₂ and CO₂ are excluded).
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// // Air at any depth has END == actual depth
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
@@ -330,8 +330,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// equivalent narcotic effect of air at `end_limit`.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// let end_limit = Meters::new(30.0);
@@ -352,8 +352,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Formula: `EAD = ((depth + 10) × FN₂ / FN₂_air) − 10`
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// // Air's EAD equals actual depth
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
@@ -377,8 +377,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// (1025 kg/m³), giving ≈ 1.204 g/L for dry air at 20 °C.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// // Density doubles at the depth where absolute pressure = 2 × P_surface (≈ 10.1 m)
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// let d0 = ean32.gas_density_at(Meters::new(0.0));
@@ -404,8 +404,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// - Returns [`f64::INFINITY`] CNS%/min for `ppO₂ > 1.6 bar` (not recommended).
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{CnsRatePerMinute, Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{CnsRatePerMinute, Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// // At MOD (33.75 m), ppO₂ = 1.4 bar → limit 150 min → rate ≈ 0.667 CNS%/min
     /// let rate = ean32.cns_rate_at(Meters::new(33.75));
@@ -429,8 +429,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Multiply by exposure time in minutes; daily limit is ≈ 850 OTU.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, OTUPerMinute, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, OTUPerMinute, Percent};
     /// // Below 0.5 bar threshold: zero OTU
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
     /// assert_eq!(air.otu_rate_at(Meters::new(0.0)), OTUPerMinute::new(0.0));
@@ -453,8 +453,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Short human-readable name for the blend method used to produce this mix.
     ///
     /// ```no_run
-    /// use dps::gas::{EANx, EANxBlend, Psa};
-    /// use dps::units::Percent;
+    /// use dps_gas::{EANx, EANxBlend, Psa};
+    /// use dps_units::Percent;
     ///
     /// let pp = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(pp.blend_name(), "partial pressure");
@@ -473,8 +473,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// method, and the full component breakdown (O₂, N₂, Ar, CO₂, other).
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::Percent;
+    /// use dps_gas::EANx;
+    /// use dps_units::Percent;
     ///
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// println!("{}", ean32.detail());
@@ -498,9 +498,9 @@ impl EANxBlend<PartialPressure> {
     /// for that ppO₂ limit).
     ///
     /// ```
-    /// use dps::gas::EANx;
-    /// use dps::environment::DiveEnvironment;
-    /// use dps::units::{Bar, Meters};
+    /// use dps_gas::EANx;
+    /// use dps_environment::DiveEnvironment;
+    /// use dps_units::{Bar, Meters};
     /// # use approx::assert_relative_eq;
     /// let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4), DiveEnvironment::standard()).unwrap();
     /// // FO₂ = 1.4 / (30/9.948 + 1.013) ≈ 0.347
@@ -566,8 +566,8 @@ pub(super) fn gas_name(fo2: Percent) -> impl fmt::Display {
 /// Returns [`InvalidEANxError::O2TooLow`] if `pct` is below 10 %.
 ///
 /// ```no_run
-/// use dps::gas::EANx;
-/// use dps::units::Percent;
+/// use dps_gas::EANx;
+/// use dps_units::Percent;
 /// assert!(EANx::try_from(Percent::new(0.32).unwrap()).is_ok());
 /// assert!(EANx::try_from(Percent::new(0.10).unwrap()).is_ok());
 /// assert!(EANx::try_from(Percent::new(0.09).unwrap()).is_err());
@@ -585,7 +585,7 @@ impl TryFrom<Percent> for EANx {
 /// Accepts the formats produced by [`Display`](std::fmt::Display):
 /// `"Air"`, `"EANx N"`, `"Hypoxic N"`, `"O₂ N%"`, `"Pure O₂"`, and the
 /// fallback `"N%"` / `"N.d%"` percentage format from
-/// [`Percent`](crate::units::Percent)'s own display.
+/// [`Percent`](dps_units::Percent)'s own display.
 ///
 /// # Errors
 ///
@@ -595,7 +595,7 @@ impl TryFrom<Percent> for EANx {
 /// # Examples
 ///
 /// ```
-/// use dps::gas::EANx;
+/// use dps_gas::EANx;
 ///
 /// assert_eq!("Air".parse::<EANx>().unwrap().to_string(),    "Air");
 /// assert_eq!("EANx 32".parse::<EANx>().unwrap().to_string(), "EANx 32");
@@ -663,10 +663,10 @@ impl<M: BlendMethod + PartialEq> approx::RelativeEq for EANxBlend<M> {
 mod tests {
     use super::*;
 
-    use crate::environment::DiveEnvironment;
-    use crate::gas::blend::Psa;
-    use crate::gas::constants::AIR_O2;
-    use crate::units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
+    use dps_environment::DiveEnvironment;
+    use crate::blend::Psa;
+    use crate::constants::AIR_O2;
+    use dps_units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Percent};
 
     use approx::assert_relative_eq;
     use rstest::*;

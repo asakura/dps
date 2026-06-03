@@ -1,7 +1,7 @@
 use super::{BlendMethod, sealed};
 
-use crate::gas::components::GasComponents;
-use crate::gas::constants::{AIR_DILUENT, AIR_OTHER};
+use crate::components::GasComponents;
+use crate::constants::{AIR_DILUENT, AIR_OTHER};
 
 /// Membrane separator blending.
 ///
@@ -14,8 +14,8 @@ use crate::gas::constants::{AIR_DILUENT, AIR_OTHER};
 /// available.
 ///
 /// ```no_run
-/// use dps::gas::{EANxBlend, Membrane};
-/// use dps::units::Percent;
+/// use dps_gas::{EANxBlend, Membrane};
+/// use dps_units::Percent;
 ///
 /// // From a gas-analyser reading at FO₂ 0.32
 /// let mem = Membrane::from_analysis(0.32, 0.645, 0.030, 0.003).unwrap();
@@ -58,7 +58,7 @@ impl Membrane {
     /// Returns [`InvalidMembraneFractionsError`] if `fn2 + far + fco2 > 1 − fo2`.
     ///
     /// ```no_run
-    /// use dps::gas::Membrane;
+    /// use dps_gas::Membrane;
     /// let mem = Membrane::from_analysis(0.32, 0.645, 0.030, 0.003).unwrap();
     /// ```
     #[expect(
@@ -104,8 +104,8 @@ impl Membrane {
     /// precision work.
     ///
     /// ```no_run
-    /// use dps::gas::{EANxBlend, Membrane, EANx};
-    /// use dps::units::Percent;
+    /// use dps_gas::{EANxBlend, Membrane, EANx};
+    /// use dps_units::Percent;
     ///
     /// let mem = Membrane::typical();
     /// let mix = EANxBlend::new(Percent::new(0.32).unwrap(), mem).unwrap();
@@ -153,7 +153,7 @@ impl BlendMethod for Membrane {
 /// Error returned when membrane diluent fractions are inconsistent.
 ///
 /// ```no_run
-/// use dps::gas::{Membrane, InvalidMembraneFractionsError};
+/// use dps_gas::{Membrane, InvalidMembraneFractionsError};
 /// // fn2 + far + fco2 > 1 − fo2
 /// assert!(Membrane::from_analysis(0.32, 0.60, 0.10, 0.005).is_err());
 /// ```

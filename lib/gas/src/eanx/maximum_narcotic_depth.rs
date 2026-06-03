@@ -1,19 +1,19 @@
 use super::gas_name;
 
-use crate::environment::DiveEnvironment;
-use crate::gas::constants::AIR_NARCOTIC;
-use crate::units::{Meters, Percent};
+use dps_environment::DiveEnvironment;
+use crate::constants::AIR_NARCOTIC;
+use dps_units::{Meters, Percent};
 
 use std::fmt;
 
 /// Maximum Narcotic Depth for a given END limit.
 ///
-/// Produced by [`EANxBlend::mnd_at`](crate::gas::EANxBlend::mnd_at). The blend method is erased at this
+/// Produced by [`EANxBlend::mnd_at`](crate::EANxBlend::mnd_at). The blend method is erased at this
 /// boundary; only FO₂ (for the gas name) and the narcotic fraction matter.
 ///
 /// ```no_run
-/// use dps::gas::EANx;
-/// use dps::units::{Meters, Percent};
+/// use dps_gas::EANx;
+/// use dps_units::{Meters, Percent};
 /// // Air: MND always equals the END limit
 /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
 /// let m = air.mnd_at(Meters::new(30.0));
@@ -31,8 +31,8 @@ impl MND {
     /// The maximum narcotic depth.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
     /// assert_relative_eq!(air.mnd_at(Meters::new(30.0)).mnd(), Meters::new(30.0), epsilon = 1e-9);
@@ -45,8 +45,8 @@ impl MND {
     /// The O₂ fraction of the gas that produced this `MND`.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.mnd_at(Meters::new(30.0)).fo2(), Percent::new(0.32).unwrap());
     /// ```
@@ -58,8 +58,8 @@ impl MND {
     /// The END limit used to compute this `MND`.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.mnd_at(Meters::new(30.0)).end_limit(), Meters::new(30.0));
     /// ```
@@ -71,8 +71,8 @@ impl MND {
     /// Full-detail formatter: `{gas name}  MND {mnd}  @ END {end_limit}`.
     ///
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
     /// assert_eq!(
     ///     air.mnd_at(Meters::new(30.0)).summary().to_string(),
@@ -115,8 +115,8 @@ impl fmt::Display for MND {
 
 impl From<MND> for Meters {
     /// ```no_run
-    /// use dps::gas::EANx;
-    /// use dps::units::{Meters, Percent};
+    /// use dps_gas::EANx;
+    /// use dps_units::{Meters, Percent};
     /// let m = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().mnd_at(Meters::new(30.0));
     /// assert_eq!(Meters::from(m), m.mnd());
     /// ```
@@ -181,10 +181,10 @@ impl approx::RelativeEq for MND {
 mod tests {
     use super::*;
 
-    use crate::gas::EANx;
-    use crate::gas::constants::AIR_O2;
-    use crate::gas::eanx::InvalidEANxError;
-    use crate::units::{Meters, Percent};
+    use crate::EANx;
+    use crate::constants::AIR_O2;
+    use crate::eanx::InvalidEANxError;
+    use dps_units::{Meters, Percent};
 
     use approx::assert_relative_eq;
 

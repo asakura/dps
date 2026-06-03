@@ -1,12 +1,12 @@
-use crate::units::Percent;
+use dps_units::Percent;
 
-/// Error returned when a string cannot be parsed as an [`EANx`](crate::gas::EANx) blend.
+/// Error returned when a string cannot be parsed as an [`EANx`](crate::EANx) blend.
 ///
 /// Produced by [`EANx::from_str`](std::str::FromStr) when the input does not match any known
 /// gas-name format or the resulting O₂ fraction is outside the valid range.
 ///
 /// ```
-/// use dps::gas::EANx;
+/// use dps_gas::EANx;
 ///
 /// assert!("invalid".parse::<EANx>().is_err());
 /// assert!("EANx 999".parse::<EANx>().is_err());
@@ -16,11 +16,11 @@ use crate::units::Percent;
 #[error("invalid EANx blend name")]
 pub struct ParseEANxError;
 
-/// Error returned when an [`EANxBlend`](crate::gas::EANxBlend) cannot be constructed.
+/// Error returned when an [`EANxBlend`](crate::EANxBlend) cannot be constructed.
 ///
 /// ```no_run
-/// use dps::gas::{EANxBlend, InvalidEANxError, PartialPressure, Psa};
-/// use dps::units::Percent;
+/// use dps_gas::{EANxBlend, InvalidEANxError, PartialPressure, Psa};
+/// use dps_units::Percent;
 ///
 /// // FO₂ below 10 % minimum
 /// let too_low = Percent::new(0.09).unwrap();
@@ -44,23 +44,23 @@ pub enum InvalidEANxError {
     O2TooLow(Percent),
     /// FO₂ exceeds the physical ceiling for this blend method.
     ///
-    /// For [`Psa`](crate::gas::Psa) the ceiling is ≈ 95.7 %: the point at which all N₂
+    /// For [`Psa`](crate::Psa) the ceiling is ≈ 95.7 %: the point at which all N₂
     /// would be depleted and the output is pure O₂ + Ar.
     #[error("O₂ fraction {0} exceeds the blend method ceiling")]
     BlendCeilingExceeded(Percent),
-    /// The input string is not a recognised [`EANx`](crate::gas::EANx) blend name.
+    /// The input string is not a recognised [`EANx`](crate::EANx) blend name.
     #[error(transparent)]
     ParseFailed(#[from] ParseEANxError),
     /// A unit value was outside the valid range during blend construction.
     #[error(transparent)]
-    Unit(#[from] crate::units::UnitError),
+    Unit(#[from] dps_units::UnitError),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::units::{Percent, UnitError};
+    use dps_units::{Percent, UnitError};
 
     use rstest::rstest;
 

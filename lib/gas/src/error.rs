@@ -5,7 +5,7 @@
 pub enum Error {
     /// `EANx` blend validation failed.
     #[error(transparent)]
-    InvalidEANx(#[from] crate::gas::eanx::InvalidEANxError),
+    InvalidEANx(#[from] crate::eanx::InvalidEANxError),
     /// Membrane diluent fraction validation failed.
     #[error(transparent)]
     InvalidMembrane(#[from] super::InvalidMembraneFractionsError),

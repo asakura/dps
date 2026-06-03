@@ -1,0 +1,32 @@
+[package]
+name = "dps-gas"
+version = "0.1.0"
+edition = "2024"
+authors = ["Mikalai Seva"]
+description = "Gas mix types and blending models for dive planning"
+license = "MIT"
+repository = "https://github.com/asakura/dps"
+readme = "README.md"
+keywords = ["diving", "dive-planning", "scuba", "nitrox"]
+categories = ["science"]
+
+[lints]
+workspace = true
+
+[dependencies]
+dps-units = { path = "../units" }
+dps-environment = { path = "../environment" }
+approx = "0.5"
+thiserror = "2.0"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+optional = true
+
+[dev-dependencies]
+approx = "0.5"
+rstest = "0.26"
+
+[features]
+serde = ["dep:serde", "dps-units/serde", "dps-environment/serde"]

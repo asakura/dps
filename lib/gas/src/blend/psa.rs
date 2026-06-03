@@ -1,6 +1,6 @@
 //! Pressure-swing adsorption (PSA) blend method.
 //!
-//! Provides [`Psa`], a [`BlendMethod`](crate::gas::BlendMethod) implementation for oxygen
+//! Provides [`Psa`], a [`BlendMethod`](crate::BlendMethod) implementation for oxygen
 //! concentrators that use zeolite molecular sieves.
 //!
 //! PSA separates O₂ from air by adsorbing N₂ and CO₂ on the sieve while O₂, Ar, and
@@ -11,8 +11,8 @@
 
 use super::{BlendMethod, sealed};
 
-use crate::gas::components::GasComponents;
-use crate::gas::constants::{AIR_AR_RAW, AIR_O2_RAW, AIR_OTHER_RAW};
+use crate::components::GasComponents;
+use crate::constants::{AIR_AR_RAW, AIR_O2_RAW, AIR_OTHER_RAW};
 
 // Zeolite PSA cannot separate Ar from O₂; both concentrate at the same rate.
 // Noble traces (Ne, He, Kr, …) similarly pass through unretained.
@@ -29,19 +29,19 @@ const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 /// - CO₂ is essentially absent from the output.
 /// - N₂ is the remainder once O₂, Ar, and traces are accounted for.
 ///
-/// The practical ceiling is FO₂ ≈ 95.7 % (where N₂ → 0); [`EANxBlend::new`](crate::gas::EANxBlend::new)
+/// The practical ceiling is FO₂ ≈ 95.7 % (where N₂ → 0); [`EANxBlend::new`](crate::EANxBlend::new)
 /// rejects values above this ceiling with
-/// [`InvalidEANxError::BlendCeilingExceeded`](crate::gas::InvalidEANxError::BlendCeilingExceeded).
+/// [`InvalidEANxError::BlendCeilingExceeded`](crate::InvalidEANxError::BlendCeilingExceeded).
 ///
 /// ```no_run
-/// use dps::gas::{EANxBlend, Psa};
-/// use dps::units::Percent;
+/// use dps_gas::{EANxBlend, Psa};
+/// use dps_units::Percent;
 ///
 /// let ean32 = EANxBlend::new(Percent::new(0.32).unwrap(), Psa).unwrap();
 /// // PSA has no CO₂ in output
 /// assert_eq!(ean32.fco2(), 0.0);
 /// // Ar is higher than in PP-blended gas at the same FO₂
-/// let pp = dps::gas::EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+/// let pp = dps_gas::EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// assert!(ean32.far() > pp.far());
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -73,7 +73,7 @@ impl BlendMethod for Psa {
 mod tests {
     use super::*;
 
-    use crate::gas::constants::{AIR_AR, AIR_O2};
+    use crate::constants::{AIR_AR, AIR_O2};
 
     use approx::assert_relative_eq;
 

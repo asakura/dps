@@ -1,4 +1,4 @@
-use crate::units::Percent;
+use dps_units::Percent;
 
 pub(super) const EAN_MIN_O2: Percent = Percent::literal(0.10);
 

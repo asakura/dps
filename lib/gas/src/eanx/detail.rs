@@ -1,6 +1,6 @@
 use super::EANxBlend;
 
-use crate::gas::blend::BlendMethod;
+use crate::blend::BlendMethod;
 
 use std::fmt;
 
@@ -10,8 +10,8 @@ use std::fmt;
 /// fractions. Produced by [`EANxBlend::detail`].
 ///
 /// ```no_run
-/// use dps::gas::EANx;
-/// use dps::units::Percent;
+/// use dps_gas::EANx;
+/// use dps_units::Percent;
 ///
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// println!("{}", ean32.detail());
@@ -58,9 +58,9 @@ impl<M: BlendMethod> fmt::Display for EANxDetail<M> {
 mod tests {
     use super::*;
 
-    use crate::gas::eanx::InvalidEANxError;
-    use crate::gas::{EANx, EANxBlend, Membrane, Psa};
-    use crate::units::Percent;
+    use crate::eanx::InvalidEANxError;
+    use crate::{EANx, EANxBlend, Membrane, Psa};
+    use dps_units::Percent;
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {
         let pct = Percent::new(fraction)?;
