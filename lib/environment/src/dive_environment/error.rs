@@ -14,12 +14,43 @@
 //! ));
 //! ```
 
-use super::from_str::ParseDiveEnvironmentError;
-
 use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
-/// Error returned by fallible [`DiveEnvironment`](super::DiveEnvironment) constructors and [`FromStr`](std::str::FromStr).
-#[derive(Debug, Clone, Copy, thiserror::Error)]
+/// Error returned when a string cannot be parsed as a [`DiveEnvironment`].
+///
+/// Produced by [`DiveEnvironment::from_str`] when the input does not match any
+/// format produced by [`Display`](std::fmt::Display).
+///
+/// ```
+/// use dps_environment::DiveEnvironment;
+///
+/// assert!("invalid".parse::<DiveEnvironment>().is_err());
+/// assert!("standard".parse::<DiveEnvironment>().is_ok());
+/// ```
+#[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
+pub enum ParseDiveEnvironmentError {
+    /// The string is an ocean preset, but the name is not recognised.
+    #[error("unknown ocean preset '{0}'")]
+    UnknownOcean(String),
+    /// The string is a lake preset, but the name is not recognised.
+    #[error("unknown lake preset '{0}'")]
+    UnknownLake(String),
+    /// The custom format string is missing required keys or delimiters.
+    #[error("invalid custom format: expected 'surface_pressure=P,water_density=D'")]
+    InvalidCustomFormat,
+    /// The custom format contains an unparseable surface pressure value.
+    #[error("invalid surface pressure: {0}")]
+    InvalidSurfacePressure(String),
+    /// The custom format contains an unparseable water density value.
+    #[error("invalid water density: {0}")]
+    InvalidWaterDensity(String),
+    /// The string does not match any known environment format.
+    #[error("unrecognised environment format: '{0}'")]
+    UnrecognisedFormat(String),
+}
+
+/// Error returned by fallible [`DiveEnvironment`](super::DiveEnvironment) constructors and [`FromStr`](std::str::Str).
+#[derive(Debug, Clone, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum DiveEnvironmentError {
     /// Surface pressure must be finite and positive.
@@ -97,8 +128,10 @@ mod tests {
 
         #[rstest]
         fn parse_delegates_to_inner_message() {
-            let msg = DiveEnvironmentError::Parse(ParseDiveEnvironmentError).to_string();
-            assert_eq!(msg, ParseDiveEnvironmentError.to_string());
+            let inner = ParseDiveEnvironmentError::UnrecognisedFormat("invalid".to_owned());
+            let msg = DiveEnvironmentError::Parse(inner.clone()).to_string();
+
+            assert_eq!(msg, inner.to_string());
         }
     }
 }

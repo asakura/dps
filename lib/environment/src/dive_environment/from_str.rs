@@ -6,27 +6,12 @@
 //! assert_eq!("standard".parse::<DiveEnvironment>().unwrap(), DiveEnvironment::standard());
 //! ```
 
-use super::{DiveEnvironment, DiveEnvironmentError};
+use super::{DiveEnvironment, DiveEnvironmentError, ParseDiveEnvironmentError};
 use crate::{Lake, Ocean};
 
 use dps_units::{Bar, MetersPerBar};
 
 use std::str::FromStr;
-
-/// Error returned when a string cannot be parsed as a [`DiveEnvironment`].
-///
-/// Produced by [`DiveEnvironment::from_str`] when the input does not match any
-/// format produced by [`Display`](std::fmt::Display).
-///
-/// ```
-/// use dps_environment::DiveEnvironment;
-///
-/// assert!("invalid".parse::<DiveEnvironment>().is_err());
-/// assert!("standard".parse::<DiveEnvironment>().is_ok());
-/// ```
-#[derive(Debug, Clone, Copy, thiserror::Error)]
-#[error("invalid dive environment string")]
-pub struct ParseDiveEnvironmentError;
 
 /// Parses a [`DiveEnvironment`] from its display representation.
 ///
@@ -57,30 +42,39 @@ impl FromStr for DiveEnvironment {
             "standard" => Ok(Self::standard()),
             "freshwater" => Ok(Self::freshwater()),
             _ if s.starts_with("ocean:") => {
-                let name = s.strip_prefix("ocean:").ok_or(ParseDiveEnvironmentError)?;
-                let ocean = Ocean::from_str(name).map_err(|_| ParseDiveEnvironmentError)?;
+                let name = s.strip_prefix("ocean:").unwrap_or("");
+                let ocean = Ocean::from_str(name)
+                    .map_err(|_| ParseDiveEnvironmentError::UnknownOcean(name.to_owned()))?;
 
                 Ok(Self::ocean(ocean))
             }
             _ if s.starts_with("lake:") => {
-                let name = s.strip_prefix("lake:").ok_or(ParseDiveEnvironmentError)?;
-                let lake = Lake::from_str(name).map_err(|_| ParseDiveEnvironmentError)?;
+                let name = s.strip_prefix("lake:").unwrap_or("");
+                let lake = Lake::from_str(name)
+                    .map_err(|_| ParseDiveEnvironmentError::UnknownLake(name.to_owned()))?;
 
                 Ok(Self::lake(lake))
             }
-            _ => {
+            _ if s.starts_with("surface_pressure=") => {
                 let (sp_part, wd_part) = s
                     .split_once(",water_density=")
-                    .ok_or(ParseDiveEnvironmentError)?;
-                let p: f64 = sp_part
+                    .ok_or(ParseDiveEnvironmentError::InvalidCustomFormat)?;
+
+                let p_str = sp_part
                     .strip_prefix("surface_pressure=")
-                    .ok_or(ParseDiveEnvironmentError)?
-                    .parse()
-                    .map_err(|_| ParseDiveEnvironmentError)?;
-                let d: f64 = wd_part.parse().map_err(|_| ParseDiveEnvironmentError)?;
+                    .ok_or(ParseDiveEnvironmentError::InvalidCustomFormat)?;
+
+                let p: f64 = p_str.parse().map_err(|_| {
+                    ParseDiveEnvironmentError::InvalidSurfacePressure(p_str.to_owned())
+                })?;
+
+                let d: f64 = wd_part.parse().map_err(|_| {
+                    ParseDiveEnvironmentError::InvalidWaterDensity(wd_part.to_owned())
+                })?;
 
                 Self::new(Bar::new(p), MetersPerBar::new(d))
             }
+            _ => Err(ParseDiveEnvironmentError::UnrecognisedFormat(s.to_owned()).into()),
         }
     }
 }
@@ -96,36 +90,46 @@ mod tests {
     #[rstest]
     fn parses_standard() -> Result<(), DiveEnvironmentError> {
         let env = "standard".parse::<DiveEnvironment>()?;
+
         assert_eq!(env, DiveEnvironment::standard());
+
         Ok(())
     }
 
     #[rstest]
     fn parses_freshwater() -> Result<(), DiveEnvironmentError> {
         let env = "freshwater".parse::<DiveEnvironment>()?;
+
         assert_eq!(env, DiveEnvironment::freshwater());
+
         Ok(())
     }
 
     #[rstest]
     fn parses_ocean_format() -> Result<(), DiveEnvironmentError> {
         let env = "ocean:RedSea".parse::<DiveEnvironment>()?;
+
         assert_eq!(env, DiveEnvironment::ocean(Ocean::RedSea));
+
         Ok(())
     }
 
     #[rstest]
     fn parses_lake_format() -> Result<(), DiveEnvironmentError> {
         let env = "lake:Titicaca".parse::<DiveEnvironment>()?;
+
         assert_eq!(env, DiveEnvironment::lake(Lake::Titicaca));
+
         Ok(())
     }
 
     #[rstest]
     fn parses_key_value_format() -> Result<(), DiveEnvironmentError> {
         let env = "surface_pressure=0.95,water_density=10.1".parse::<DiveEnvironment>()?;
+
         assert_eq!(env.surface_pressure(), Bar::new(0.95));
         assert_eq!(env.water_density(), MetersPerBar::new(10.1));
+
         Ok(())
     }
 
@@ -133,7 +137,49 @@ mod tests {
     fn invalid_returns_error() {
         assert_matches!(
             "invalid".parse::<DiveEnvironment>(),
-            Err(DiveEnvironmentError::Parse(_))
+            Err(DiveEnvironmentError::Parse(ParseDiveEnvironmentError::UnrecognisedFormat(s))) if s == "invalid"
+        );
+    }
+
+    #[rstest]
+    fn unknown_ocean_returns_error() {
+        assert_matches!(
+            "ocean:Atlantis".parse::<DiveEnvironment>(),
+            Err(DiveEnvironmentError::Parse(ParseDiveEnvironmentError::UnknownOcean(s))) if s == "Atlantis"
+        );
+    }
+
+    #[rstest]
+    fn unknown_lake_returns_error() {
+        assert_matches!(
+            "lake:LochNess".parse::<DiveEnvironment>(),
+            Err(DiveEnvironmentError::Parse(ParseDiveEnvironmentError::UnknownLake(s))) if s == "LochNess"
+        );
+    }
+
+    #[rstest]
+    fn invalid_custom_format_returns_error() {
+        assert_matches!(
+            "surface_pressure=0.95,invalid=10.1".parse::<DiveEnvironment>(),
+            Err(DiveEnvironmentError::Parse(
+                ParseDiveEnvironmentError::InvalidCustomFormat
+            ))
+        );
+    }
+
+    #[rstest]
+    fn invalid_surface_pressure_returns_error() {
+        assert_matches!(
+            "surface_pressure=zero,water_density=10.1".parse::<DiveEnvironment>(),
+            Err(DiveEnvironmentError::Parse(ParseDiveEnvironmentError::InvalidSurfacePressure(s))) if s == "zero"
+        );
+    }
+
+    #[rstest]
+    fn invalid_water_density_returns_error() {
+        assert_matches!(
+            "surface_pressure=0.95,water_density=high".parse::<DiveEnvironment>(),
+            Err(DiveEnvironmentError::Parse(ParseDiveEnvironmentError::InvalidWaterDensity(s))) if s == "high"
         );
     }
 
@@ -141,21 +187,27 @@ mod tests {
     fn custom_roundtrips() -> Result<(), DiveEnvironmentError> {
         let s = "surface_pressure=0.95,water_density=10.1";
         let env: DiveEnvironment = s.parse()?;
+
         assert_eq!(env.to_string().parse::<DiveEnvironment>()?, env);
+
         Ok(())
     }
 
     #[rstest]
     fn ocean_roundtrips() -> Result<(), DiveEnvironmentError> {
         let env = DiveEnvironment::ocean(Ocean::RedSea);
+
         assert_eq!(env.to_string().parse::<DiveEnvironment>()?, env);
+
         Ok(())
     }
 
     #[rstest]
     fn lake_roundtrips() -> Result<(), DiveEnvironmentError> {
         let env = DiveEnvironment::lake(Lake::Titicaca);
+
         assert_eq!(env.to_string().parse::<DiveEnvironment>()?, env);
+
         Ok(())
     }
 }

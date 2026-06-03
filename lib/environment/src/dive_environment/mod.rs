@@ -46,8 +46,7 @@ mod error;
 mod from_impls;
 mod from_str;
 
-pub use self::error::DiveEnvironmentError;
-pub use self::from_str::ParseDiveEnvironmentError;
+pub use self::error::{DiveEnvironmentError, ParseDiveEnvironmentError};
 use super::physics::{
     DENSITY_BASE, DENSITY_SALINITY_COEFF, DENSITY_TEMP_COEFF, FRESHWATER_TEMP_C,
     ICAO_PRESSURE_EXPONENT, ICAO_SEA_LEVEL_PA, ICAO_TEMP_GRADIENT, ISO_SEAWATER_DENSITY,

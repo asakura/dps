@@ -23,8 +23,18 @@ use dps_units::{Celsius, Meters};
 /// All variants are freshwater (salinity $\approx \pu{0 ‰}$). Use
 /// [`crate::DiveEnvironment::lake`] to obtain a
 /// [`crate::DiveEnvironment`] for a given lake.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-#[derive(strum::Display, strum::EnumString, strum::VariantNames, strum::EnumIter)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Hash,
+    strum::Display,
+    strum::EnumString,
+    strum::VariantNames,
+    strum::EnumIter,
+)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Lake {
     // Extreme altitude > 5 000 m
