@@ -20,6 +20,6 @@ pub use crate::constants::{
 };
 pub use crate::eanx::{
     EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, InvalidEANxError, MND,
-    MNDSummary, MOD, MODSummary, MiniMOD, MiniMODSummary, PPO2, ParseEANxError, Ppo2Summary,
+    MNDSummary, MOD, MODSummary, MiniMOD, MiniMODSummary, PPO2, PPO2Summary, ParseEANxError,
 };
 pub use crate::error::Error as GasError;

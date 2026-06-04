@@ -14,7 +14,7 @@ pub use self::error::{InvalidEANxError, ParseEANxError};
 pub use self::maximum_narcotic_depth::{MND, MNDSummary};
 pub use self::minimum_operating_depth::{MiniMOD, MiniMODSummary};
 pub use self::operating_depth::{MOD, MODSummary};
-pub use self::ppo2::{PPO2, Ppo2Summary};
+pub use self::ppo2::{PPO2, PPO2Summary};
 use super::{
     blend::{BlendMethod, PartialPressure},
     components::GasComponents,

@@ -98,8 +98,8 @@ impl PPO2 {
     /// );
     /// ```
     #[must_use]
-    pub const fn summary(self) -> Ppo2Summary {
-        Ppo2Summary(self)
+    pub const fn summary(self) -> PPO2Summary {
+        PPO2Summary(self)
     }
 
     pub(super) fn new(fo2: Percent, depth: Meters, env: DiveEnvironment) -> Self {
@@ -130,9 +130,9 @@ impl From<PPO2> for Bar {
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
-pub struct Ppo2Summary(PPO2);
+pub struct PPO2Summary(PPO2);
 
-impl Ppo2Summary {
+impl PPO2Summary {
     /// Unwraps the inner [`PPO2`].
     #[must_use]
     pub const fn into_inner(self) -> PPO2 {
@@ -140,13 +140,13 @@ impl Ppo2Summary {
     }
 }
 
-impl From<PPO2> for Ppo2Summary {
+impl From<PPO2> for PPO2Summary {
     fn from(p: PPO2) -> Self {
         Self(p)
     }
 }
 
-impl fmt::Display for Ppo2Summary {
+impl fmt::Display for PPO2Summary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -312,7 +312,7 @@ mod tests {
         fn from_impl_matches_summary_method() -> Result<(), InvalidEANxError> {
             let p = ean(0.32)?.ppo2_at(Meters::new(30.0));
 
-            assert_eq!(Ppo2Summary::from(p).to_string(), p.summary().to_string());
+            assert_eq!(PPO2Summary::from(p).to_string(), p.summary().to_string());
 
             Ok(())
         }
