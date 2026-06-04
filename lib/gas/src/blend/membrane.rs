@@ -46,6 +46,13 @@ pub struct Membrane {
     fother: f64,
 }
 
+impl Default for Membrane {
+    /// Returns [`Membrane::typical()`].
+    fn default() -> Self {
+        Self::typical()
+    }
+}
+
 #[cfg(feature = "serde")]
 #[derive(::serde::Deserialize)]
 struct MembraneShadow {
@@ -188,7 +195,7 @@ impl BlendMethod for Membrane {
 /// // fn2 + far + fco2 > 1 − fo2
 /// assert!(Membrane::from_analysis(0.32, 0.60, 0.10, 0.005).is_err());
 /// ```
-#[derive(Debug, Clone, Copy, thiserror::Error)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, thiserror::Error)]
 #[non_exhaustive]
 #[error("membrane diluent fractions are invalid: fn2 + far + fco2 must not exceed (1 − fo2)")]
 pub struct InvalidMembraneFractionsError;
