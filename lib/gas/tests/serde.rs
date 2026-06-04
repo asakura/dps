@@ -14,9 +14,8 @@
 
 use approx::assert_relative_eq;
 use dps_gas::{
-    EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, GasComponents, MND,
-    MNDSummary, MOD, MODSummary, Membrane, MiniMOD, MiniMODSummary, PPO2, PartialPressure,
-    Ppo2Summary, Psa,
+    EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, GasComponents, MND, MNDSummary,
+    MOD, MODSummary, Membrane, MiniMOD, MiniMODSummary, PPO2, PartialPressure, Ppo2Summary, Psa,
 };
 use dps_units::{Bar, Meters, Percent};
 use rstest::rstest;

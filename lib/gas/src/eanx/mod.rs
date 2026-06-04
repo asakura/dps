@@ -607,6 +607,32 @@ impl TryFrom<Percent> for EANx {
     }
 }
 
+/// Returns air ($21\\%$ $\ce{O2}$, partial-pressure blended).
+///
+/// # Examples
+///
+/// ```
+/// use dps_gas::EANx;
+/// use dps_units::Percent;
+///
+/// let air = EANx::default();
+/// assert_eq!(air.to_string(), "Air");
+/// assert_eq!(air.fo2(), Percent::new(0.21).unwrap());
+/// ```
+impl Default for EANx {
+    #[expect(
+        clippy::expect_used,
+        reason = "0.21 is within Percent bounds and satisfies EAN_MIN_O2; PartialPressure has no ceiling"
+    )]
+    fn default() -> Self {
+        Self::new(
+            Percent::new(0.21).expect("0.21 is a valid O₂ fraction"),
+            PartialPressure,
+        )
+        .expect("air satisfies EAN_MIN_O2 and PartialPressure has no ceiling")
+    }
+}
+
 /// Parses an [`EANx`] blend from its display representation.
 ///
 /// Accepts the formats produced by [`Display`](std::fmt::Display):
@@ -1081,6 +1107,22 @@ mod tests {
         fn try_from_percent_accepts_fraction_that_rounds_into_valid_range()
         -> Result<(), InvalidEANxError> {
             assert!(EANx::try_from(Percent::new(0.316)?).is_ok());
+
+            Ok(())
+        }
+    }
+
+    mod default {
+        use super::*;
+
+        #[rstest]
+        fn default_is_air() {
+            assert_eq!(EANx::default().to_string(), "Air");
+        }
+
+        #[rstest]
+        fn default_fo2_is_21_percent() -> Result<(), InvalidEANxError> {
+            assert_relative_eq!(EANx::default().fo2(), Percent::new(0.21)?);
 
             Ok(())
         }
