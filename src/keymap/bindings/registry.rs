@@ -16,8 +16,6 @@
 //! assert!(bindings.get(&Mode::Normal).is_some());
 //! ```
 
-use super::builder::KeyBindingsBuilder;
-
 use crate::keymap::{map::ModeMap, mode::Mode};
 
 /// Read-only mode-indexed keybinding registry.
