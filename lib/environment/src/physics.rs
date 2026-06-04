@@ -31,7 +31,7 @@ pub const STANDARD_GRAVITY: f64 = 9.806_65;
 /// ISO standard seawater density at $\pu{35 ‰} salinity, $\pu{15 ^\circ C}$, $\pu{0 dbar}$ (ISO 19901-7), in $\pu{kg/m^3}$.
 pub const ISO_SEAWATER_DENSITY: f64 = 1025.0;
 
-/// Pure-water baseline in the linear density approximation ρ(S,T) ≈ 1000 + 0.8S − 0.2T, in $\pu{kg/m^3}$.
+/// Pure-water baseline in the linear density approximation $\rho(S,T) \approx 1000 + 0.8S - 0.2T$, in $\pu{kg/m^3}$.
 pub const DENSITY_BASE: f64 = 1000.0;
 
 /// Salinity coefficient in the linear density approximation, in $\pu{kg/(m^3 \times ‰)}$.
