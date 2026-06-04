@@ -5,10 +5,6 @@
         reason = "Tests legitimately combine Result return types with panic-inducing assertions"
     )
 )]
-#![allow(
-    rustdoc::private_doc_tests,
-    reason = "Module-level doc examples reference crate paths that are private to rustdoc"
-)]
 
 //! Gas mix types and blending models for dive planning.
 //!
