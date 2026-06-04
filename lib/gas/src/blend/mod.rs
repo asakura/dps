@@ -16,7 +16,29 @@ use std::fmt;
 /// Describes how a nitrox mix was blended, determining the full gas composition
 /// from the $\ce{O2}$ fraction.
 ///
-/// Sealed: only [`PartialPressure`], [`Psa`], and [`Membrane`] are valid.
+/// # Implementations
+///
+/// Three concrete types implement this trait:
+///
+/// | Type | Description |
+/// |------|-------------|
+/// | [`PartialPressure`] | Bank gases mixed by partial pressure — canonical nitrox blending |
+/// | [`Psa`] | Pressure-swing adsorption unit — adds residual Ar, caps $\ce{O2}$ at $\approx 95.7\\%$ |
+/// | [`Membrane`] | Hollow-fibre membrane unit — arbitrary Ar/N₂ residuals from bench analysis |
+///
+/// # Sealed trait
+///
+/// This trait is **sealed**: it cannot be implemented outside this crate.
+/// The supertrait `sealed::Sealed` is private, so the compiler rejects any
+/// external `impl BlendMethod for MyType`.
+///
+/// The seal is intentional. Each blend method encodes a physical gas model
+/// (residual inert fractions, production ceilings, component ratios) that
+/// feeds into CNS/OTU oxygen-toxicity and nitrogen-narcosis calculations.
+/// Allowing arbitrary external implementations would make it impossible to
+/// audit those models for correctness and physical plausibility as a unit.
+/// If you need a blend method not covered here, open an issue or PR so it
+/// can be validated against the rest of the crate.
 pub trait BlendMethod: sealed::Sealed + Copy + fmt::Debug {
     /// Full gas composition for a mix with the given $\ce{O2}$ fraction.
     ///
