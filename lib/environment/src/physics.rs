@@ -43,7 +43,7 @@ pub const DENSITY_TEMP_COEFF: f64 = -0.2;
 /// ICAO ISA sea-level pressure used in the barometric altitude formula, in $\pu{Pa}$.
 pub const ICAO_SEA_LEVEL_PA: f64 = 101_325.0;
 
-/// Normalized temperature lapse rate L/T₀ in m⁻¹, where L = 0.0065 K/m and T₀ = 288.15 K.
+/// Normalized temperature lapse rate $L/T_0$ in $\pu{m^{-1}}$, where $L = \pu{0.0065 K/m}$ and $T_0 = \pu{288.15 K}$.
 pub const ICAO_TEMP_GRADIENT: f64 = 2.255_77e-5;
 
 /// Barometric exponent g·M/(R·L) in the ICAO ISA formula (dimensionless).

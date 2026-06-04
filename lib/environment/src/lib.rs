@@ -68,7 +68,7 @@
 //! diver well into altitude-adjustment territory before they hit the water.
 //!
 //! The two coefficients come from atmospheric physics: $2.25577 \times 10^{-5}$ is
-//! L/T₀, the temperature lapse rate ($\pu{0.0065 K/m}$) divided by ISA sea-level
+//! $L/T_0$, the temperature lapse rate ($\pu{0.0065 K/m}$) divided by ISA sea-level
 //! temperature ($\pu{288.15 K}$); $5.25588$ is g·M/(R·L), standard gravity times
 //! molar mass of dry air divided by the universal gas constant times the lapse
 //! rate.
