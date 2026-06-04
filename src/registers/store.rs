@@ -1,4 +1,16 @@
-//! TODO: module level docs
+//! Concrete [`RegisterStore`] implementation.
+//!
+//! ```
+//! use dps::registers::{RegisterName, RegisterStore, RegisterValue};
+//! use dps::gas::EANx;
+//! use dps::units::Percent;
+//!
+//! let mut store = RegisterStore::default();
+//! let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+//!
+//! store.push_yank(RegisterName::Unnamed, RegisterValue::EANx(ean32));
+//! assert_eq!(store.read(RegisterName::Yank), Some(RegisterValue::EANx(ean32)));
+//! ```
 
 use super::name::RegIndex;
 use super::{RegisterError, RegisterName, RegisterValue, YankRingTooSmall};
