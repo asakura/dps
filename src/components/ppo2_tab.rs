@@ -1,4 +1,4 @@
-//! ppO₂-by-depth table component.
+//! $\text{pp}\ce{O2}$-by-depth table component.
 //!
 //! # Examples
 //!
@@ -59,7 +59,7 @@ const COL_DEPTH_W: u16 = 7;
 const COL_PPO2_MIX_W: u16 = 7;
 const FIXED_COL_COUNT: usize = 1;
 
-/// ppO₂-by-depth table: partial pressure of oxygen for each mix at each depth.
+/// $\text{pp}\ce{O2}$-by-depth table: partial pressure of oxygen for each mix at each depth.
 #[derive(Debug, Clone)]
 pub struct PpO2Tab {
     theme: Theme,

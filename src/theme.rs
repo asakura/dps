@@ -70,11 +70,11 @@
 //! Both tables colour computed values by dive-safety level. Thresholds differ
 //! per table but the colour mapping is shared:
 //!
-//! | Slot | Level | MOD condition | ppO₂ condition |
+//! | Slot | Level | MOD condition | $\text{pp}\ce{O2}$ condition |
 //! |------|-------|---------------|----------------|
-//! | `green` | safe | depth ≥ 20 m | ppO₂ ∈ \[0.18, 1.4) |
-//! | `yellow` | caution | depth ∈ \[10, 20) m | ppO₂ ∈ \[1.4, 1.6) |
-//! | `red` | danger | depth < 10 m | ppO₂ < 0.18 or ≥ 1.6 |
+//! | `green` | safe | depth ≥ 20 m | $\text{pp}\ce{O2}$ ∈ \[0.18, 1.4) |
+//! | `yellow` | caution | depth ∈ \[10, 20) m | $\text{pp}\ce{O2}$ ∈ \[1.4, 1.6) |
+//! | `red` | danger | depth < 10 m | $\text{pp}\ce{O2}$ < 0.18 or ≥ 1.6 |
 //!
 //! **Unassigned neutrals:** `surface1` (between `surface0` and `surface2`;
 //! natural fit for a focused-but-not-active panel border or a secondary

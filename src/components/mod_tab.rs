@@ -1,4 +1,4 @@
-//! MOD-by-ppO₂ table component.
+//! MOD-by-$\text{pp}\ce{O2}$ table component.
 //!
 //! # Examples
 //!
@@ -47,7 +47,7 @@ const TABLE_OVERHEAD_W: u16 = 2 + 2 + COL_NAME_W + 1 + COL_O2_W + 1;
 const MOD_RED_BELOW: Meters = Meters::new(10.0);
 const MOD_YELLOW_BELOW: Meters = Meters::new(20.0);
 
-/// MOD-by-ppO₂ table: maximum operating depth for each nitrox mix at the selected ppO₂ limit.
+/// MOD-by-$\text{pp}\ce{O2}$ table: maximum operating depth for each nitrox mix at the selected $\text{pp}\ce{O2}$ limit.
 #[derive(Debug)]
 pub struct ModTab {
     theme: Theme,
@@ -67,7 +67,7 @@ impl Default for ModTab {
 impl ModTab {
     pub(crate) const TITLE: &'static str = "MOD Table";
 
-    /// Creates a `ModTab` pre-selected on EAN32 at 1.4 bar ppO₂.
+    /// Creates a `ModTab` pre-selected on EAN32 at 1.4 bar $\text{pp}\ce{O2}$.
     ///
     /// # Examples
     ///
@@ -106,7 +106,7 @@ impl ModTab {
         PPO2_STEP.mul_add(self.ppo2_idx as f64, PPO2_MIN)
     }
 
-    /// ppO₂ column values for a sliding window of `window_size` columns centred on the selected index.
+    /// $\text{pp}\ce{O2}$ column values for a sliding window of `window_size` columns centred on the selected index.
     #[expect(
         clippy::cast_precision_loss,
         reason = "start + i is bounded by PPO2_COUNT = 9"
@@ -119,7 +119,7 @@ impl ModTab {
             .collect()
     }
 
-    /// Column index of the selected ppO₂ within the visible window (0-based).
+    /// Column index of the selected $\text{pp}\ce{O2}$ within the visible window (0-based).
     fn ppo2_window_col(&self, window_size: usize) -> usize {
         self.ppo2_idx - window_start(self.ppo2_idx, PPO2_COUNT, window_size)
     }

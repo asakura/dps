@@ -10,7 +10,7 @@
     reason = "Module-level doc examples reference crate paths that are private to rustdoc"
 )]
 
-//! DPS — interactive terminal MOD and ppO₂ tables for nitrox dive planning.
+//! DPS — interactive terminal MOD and $\text{pp}\ce{O2}$ tables for nitrox dive planning.
 
 // TODO: The following re-exports are for backward compatibility after moving
 // core modules to independent crates in `lib/`. Internal references within
