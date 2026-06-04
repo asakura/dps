@@ -32,7 +32,7 @@
 //!
 //! ```no_run
 //! use dps_environment::DiveEnvironment;
-//! use dps_gas::{EANx, BlendMethod};
+//! use dps_gas::EANx;
 //! use dps_units::{Bar, Meters, Percent};
 //!
 //! let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -41,8 +41,9 @@
 //! let m = ean32.mod_at(Bar::new(1.4));
 //! assert_eq!(m.to_string(), "33.4 m");
 //!
-//! // Narcotic equivalent depth at 30 m
+//! // Narcotic equivalent depth at 30 m — shallower than actual for enriched air
 //! let end = ean32.end_at(Meters::new(30.0));
+//! assert!(end.depth() < Meters::new(30.0));
 //!
 //! // Best mix for a 30 m dive
 //! let best = EANx::best_mix(Meters::new(30.0), Bar::new(1.4), DiveEnvironment::standard()).unwrap();

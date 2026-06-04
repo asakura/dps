@@ -255,7 +255,7 @@ mod equivalent_air_depth {
         let parsed: EAD = serde_json::from_str(&json)?;
 
         assert_eq!(e, parsed);
-        assert_eq!(parsed.ead(), e.ead());
+        assert_eq!(parsed.depth(), e.depth());
         assert_eq!(parsed.actual_depth(), e.actual_depth());
 
         Ok(())
@@ -289,7 +289,7 @@ mod equivalent_narcotic_depth {
         let parsed: END = serde_json::from_str(&json)?;
 
         assert_eq!(e, parsed);
-        assert_eq!(parsed.end(), e.end());
+        assert_eq!(parsed.depth(), e.depth());
         assert_eq!(parsed.actual_depth(), e.actual_depth());
 
         Ok(())
@@ -323,7 +323,7 @@ mod maximum_narcotic_depth {
         let parsed: MND = serde_json::from_str(&json)?;
 
         assert_eq!(m, parsed);
-        assert_eq!(parsed.mnd(), m.mnd());
+        assert_eq!(parsed.depth(), m.depth());
         assert_eq!(parsed.end_limit(), m.end_limit());
 
         Ok(())

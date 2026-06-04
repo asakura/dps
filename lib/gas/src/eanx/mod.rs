@@ -41,6 +41,7 @@ use std::{fmt, str::FromStr};
 /// let psa32 = EANxBlend::new(Percent::new(0.32).unwrap(), Psa).unwrap();
 ///
 /// let end = psa32.end_at(Meters::new(30.0));
+/// assert!(end.depth() < Meters::new(30.0));
 /// let density = psa32.gas_density_at(Meters::new(30.0));
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -340,11 +341,11 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// # use approx::assert_relative_eq;
     /// // Air at any depth has END == actual depth
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
-    /// assert_relative_eq!(air.end_at(Meters::new(30.0)).end(), Meters::new(30.0), epsilon = 1e-6);
+    /// assert_relative_eq!(air.end_at(Meters::new(30.0)).depth(), Meters::new(30.0), epsilon = 1e-6);
     ///
     /// // EANx 32 at 30 m has a shallower END than 30 m
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert!(ean32.end_at(Meters::new(30.0)).end() < Meters::new(30.0));
+    /// assert!(ean32.end_at(Meters::new(30.0)).depth() < Meters::new(30.0));
     /// ```
     #[must_use]
     pub fn end_at(self, depth: Meters) -> END {
@@ -364,7 +365,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// let end_limit = Meters::new(30.0);
     /// let mnd = ean32.mnd_at(end_limit);
     /// // end_at(mnd) recovers the limit
-    /// assert_relative_eq!(ean32.end_at(Meters::from(mnd)).end(), end_limit, epsilon = 1e-6);
+    /// assert_relative_eq!(ean32.end_at(Meters::from(mnd)).depth(), end_limit, epsilon = 1e-6);
     /// ```
     #[must_use]
     pub fn mnd_at(self, end_limit: Meters) -> MND {
@@ -384,11 +385,11 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// # use approx::assert_relative_eq;
     /// // Air's EAD equals actual depth
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
-    /// assert_relative_eq!(air.ead_at(Meters::new(30.0)).ead(), Meters::new(30.0), epsilon = 1e-6);
+    /// assert_relative_eq!(air.ead_at(Meters::new(30.0)).depth(), Meters::new(30.0), epsilon = 1e-6);
     ///
     /// // Enriched air has shallower EAD (less N₂ → less decompression obligation)
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert!(ean32.ead_at(Meters::new(30.0)).ead() < Meters::new(30.0));
+    /// assert!(ean32.ead_at(Meters::new(30.0)).depth() < Meters::new(30.0));
     /// ```
     #[must_use]
     pub fn ead_at(self, depth: Meters) -> EAD {
