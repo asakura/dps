@@ -25,7 +25,7 @@ use std::fmt;
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "ENDShadow"))]
 pub struct END {
-    end: Meters,
+    depth: Meters,
     fo2: Percent,
     actual_depth: Meters,
 }
@@ -33,7 +33,7 @@ pub struct END {
 #[cfg(feature = "serde")]
 #[derive(::serde::Deserialize)]
 struct ENDShadow {
-    end: Meters,
+    depth: Meters,
     fo2: Percent,
     actual_depth: Meters,
 }
@@ -42,7 +42,7 @@ struct ENDShadow {
 impl From<ENDShadow> for END {
     fn from(shadow: ENDShadow) -> Self {
         Self {
-            end: shadow.end,
+            depth: shadow.depth,
             fo2: shadow.fo2,
             actual_depth: shadow.actual_depth,
         }
@@ -57,11 +57,11 @@ impl END {
     /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
-    /// assert_relative_eq!(air.end_at(Meters::new(30.0)).end(), Meters::new(30.0), epsilon = 1e-9);
+    /// assert_relative_eq!(air.end_at(Meters::new(30.0)).depth(), Meters::new(30.0), epsilon = 1e-9);
     /// ```
     #[must_use]
-    pub const fn end(self) -> Meters {
-        self.end
+    pub const fn depth(self) -> Meters {
+        self.depth
     }
 
     /// The $\ce{O2}$ fraction of the gas that produced this `END`.
@@ -90,7 +90,7 @@ impl END {
         self.actual_depth
     }
 
-    /// Full-detail formatter: `{gas name}  END {end}  @ {actual_depth}`.
+    /// Full-detail formatter: `{gas name}  END {depth}  @ {actual_depth}`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -106,22 +106,22 @@ impl END {
         ENDSummary(self)
     }
 
-    pub(super) fn new(fo2: Percent, narcotic: f64, depth: Meters, env: DiveEnvironment) -> Self {
-        let abs = env.absolute_pressure(depth);
+    pub(super) fn new(fo2: Percent, narcotic: f64, actual_depth: Meters, env: DiveEnvironment) -> Self {
+        let abs = env.absolute_pressure(actual_depth);
         let end_pressure = abs * (narcotic / f64::from(AIR_NARCOTIC));
-        let end = env.depth(end_pressure);
+        let depth = env.depth(end_pressure);
 
         Self {
-            end,
+            depth,
             fo2,
-            actual_depth: depth,
+            actual_depth,
         }
     }
 }
 
 impl fmt::Display for END {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.end.fmt(f)
+        self.depth.fmt(f)
     }
 }
 
@@ -130,14 +130,14 @@ impl From<END> for Meters {
     /// use dps_gas::EANx;
     /// use dps_units::{Meters, Percent};
     /// let e = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().end_at(Meters::new(30.0));
-    /// assert_eq!(Meters::from(e), e.end());
+    /// assert_eq!(Meters::from(e), e.depth());
     /// ```
     fn from(e: END) -> Self {
-        e.end
+        e.depth
     }
 }
 
-/// Full-detail display: `{gas name}  END {end}  @ {actual_depth}`.
+/// Full-detail display: `{gas name}  END {depth}  @ {actual_depth}`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
@@ -177,7 +177,7 @@ impl approx::AbsDiffEq for END {
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: f64) -> bool {
-        self.end.abs_diff_eq(&other.end, epsilon)
+        self.depth.abs_diff_eq(&other.depth, epsilon)
     }
 }
 
@@ -187,7 +187,7 @@ impl approx::RelativeEq for END {
     }
 
     fn relative_eq(&self, other: &Self, epsilon: f64, max_relative: f64) -> bool {
-        self.end.relative_eq(&other.end, epsilon, max_relative)
+        self.depth.relative_eq(&other.depth, epsilon, max_relative)
     }
 }
 
@@ -223,10 +223,10 @@ mod tests {
         }
 
         #[test]
-        fn end_accessor_returns_meters() -> Result<(), InvalidEANxError> {
+        fn depth_accessor_returns_meters() -> Result<(), InvalidEANxError> {
             let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
-            assert_relative_eq!(e.end(), Meters::new(30.0), epsilon = 1e-9);
+            assert_relative_eq!(e.depth(), Meters::new(30.0), epsilon = 1e-9);
 
             Ok(())
         }
@@ -255,7 +255,7 @@ mod tests {
         fn from_gives_meters() -> Result<(), InvalidEANxError> {
             let e = ean(f64::from(AIR_O2))?.end_at(Meters::new(30.0));
 
-            assert_eq!(Meters::from(e), e.end());
+            assert_eq!(Meters::from(e), e.depth());
 
             Ok(())
         }
@@ -266,7 +266,7 @@ mod tests {
             let e = ean(0.32)?.end_at(depth);
 
             assert!(
-                e.end() < depth,
+                e.depth() < depth,
                 "EANx 32 should have a shallower END than 30 m"
             );
 
@@ -278,7 +278,7 @@ mod tests {
             // EANx 32 at surface: narcotic load < air narcotic → clamped to 0
             let e = ean(0.32)?.end_at(Meters::new(0.0));
 
-            assert_relative_eq!(e.end(), Meters::new(0.0), epsilon = 1e-9);
+            assert_relative_eq!(e.depth(), Meters::new(0.0), epsilon = 1e-9);
 
             Ok(())
         }
@@ -295,7 +295,7 @@ mod tests {
             let expected = env.depth(end_pressure);
 
             assert_relative_eq!(
-                mix.end_at(Meters::new(30.0)).end(),
+                mix.end_at(Meters::new(30.0)).depth(),
                 expected,
                 epsilon = 1e-9
             );
@@ -306,7 +306,7 @@ mod tests {
         #[test]
         fn higher_fo2_gives_lower_end() -> Result<(), InvalidEANxError> {
             let depth = Meters::new(40.0);
-            assert!(ean(0.32)?.end_at(depth).end() < ean(0.21)?.end_at(depth).end());
+            assert!(ean(0.32)?.end_at(depth).depth() < ean(0.21)?.end_at(depth).depth());
 
             Ok(())
         }
