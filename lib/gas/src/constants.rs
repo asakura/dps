@@ -71,6 +71,7 @@ pub const STANDARD_TEMP_K: f64 = 293.15;
 /// Returns the NOAA single-dive CNS exposure limit in minutes for a given $\text{pp}\ce{O2}$.
 ///
 /// Returns `f64::INFINITY` below $\pu{0.5 bar}$, and `0.0` above $\pu{1.6 bar}$.
+#[must_use]
 pub fn cns_limit_minutes(ppo2: f64) -> f64 {
     if ppo2 <= 0.50 {
         return f64::INFINITY; // no CNS effect below 0.5 bar
