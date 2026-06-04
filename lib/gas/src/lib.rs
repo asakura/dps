@@ -50,12 +50,15 @@
 
 mod blend;
 mod components;
-mod constants;
+pub mod constants;
 mod eanx;
 pub mod error;
 
 pub use blend::{BlendMethod, InvalidMembraneFractionsError, Membrane, PartialPressure, Psa};
 pub use components::GasComponents;
+pub use constants::{
+    AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_NARCOTIC, AIR_O2, AIR_OTHER, EAN_MIN_O2,
+};
 pub use eanx::{
     EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, InvalidEANxError, MND,
     MNDSummary, MOD, MODSummary, MiniMOD, MiniMODSummary, PPO2, ParseEANxError, Ppo2Summary,
