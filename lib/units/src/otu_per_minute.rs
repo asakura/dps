@@ -4,8 +4,8 @@ use crate::unit_newtype;
 ///
 /// Computed via the NOAA formula:
 /// $$
-/// \text{OTU/min} = \left(\text{ppO}_2 - \pu{0.5 bar}\right)^{0.83}
-/// \quad \text{when } \text{ppO}_2 > \pu{0.5 bar}, \text{ else } 0
+/// \text{OTU/min} = \left(\text{pp}\ce{O2} - \pu{0.5 bar}\right)^{0.83}
+/// \quad \text{when } \text{pp}\ce{O2} > \pu{0.5 bar}, \text{ else } 0
 /// $$
 /// The daily limit is approximately $\pu{850 OTU}$.
 ///

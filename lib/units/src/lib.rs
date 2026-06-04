@@ -25,7 +25,7 @@
 //! ## Derived Units
 //!
 //! - [`MetersPerBar`][]: Depth-to-pressure conversion factor in $\pu{m/bar}$.
-//! - [`CnsRatePerMinute`][]: CNS O₂ toxicity accumulation rate in $\text{CNS\\%/min}$.
+//! - [`CnsRatePerMinute`][]: CNS $\ce{O2}$ toxicity accumulation rate in $\text{CNS\\%/min}$.
 //! - [`OTUPerMinute`][]: Oxygen Tolerance Unit accumulation rate in $\text{OTU/min}$.
 //! - [`GramsPerLitre`][]: Gas density in $\pu{g/L}$.
 //!

@@ -1,10 +1,10 @@
 use crate::unit_newtype;
 
-/// CNS O₂ toxicity rate in percent of the single-dive CNS exposure limit per minute.
+/// CNS $\ce{O2}$ toxicity rate in percent of the single-dive CNS exposure limit per minute.
 ///
 /// Computed from the NOAA single-dive CNS table. Multiply by exposure time in
 /// minutes to get the percentage of the CNS limit consumed. A value of
-/// [`f64::INFINITY`] indicates a ppO₂ above $\pu{1.6 bar}$ (not recommended).
+/// [`f64::INFINITY`] indicates a $\text{pp}\ce{O2}$ above $\pu{1.6 bar}$ (not recommended).
 ///
 /// ```
 /// # use approx::assert_relative_eq;
