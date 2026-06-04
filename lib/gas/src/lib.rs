@@ -15,15 +15,15 @@
 //! # Overview
 //!
 //! The central type is [`EANxBlend<M>`], parameterised by a [`BlendMethod`] that
-//! determines the full gas composition (N₂, Ar, CO₂, trace gases) from the O₂
+//! determines the full gas composition ($\ce{N2}$, Ar, $\ce{CO2}$, trace gases) from the $\ce{O2}$
 //! fraction alone — or from measured gas-analysis data for membrane systems.
 //!
 //! Three blend methods are provided:
 //!
-//! | Type | Diluent | Ar | CO₂ |
+//! | Type | Diluent | Ar | $\ce{CO2}$ |
 //! |---|---|---|---|
 //! | [`PartialPressure`] | air-derived | ≈ air ratio | ≈ air ratio |
-//! | [`Psa`] | N₂ stripped | co-concentrates with O₂ | stripped by zeolite |
+//! | [`Psa`] | $\ce{N2}$ stripped | co-concentrates with $\ce{O2}$ | stripped by zeolite |
 //! | [`Membrane`] | equipment-dependent | enriched vs air | enriched vs air |
 //!
 //! The [`EANx`] type alias covers the common partial-pressure case.

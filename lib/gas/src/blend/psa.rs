@@ -3,11 +3,11 @@
 //! Provides [`Psa`], a [`BlendMethod`](crate::BlendMethod) implementation for oxygen
 //! concentrators that use zeolite molecular sieves.
 //!
-//! PSA separates O₂ from air by adsorbing N₂ and CO₂ on the sieve while O₂, Ar, and
-//! noble traces pass through unretained. Because Ar co-concentrates with O₂ at a fixed
-//! ratio, a PSA mix carries more Ar than a partial-pressure mix at the same FO₂ and
-//! contains essentially no CO₂. The physical ceiling is FO₂ ≈ 95.7 %, the point at
-//! which N₂ → 0.
+//! PSA separates $\ce{O2}$ from air by adsorbing $\ce{N2}$ and $\ce{CO2}$ on the sieve while $\ce{O2}$, Ar, and
+//! noble traces pass through unretained. Because Ar co-concentrates with $\ce{O2}$ at a fixed
+//! ratio, a PSA mix carries more Ar than a partial-pressure mix at the same $\text{F}\ce{O2}$ and
+//! contains essentially no $\ce{CO2}$. The physical ceiling is $\text{F}\ce{O2}$ ≈ 95.7 %, the point at
+//! which $\ce{N2}$ → 0.
 
 use super::{BlendMethod, sealed};
 
@@ -22,14 +22,14 @@ const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 
 /// Pressure-swing adsorption (PSA) blending.
 ///
-/// Zeolite molecular sieves adsorb N₂ and CO₂ strongly; O₂, Ar, and noble
+/// Zeolite molecular sieves adsorb $\ce{N2}$ and $\ce{CO2}$ strongly; $\ce{O2}$, Ar, and noble
 /// traces pass through essentially unretained. As a result:
 ///
-/// - Ar and other noble traces scale with FO₂ (not with the diluent fraction).
-/// - CO₂ is essentially absent from the output.
-/// - N₂ is the remainder once O₂, Ar, and traces are accounted for.
+/// - Ar and other noble traces scale with $\text{F}\ce{O2}$ (not with the diluent fraction).
+/// - $\ce{CO2}$ is essentially absent from the output.
+/// - $\ce{N2}$ is the remainder once $\ce{O2}$, Ar, and traces are accounted for.
 ///
-/// The practical ceiling is FO₂ ≈ 95.7 % (where N₂ → 0); [`EANxBlend::new`](crate::EANxBlend::new)
+/// The practical ceiling is $\text{F}\ce{O2}$ ≈ 95.7 % (where $\ce{N2}$ → 0); [`EANxBlend::new`](crate::EANxBlend::new)
 /// rejects values above this ceiling with
 /// [`InvalidEANxError::BlendCeilingExceeded`](crate::InvalidEANxError::BlendCeilingExceeded).
 ///

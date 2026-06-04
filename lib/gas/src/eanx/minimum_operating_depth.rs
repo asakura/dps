@@ -8,10 +8,10 @@ use dps_units::{Bar, Meters, Percent};
 
 use std::fmt;
 
-/// Minimum Operating Depth for a hypoxic gas mix at a ppO₂ floor.
+/// Minimum Operating Depth for a hypoxic gas mix at a $\text{pp}\ce{O2}$ floor.
 ///
 /// Produced by [`EANxBlend::minimod_at`](crate::EANxBlend::minimod_at). The blend method is erased at this
-/// boundary because `MiniMOD` depends only on FO₂ and `ppO₂_min`.
+/// boundary because `MiniMOD` depends only on $\text{F}\ce{O2}$ and `ppo2_min`.
 ///
 /// ```no_run
 /// use dps_gas::EANx;
@@ -73,7 +73,7 @@ impl MiniMOD {
         self.depth
     }
 
-    /// The O₂ fraction of the gas that produced this `MiniMOD`.
+    /// The $\ce{O2}$ fraction of the gas that produced this `MiniMOD`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -86,7 +86,7 @@ impl MiniMOD {
         self.fo2
     }
 
-    /// The ppO₂ floor used to compute this `MiniMOD`.
+    /// The $\text{pp}\ce{O2}$ floor used to compute this `MiniMOD`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;

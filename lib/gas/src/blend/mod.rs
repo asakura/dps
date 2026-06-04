@@ -14,11 +14,11 @@ use super::components::GasComponents;
 use std::fmt;
 
 /// Describes how a nitrox mix was blended, determining the full gas composition
-/// from the O₂ fraction.
+/// from the $\ce{O2}$ fraction.
 ///
 /// Sealed: only [`PartialPressure`], [`Psa`], and [`Membrane`] are valid.
 pub trait BlendMethod: sealed::Sealed + Copy + fmt::Debug {
-    /// Full gas composition for a mix with the given O₂ fraction.
+    /// Full gas composition for a mix with the given $\ce{O2}$ fraction.
     ///
     /// ```no_run
     /// use dps_gas::{BlendMethod, PartialPressure};

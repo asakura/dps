@@ -2,7 +2,7 @@
 
 use dps_units::Percent;
 
-/// Minimum O₂ fraction permitted for an EANx blend (10 %).
+/// Minimum $\ce{O2}$ fraction permitted for an EANx blend ($\pu{10 \\%}$).
 pub const EAN_MIN_O2: Percent = Percent::literal(0.10);
 
 // Dry air mole fractions (NOAA standard atmosphere)
@@ -20,28 +20,28 @@ pub const EAN_MIN_O2: Percent = Percent::literal(0.10);
 // `#![feature(const_trait_impl)]` is stabilised the _RAW layer can be removed
 // and the derivations rewritten as e.g. `f64::from(AIR_O2)`.
 
-/// O₂ mole fraction in dry air (≈ 20.946 %).
+/// $\ce{O2}$ mole fraction in dry air ($\approx \pu{20.946 \\%}$).
 pub const AIR_O2_RAW: f64 = 0.209_46;
-/// Ar mole fraction in dry air (≈ 0.934 %).
+/// Ar mole fraction in dry air ($\approx \pu{0.934 \\%}$).
 pub const AIR_AR_RAW: f64 = 0.009_34;
-/// CO₂ mole fraction in dry air (≈ 0.0407 %).
+/// $\ce{CO2}$ mole fraction in dry air ($\approx \pu{0.0407 \\%}$).
 pub const AIR_CO2_RAW: f64 = 0.000_407;
-/// Lumped trace-gas mole fraction in dry air (≈ 0.00274 %).
+/// Lumped trace-gas mole fraction in dry air ($\approx \pu{0.00274 \\%}$).
 pub const AIR_OTHER_RAW: f64 = 0.000_027_4;
-/// N₂ mole fraction in dry air, derived as the remainder (≈ 78.077 %).
+/// $\ce{N2}$ mole fraction in dry air, derived as the remainder ($\approx \pu{78.077 \\%}$).
 pub const AIR_N2_RAW: f64 = 1.0 - AIR_O2_RAW - AIR_AR_RAW - AIR_CO2_RAW - AIR_OTHER_RAW;
 
-/// O₂ fraction in standard dry air.
+/// $\ce{O2}$ fraction in standard dry air.
 pub const AIR_O2: Percent = Percent::literal(AIR_O2_RAW);
-/// Ar fraction in standard dry air.
+/// $\ce{Ar}$ fraction in standard dry air.
 pub const AIR_AR: Percent = Percent::literal(AIR_AR_RAW);
-/// CO₂ fraction in standard dry air (NOAA GML 2017 annual mean ≈ 406.6 ppm).
+/// $\ce{CO2}$ fraction in standard dry air (NOAA GML 2017 annual mean $\approx \pu{406.6 ppm}$).
 pub const AIR_CO2: Percent = Percent::literal(AIR_CO2_RAW);
-/// Lumped trace-gas fraction in standard dry air (Ne, He, CH₄, Kr, H₂, N₂O, Xe, …).
+/// Lumped trace-gas fraction in standard dry air ($\ce{Ne}$, $\ce{He}$, $\ce{CH4}$, $\ce{Kr}$, $\ce{H2}$, $\ce{N2O}$, $\ce{Xe}$, …).
 pub const AIR_OTHER: Percent = Percent::literal(AIR_OTHER_RAW);
-/// N₂ fraction in standard dry air.
+/// $\ce{N2}$ fraction in standard dry air.
 pub const AIR_N2: Percent = Percent::literal(AIR_N2_RAW);
-/// Non-O₂ total fraction in standard dry air.
+/// Non-$\ce{O2}$ total fraction in standard dry air.
 pub const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW);
 
 // Narcosis
@@ -50,23 +50,23 @@ pub const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW);
 // partial pressure. CO₂ narcosis from inspired gas at air-trace concentrations
 // is negligible and excluded.
 
-/// Relative narcotic potency of Argon vs Nitrogen (1.5).
+/// Relative narcotic potency of Argon vs Nitrogen ($1.5$).
 pub const AR_NARCOTIC_POTENCY: f64 = 1.5;
-/// Equivalent narcotic fraction of standard dry air (N₂ + 1.5 × Ar).
+/// Equivalent narcotic fraction of standard dry air ($\ce{N2} + 1.5 \times \ce{Ar}$).
 pub const AIR_NARCOTIC: Percent = Percent::literal(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW);
 
 // Gas density
 //
 // ρ [g/L] = P [Pa] × M [g/mol] / (R [Pa·L/(mol·K)] × T [K])
 
-/// Universal gas constant in Pa·L/(mol·K) (8314.46).
+/// Universal gas constant ($\pu{8314.46 Pa.L.mol^{-1}.K^{-1}}$).
 pub const GAS_CONSTANT: f64 = 8314.46;
-/// ISO standard reference temperature (20 °C) in Kelvin (293.15 K).
+/// ISO standard reference temperature ($20\\,^\circ\text{C}$, $\pu{293.15 K}$).
 pub const STANDARD_TEMP_K: f64 = 293.15;
 
-/// Returns the NOAA single-dive CNS exposure limit in minutes for a given ppO₂.
+/// Returns the NOAA single-dive CNS exposure limit in minutes for a given $\text{pp}\ce{O2}$.
 ///
-/// Returns `f64::INFINITY` below 0.5 bar, and `0.0` above 1.6 bar.
+/// Returns `f64::INFINITY` below $\pu{0.5 bar}$, and `0.0` above $\pu{1.6 bar}$.
 pub fn cns_limit_minutes(ppo2: f64) -> f64 {
     if ppo2 <= 0.50 {
         return f64::INFINITY; // no CNS effect below 0.5 bar

@@ -8,10 +8,10 @@ use dps_units::{Bar, Meters, Percent};
 
 use std::fmt;
 
-/// Maximum Operating Depth for a gas mix at a ppO₂ limit.
+/// Maximum Operating Depth for a gas mix at a $\text{pp}\ce{O2}$ limit.
 ///
 /// Produced by [`EANxBlend::mod_at`](crate::EANxBlend::mod_at). The blend method is erased at this boundary
-/// because MOD depends only on FO₂ and `ppO₂_max`.
+/// because MOD depends only on $\text{F}\ce{O2}$ and `ppo2_max`.
 ///
 /// ```no_run
 /// use dps_gas::EANx;
@@ -73,7 +73,7 @@ impl MOD {
         self.depth
     }
 
-    /// The O₂ fraction of the gas that produced this MOD.
+    /// The $\ce{O2}$ fraction of the gas that produced this MOD.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -86,7 +86,7 @@ impl MOD {
         self.fo2
     }
 
-    /// The ppO₂ limit used to compute this MOD.
+    /// The $\text{pp}\ce{O2}$ limit used to compute this MOD.
     ///
     /// ```no_run
     /// use dps_gas::EANx;

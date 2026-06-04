@@ -1,6 +1,6 @@
 //! Full mole-fraction breakdown of a breathing gas.
 //!
-//! Provides [`GasComponents`], the five-component (O₂, N₂, Ar, CO₂, and lumped traces)
+//! Provides [`GasComponents`], the five-component ($\ce{O2}$, $\ce{N2}$, Ar, $\ce{CO2}$, and lumped traces)
 //! output of [`BlendMethod::components`](crate::BlendMethod::components).
 //!
 //! Instances are constructed exclusively inside the blend machinery and carry the
@@ -149,7 +149,7 @@ impl GasComponents {
         self.co2
     }
 
-    /// Lumped trace-gas fraction: Ne, He, CH₄, Kr, H₂, N₂O, Xe, …
+    /// Lumped trace-gas fraction: Ne, He, $\ce{CH4}$, Kr, $\ce{H2}$, $\ce{N2O}$, Xe, …
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -197,9 +197,9 @@ impl GasComponents {
         )
     }
 
-    /// Narcotic fraction under the NOAA model: N₂ + 1.5 × Ar.
+    /// Narcotic fraction under the NOAA model: $\ce{N2}$ + 1.5 × Ar.
     ///
-    /// O₂ is treated as non-narcotic; CO₂ narcosis from inspired gas at
+    /// $\ce{O2}$ is treated as non-narcotic; $\ce{CO2}$ narcosis from inspired gas at
     /// air-trace concentrations is negligible and excluded.
     ///
     /// ```no_run

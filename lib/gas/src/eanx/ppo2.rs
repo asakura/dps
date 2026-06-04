@@ -5,10 +5,10 @@ use dps_units::{Bar, Meters, Percent};
 
 use std::fmt;
 
-/// Partial pressure of O₂ at a given depth.
+/// Partial pressure of $\ce{O2}$ at a given depth.
 ///
 /// Produced by [`EANxBlend::ppo2_at`](crate::EANxBlend::ppo2_at). The blend method is erased at this
-/// boundary because ppO₂ depends only on FO₂ and depth.
+/// boundary because $\text{pp}\ce{O2}$ depends only on $\text{F}\ce{O2}$ and depth.
 ///
 /// ```no_run
 /// use dps_gas::EANx;
@@ -47,7 +47,7 @@ impl From<PPO2Shadow> for PPO2 {
 }
 
 impl PPO2 {
-    /// The computed ppO₂ as a [`Bar`] value.
+    /// The computed $\text{pp}\ce{O2}$ as a [`Bar`] value.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -60,7 +60,7 @@ impl PPO2 {
         self.ppo2
     }
 
-    /// The O₂ fraction of the gas that produced this `Ppo2`.
+    /// The $\ce{O2}$ fraction of the gas that produced this `Ppo2`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -73,7 +73,7 @@ impl PPO2 {
         self.fo2
     }
 
-    /// The depth at which this ppO₂ was evaluated.
+    /// The depth at which this $\text{pp}\ce{O2}$ was evaluated.
     ///
     /// ```no_run
     /// use dps_gas::EANx;

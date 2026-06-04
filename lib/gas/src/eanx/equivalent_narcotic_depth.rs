@@ -10,7 +10,7 @@ use std::fmt;
 /// Equivalent Narcotic Depth at a given actual depth.
 ///
 /// Produced by [`EANxBlend::end_at`](crate::EANxBlend::end_at). The blend method is erased at this
-/// boundary; only FO₂ (for the gas name) and the narcotic fraction matter.
+/// boundary; only $\text{F}\ce{O2}$ (for the gas name) and the narcotic fraction matter.
 ///
 /// ```no_run
 /// use dps_gas::EANx;
@@ -64,7 +64,7 @@ impl END {
         self.end
     }
 
-    /// The O₂ fraction of the gas that produced this `END`.
+    /// The $\ce{O2}$ fraction of the gas that produced this `END`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;

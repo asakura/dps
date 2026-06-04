@@ -3,7 +3,7 @@ use dps_units::Percent;
 /// Error returned when a string cannot be parsed as an [`EANx`](crate::EANx) blend.
 ///
 /// Produced by [`EANx::from_str`](std::str::FromStr) when the input does not match any known
-/// gas-name format or the resulting O₂ fraction is outside the valid range.
+/// gas-name format or the resulting $\ce{O2}$ fraction is outside the valid range.
 ///
 /// ```
 /// use dps_gas::EANx;
@@ -39,13 +39,13 @@ pub struct ParseEANxError;
 #[derive(Debug, Clone, thiserror::Error)]
 #[non_exhaustive]
 pub enum InvalidEANxError {
-    /// FO₂ is below the 10 % minimum for a breathable EAN mix.
+    /// $\text{F}\ce{O2}$ is below the 10 % minimum for a breathable EAN mix.
     #[error("O₂ fraction {0} is below the 10 % minimum")]
     O2TooLow(Percent),
-    /// FO₂ exceeds the physical ceiling for this blend method.
+    /// $\text{F}\ce{O2}$ exceeds the physical ceiling for this blend method.
     ///
-    /// For [`Psa`](crate::Psa) the ceiling is ≈ 95.7 %: the point at which all N₂
-    /// would be depleted and the output is pure O₂ + Ar.
+    /// For [`Psa`](crate::Psa) the ceiling is ≈ 95.7 %: the point at which all $\ce{N2}$
+    /// would be depleted and the output is pure $\ce{O2}$ + Ar.
     #[error("O₂ fraction {0} exceeds the blend method ceiling")]
     BlendCeilingExceeded(Percent),
     /// The input string is not a recognised [`EANx`](crate::EANx) blend name.

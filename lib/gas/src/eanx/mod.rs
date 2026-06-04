@@ -26,10 +26,10 @@ use dps_units::{Bar, CnsRatePerMinute, GramsPerLitre, Meters, OTUPerMinute, Perc
 
 use std::{fmt, str::FromStr};
 
-/// Enriched Air Nitrox, modelled by O₂ fraction and blending method.
+/// Enriched Air Nitrox, modelled by $\ce{O2}$ fraction and blending method.
 ///
-/// The blend method determines the full gas composition (N₂, Ar, CO₂, traces)
-/// from the O₂ fraction. See the [module documentation](crate) for a comparison
+/// The blend method determines the full gas composition ($\ce{N2}$, Ar, $\ce{CO2}$, traces)
+/// from the $\ce{O2}$ fraction. See the [module documentation](crate) for a comparison
 /// of the three available methods.
 ///
 /// Use the [`EANx`] type alias for the common partial-pressure case.
@@ -80,7 +80,7 @@ impl<M: BlendMethod> TryFrom<EANxBlendShadow<M>> for EANxBlend<M> {
 /// Type alias for the most common case: partial-pressure blended nitrox.
 ///
 /// Named mixes display their standard label; other fractions display as a
-/// percentage. The label is determined by rounding the O₂ fraction to the
+/// percentage. The label is determined by rounding the $\ce{O2}$ fraction to the
 /// nearest whole percent.
 ///
 /// ```no_run
@@ -95,7 +95,7 @@ impl<M: BlendMethod> TryFrom<EANxBlendShadow<M>> for EANxBlend<M> {
 pub type EANx = EANxBlend<PartialPressure>;
 
 impl<M: BlendMethod> EANxBlend<M> {
-    /// Constructs an [`EANxBlend`] from an O₂ fraction and a blending method.
+    /// Constructs an [`EANxBlend`] from an $\ce{O2}$ fraction and a blending method.
     ///
     /// # Errors
     ///
@@ -174,7 +174,7 @@ impl<M: BlendMethod> EANxBlend<M> {
         self.env
     }
 
-    /// O₂ fraction.
+    /// $\ce{O2}$ fraction.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -202,7 +202,7 @@ impl<M: BlendMethod> EANxBlend<M> {
         self.method.components(self.fo2.into())
     }
 
-    /// N₂ fraction.
+    /// $\ce{N2}$ fraction.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -230,7 +230,7 @@ impl<M: BlendMethod> EANxBlend<M> {
         self.components().ar()
     }
 
-    /// CO₂ fraction.
+    /// $\ce{CO2}$ fraction.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -256,9 +256,9 @@ impl<M: BlendMethod> EANxBlend<M> {
         self.components().other()
     }
 
-    /// ppO₂ at the given depth.
+    /// $\text{pp}\ce{O2}$ at the given depth.
     ///
-    /// Formula: `ppO₂ = (depth / 9.948 m/bar + 1.013 bar) × FO₂`
+    /// Formula: $\text{pp}\ce{O2} = \bigl(\text{depth} / \pu{9.948 m/bar} + \pu{1.013 bar}\bigr) \times \text{F}\ce{O2}$
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -273,9 +273,9 @@ impl<M: BlendMethod> EANxBlend<M> {
         PPO2::new(self.fo2, depth, self.env)
     }
 
-    /// Maximum Operating Depth for a given ppO₂ limit (O₂ toxicity constraint).
+    /// Maximum Operating Depth for a given $\text{pp}\ce{O2}$ limit ($\ce{O2}$ toxicity constraint).
     ///
-    /// Formula: `MOD = (ppO₂_max / FO₂ − 1.013 bar) × 9.948 m/bar`
+    /// Formula: $\text{MOD} = \bigl(\text{pp}\ce{O2}_{\text{max}} / \text{F}\ce{O2} - \pu{1.013 bar}\bigr) \times \pu{9.948 m/bar}$
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -298,10 +298,10 @@ impl<M: BlendMethod> EANxBlend<M> {
             .expect("fo2 guaranteed >= 10 % at EANxBlend construction")
     }
 
-    /// Minimum Operating Depth for a given ppO₂ floor (hypoxia threshold).
+    /// Minimum Operating Depth for a given $\text{pp}\ce{O2}$ floor (hypoxia threshold).
     ///
     /// Returns 0 m for mixes that are normoxic or hyperoxic at the surface.
-    /// Formula: `depth = (ppO₂_min / FO₂ − 1.013 bar) × 9.948 m/bar`, clamped to 0.
+    /// Formula: $\text{depth} = \bigl(\text{pp}\ce{O2}_{\text{min}} / \text{F}\ce{O2} - \pu{1.013 bar}\bigr) \times \pu{9.948 m/bar}$, clamped to 0.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -332,7 +332,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Equivalent Narcotic Depth at a given actual depth.
     ///
     /// The depth on air that produces the same narcotic load (NOAA model:
-    /// N₂ + 1.5 × Ar are narcotic; O₂ and CO₂ are excluded).
+    /// $\ce{N2}$ + 1.5 × Ar are narcotic; $\ce{O2}$ and $\ce{CO2}$ are excluded).
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -373,10 +373,10 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// Equivalent Air Depth at a given actual depth.
     ///
-    /// The depth on air that produces the same N₂ partial pressure. Used to
+    /// The depth on air that produces the same $\ce{N2}$ partial pressure. Used to
     /// look up no-decompression limits from air tables.
     ///
-    /// Formula: `EAD = ((depth + 10) × FN₂ / FN₂_air) − 10`
+    /// Formula: $\text{EAD} = \bigl((\text{depth} + 10) \times F_{\ce{N2}} / F_{\ce{N2},\text{air}}\bigr) - 10$
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -398,7 +398,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Gas density in g/L at the given depth, at 20 °C (standard reference).
     ///
     /// Computed via the ideal gas law: `ρ = P × M / (R × T)`.
-    /// Dense gas increases work of breathing and CO₂ retention risk at depth.
+    /// Dense gas increases work of breathing and $\ce{CO2}$ retention risk at depth.
     ///
     /// Uses 1 atm (1.013 bar) as surface pressure and standard seawater density
     /// (1025 kg/m³), giving ≈ 1.204 g/L for dry air at 20 °C.
@@ -422,13 +422,13 @@ impl<M: BlendMethod> EANxBlend<M> {
         )
     }
 
-    /// CNS O₂ toxicity rate in fraction of single-dive limit per minute.
+    /// CNS $\ce{O2}$ toxicity rate in fraction of single-dive limit per minute.
     ///
     /// Uses the NOAA single-dive CNS exposure limit table. Multiply by exposure
     /// time in minutes to get the fraction of the CNS limit consumed.
     ///
-    /// - Returns `0.0 CNS%/min` for `ppO₂ ≤ 0.5 bar` (below the CNS threshold).
-    /// - Returns [`f64::INFINITY`] CNS%/min for `ppO₂ > 1.6 bar` (not recommended).
+    /// - Returns `0.0 CNS%/min` for $\text{pp}\ce{O2} \leq \pu{0.5 bar}$ (below the CNS threshold).
+    /// - Returns [`f64::INFINITY`] CNS%/min for $\text{pp}\ce{O2} > \pu{1.6 bar}$ (not recommended).
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -451,7 +451,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// OTU (Oxygen Tolerance Unit) accumulation rate per minute at the given depth.
     ///
-    /// Formula: `OTU/min = (ppO₂ − 0.5)^0.83` when `ppO₂ > 0.5 bar`, else `0`.
+    /// Formula: $(\text{pp}\ce{O2} - \pu{0.5 bar})^{0.83}$ when $\text{pp}\ce{O2} > \pu{0.5 bar}$, else $0$.
     ///
     /// Multiply by exposure time in minutes; daily limit is ≈ 850 OTU.
     ///
@@ -497,7 +497,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Returns a display wrapper that prints extended gas information.
     ///
     /// The wrapper's [`Display`](std::fmt::Display) shows the gas name, blend
-    /// method, and the full component breakdown (O₂, N₂, Ar, CO₂, other).
+    /// method, and the full component breakdown ($\ce{O2}$, $\ce{N2}$, Ar, $\ce{CO2}$, other).
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -513,16 +513,16 @@ impl<M: BlendMethod> EANxBlend<M> {
 }
 
 impl EANxBlend<PartialPressure> {
-    /// The optimal O₂ fraction for a target depth and ppO₂ limit.
+    /// The optimal $\ce{O2}$ fraction for a target depth and $\text{pp}\ce{O2}$ limit.
     ///
-    /// Returns the highest FO₂ (as a partial-pressure nitrox mix) that keeps
-    /// ppO₂ at or below `ppo2_max` at `target_depth`, clamped to 100 % O₂.
+    /// Returns the highest $\text{F}\ce{O2}$ (as a partial-pressure nitrox mix) that keeps
+    /// $\text{pp}\ce{O2}$ at or below `ppo2_max` at `target_depth`, clamped to 100 % $\ce{O2}$.
     ///
     /// # Errors
     ///
-    /// Returns `Err(InvalidEANxError::O2TooLow)` if the required FO₂ would be
+    /// Returns `Err(InvalidEANxError::O2TooLow)` if the required $\text{F}\ce{O2}$ would be
     /// below the 10 % minimum (the target depth is beyond any breathable mix
-    /// for that ppO₂ limit).
+    /// for that $\text{pp}\ce{O2}$ limit).
     ///
     /// ```
     /// use dps_gas::EANx;
@@ -617,7 +617,7 @@ impl TryFrom<Percent> for EANx {
 /// # Errors
 ///
 /// Returns [`InvalidEANxError`] if the string does not match any known format or
-/// the resulting O₂ fraction is outside the valid [`EANx`] range (≥ 10 %).
+/// the resulting $\ce{O2}$ fraction is outside the valid [`EANx`] range (≥ 10 %).
 ///
 /// # Examples
 ///

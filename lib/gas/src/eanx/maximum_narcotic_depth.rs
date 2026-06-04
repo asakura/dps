@@ -10,7 +10,7 @@ use std::fmt;
 /// Maximum Narcotic Depth for a given END limit.
 ///
 /// Produced by [`EANxBlend::mnd_at`](crate::EANxBlend::mnd_at). The blend method is erased at this
-/// boundary; only FO₂ (for the gas name) and the narcotic fraction matter.
+/// boundary; only $\text{F}\ce{O2}$ (for the gas name) and the narcotic fraction matter.
 ///
 /// ```no_run
 /// use dps_gas::EANx;
@@ -64,7 +64,7 @@ impl MND {
         self.mnd
     }
 
-    /// The O₂ fraction of the gas that produced this `MND`.
+    /// The $\ce{O2}$ fraction of the gas that produced this `MND`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;

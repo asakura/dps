@@ -6,8 +6,8 @@ use crate::constants::{AIR_DILUENT, AIR_OTHER};
 /// Membrane separator blending.
 ///
 /// Hollow-fibre membranes separate gases by differential permeability.
-/// The N₂/Ar/CO₂ ratios in the output depend on the specific membrane
-/// material and operating conditions and cannot be derived from FO₂ alone.
+/// The $\ce{N2}$/Ar/$\ce{CO2}$ ratios in the output depend on the specific membrane
+/// material and operating conditions and cannot be derived from $\text{F}\ce{O2}$ alone.
 ///
 /// Construct via [`Membrane::from_analysis`] using a measured gas analysis, or
 /// use [`Membrane::typical`] for an approximate model when no analyser is
@@ -80,7 +80,7 @@ impl Membrane {
     ///
     /// Pass the absolute mole fractions measured in the membrane output at
     /// any operating point. The diluent fractions are normalised internally
-    /// and apply at all target FO₂ values for the same equipment settings.
+    /// and apply at all target $\text{F}\ce{O2}$ values for the same equipment settings.
     ///
     /// The `other` fraction (noble traces, etc.) is derived as the remainder.
     ///
@@ -128,8 +128,8 @@ impl Membrane {
     /// behaviour at common nitrox operating points:
     ///
     /// - Ar is enriched to ≈ 2.0 % of the diluent (≈ 1.7× air's ratio).
-    /// - CO₂ is enriched to ≈ 0.1 % of the diluent (CO₂ permeates readily).
-    /// - N₂ fills the remainder.
+    /// - $\ce{CO2}$ is enriched to ≈ 0.1 % of the diluent ($\ce{CO2}$ permeates readily).
+    /// - $\ce{N2}$ fills the remainder.
     ///
     /// These values are indicative only. Use [`Membrane::from_analysis`] for
     /// precision work.

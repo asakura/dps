@@ -10,7 +10,7 @@ use std::fmt;
 /// Equivalent Air Depth at a given actual depth.
 ///
 /// Produced by [`EANxBlend::ead_at`](crate::EANxBlend::ead_at). The blend method is erased at this
-/// boundary; only FO₂ (for the gas name) and the N₂ fraction matter.
+/// boundary; only $\text{F}\ce{O2}$ (for the gas name) and the $\ce{N2}$ fraction matter.
 ///
 /// ```no_run
 /// use dps_gas::EANx;
@@ -64,7 +64,7 @@ impl EAD {
         self.ead
     }
 
-    /// The O₂ fraction of the gas that produced this `EAD`.
+    /// The $\ce{O2}$ fraction of the gas that produced this `EAD`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;

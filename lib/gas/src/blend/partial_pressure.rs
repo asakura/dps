@@ -3,10 +3,10 @@ use super::{BlendMethod, sealed};
 use crate::components::GasComponents;
 use crate::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
 
-/// Partial-pressure blending: pure O₂ added to air.
+/// Partial-pressure blending: pure $\ce{O2}$ added to air.
 ///
-/// The diluent is always air-derived, so N₂, Ar, CO₂, and trace gases appear
-/// in the same ratios as in dry air regardless of the target O₂ fraction.
+/// The diluent is always air-derived, so $\ce{N2}$, Ar, $\ce{CO2}$, and trace gases appear
+/// in the same ratios as in dry air regardless of the target $\ce{O2}$ fraction.
 ///
 /// ```no_run
 /// use dps_gas::{EANxBlend, PartialPressure};
