@@ -364,7 +364,7 @@ mod ppo2_summary {
         let p = EANx::try_from(Percent::new(0.32)?)?.ppo2_at(Meters::new(33.75));
         let summary = p.summary();
         let json = serde_json::to_string(&summary)?;
-        let parsed: Ppo2Summary = serde_json::from_str(&json)?;
+        let parsed: PPO2Summary = serde_json::from_str(&json)?;
 
         assert_eq!(summary, parsed);
         assert_eq!(parsed.into_inner(), p);
