@@ -12,25 +12,18 @@
 //! ```
 
 pub mod error;
+mod raw_config;
 mod theme;
 
 pub use self::error::Error as ConfigError;
+pub use self::theme::ThemeMap;
 
-use crate::{
-    keymap::{KeyBindings, KeyBindingsBuilder},
-    theme::Theme,
-};
+use crate::{keymap::KeyBindings, theme::Theme};
 
-use color_eyre::Result;
-use serde::{Deserialize, de::Deserializer};
+use serde::Deserialize;
 use tracing::error;
 
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
-
-const BASE_CONFIG_CONTENT: &str = include_str!("../../.config/config.json5");
+use std::path::{Path, PathBuf};
 
 const CONFIG_FILES: &[&str] = [
     "config.json5",
@@ -40,89 +33,6 @@ const CONFIG_FILES: &[&str] = [
     "config.toml",
 ]
 .as_slice();
-
-fn default_leader() -> String {
-    "<Space>".to_string()
-}
-
-/// Intermediate deserialization view of the config file.
-///
-/// Holds raw theme and palette maps long enough for [`theme::resolve_theme`]
-/// to consume them; never exposed publicly.
-#[derive(Deserialize, Default)]
-struct RawConfig {
-    /// Leader key used to resolve `<leader>` tokens in keybinding sequences.
-    /// Accepts any key sequence string understood by `parse_key_sequence`,
-    /// e.g. `"<Space>"`, `","`, `"<C-a>"`. Defaults to `"<Space>"`.
-    #[serde(default = "default_leader")]
-    leader: String,
-    #[serde(default)]
-    keybindings: KeyBindingsBuilder,
-    #[serde(default, rename = "defaultTheme")]
-    default_theme: String,
-    #[serde(default)]
-    themes: HashMap<String, theme::ThemeConfig>,
-    #[serde(default)]
-    palettes: HashMap<String, theme::PaletteConfig>,
-}
-
-struct RawConfigContext<'a> {
-    config: &'a mut RawConfig,
-    base_config: &'a RawConfig,
-    config_dir: &'a Path,
-    data_dir: &'a Path,
-}
-
-impl<'a> TryFrom<RawConfigContext<'a>> for Config {
-    type Error = ConfigError;
-
-    fn try_from(ctx: RawConfigContext<'a>) -> Result<Self, Self::Error> {
-        let RawConfigContext {
-            config,
-            base_config,
-            config_dir,
-            data_dir,
-        } = ctx;
-
-        config.keybindings.merge_defaults(&base_config.keybindings);
-
-        if config.default_theme.is_empty() {
-            config.default_theme.clone_from(&base_config.default_theme);
-        }
-
-        for (name, t) in &base_config.themes {
-            config
-                .themes
-                .entry(name.clone())
-                .or_insert_with(|| t.clone());
-        }
-
-        for (name, p) in &base_config.palettes {
-            config
-                .palettes
-                .entry(name.clone())
-                .or_insert_with(|| p.clone());
-        }
-
-        let themes = theme::resolve_theme(&config.themes, &config.palettes)?;
-
-        if !themes.contains_key(&config.default_theme) {
-            return Err(error::Error::UnknownTheme(std::mem::take(
-                &mut config.default_theme,
-            )));
-        }
-
-        Ok(Self {
-            config: AppConfig {
-                config_dir: config_dir.to_path_buf(),
-                data_dir: data_dir.to_path_buf(),
-            },
-            keybindings: config.keybindings.build_with_leader(&config.leader),
-            themes,
-            default_theme: std::mem::take(&mut config.default_theme),
-        })
-    }
-}
 
 /// Paths written into [`Config`] by the config loader; override the
 /// platform defaults via the `DPS_DATA` / `DPS_CONFIG` environment variables.
@@ -149,7 +59,7 @@ pub struct Config {
     ///
     /// User-defined themes must supply all 15 slot mappings; partial overrides
     /// of a built-in theme are not supported — define a new theme entry instead.
-    pub themes: HashMap<String, Theme>,
+    pub themes: ThemeMap,
     /// Name of the currently active theme; must always be a key in `themes`.
     ///
     /// Switch themes at runtime by assigning a new name that exists in `themes`.
@@ -174,17 +84,9 @@ impl Default for Config {
         Self {
             config: AppConfig::default(),
             keybindings: KeyBindings::default(),
-            themes: HashMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
+            themes: ThemeMap::from([("catpuccineFrappe".to_string(), Theme::default())]),
             default_theme: "catpuccineFrappe".to_string(),
         }
-    }
-}
-
-fn parse_config(path: &Path, content: &str) -> Result<RawConfig, ConfigError> {
-    match path.extension().and_then(|e| e.to_str()).unwrap_or("json5") {
-        "yaml" | "yml" => serde_saphyr::from_str(content).map_err(ConfigError::ParseYaml),
-        "toml" => toml::from_str(content).map_err(ConfigError::ParseToml),
-        _ => json5::from_str(content).map_err(ConfigError::ParseJson),
     }
 }
 
@@ -224,23 +126,21 @@ impl Config {
     /// # }
     /// ```
     pub fn from_dirs<P: AsRef<Path>>(config_dir: P, data_dir: P) -> Result<Self, ConfigError> {
-        let base_config: RawConfig =
-            json5::from_str(BASE_CONFIG_CONTENT).map_err(ConfigError::EmbeddedConfig)?;
+        let base_config = raw_config::RawConfig::parse_base_config()?;
 
         let config_path = CONFIG_FILES
             .iter()
             .map(|name| config_dir.as_ref().join(name))
             .find(|p| p.exists());
 
-        let mut config: RawConfig = if let Some(ref path) = config_path {
-            parse_config(path, &std::fs::read_to_string(path)?)?
+        let mut config = if let Some(ref path) = config_path {
+            raw_config::RawConfig::parse_config(path, &std::fs::read_to_string(path)?)?
         } else {
             error!("No configuration file found.");
-
-            RawConfig::default()
+            raw_config::RawConfig::default()
         };
 
-        Self::try_from(RawConfigContext {
+        Self::try_from(raw_config::RawConfigContext {
             config: &mut config,
             base_config: &base_config,
             config_dir: config_dir.as_ref(),
