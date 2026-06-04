@@ -2,6 +2,10 @@
 
 use dps_units::Percent;
 
+#[expect(
+    clippy::doc_markdown,
+    reason = "EANx is a gas-mixture name, not a code identifier"
+)]
 /// Minimum $\ce{O2}$ fraction permitted for an EANx blend ($\pu{10 \\%}$).
 pub const EAN_MIN_O2: Percent = Percent::literal(0.10);
 

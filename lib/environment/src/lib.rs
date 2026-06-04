@@ -9,6 +9,10 @@
     rustdoc::private_doc_tests,
     reason = "Module-level doc examples reference crate paths that are private to rustdoc"
 )]
+#![expect(
+    clippy::doc_markdown,
+    reason = "KaTeX expressions like $L/T_0$ are falsely flagged as unquoted identifiers"
+)]
 
 //! Depth↔pressure conversion for variable dive environments.
 //!
