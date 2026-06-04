@@ -20,7 +20,7 @@
 //!
 //! Three blend methods are provided:
 //!
-//! | Type | Diluent | Ar | $\ce{CO2}$ |
+//! | Type | Diluent | $\ce{Ar}$ | $\ce{CO2}$ |
 //! |---|---|---|---|
 //! | [`PartialPressure`] | air-derived | ≈ air ratio | ≈ air ratio |
 //! | [`Psa`] | $\ce{N2}$ stripped | co-concentrates with $\ce{O2}$ | stripped by zeolite |

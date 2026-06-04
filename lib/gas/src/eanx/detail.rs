@@ -16,11 +16,11 @@ use std::fmt;
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// println!("{}", ean32.detail());
 /// // EANx 32 (partial pressure)
-/// //   O₂      32.000 %
-/// //   N₂      67.159 %
-/// //   Ar       0.803 %
-/// //   CO₂      0.035 %
-/// //   other    0.002 %
+/// //   O₂      32.000%
+/// //   N₂      67.159%
+/// //   Ar       0.803%
+/// //   CO₂      0.035%
+/// //   other    0.002%
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]

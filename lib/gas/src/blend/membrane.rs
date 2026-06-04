@@ -127,8 +127,8 @@ impl Membrane {
     /// Uses conservative estimates based on typical hollow-fibre membrane
     /// behaviour at common nitrox operating points:
     ///
-    /// - Ar is enriched to ≈ 2.0 % of the diluent (≈ 1.7× air's ratio).
-    /// - $\ce{CO2}$ is enriched to ≈ 0.1 % of the diluent ($\ce{CO2}$ permeates readily).
+    /// - $\ce{Ar}$ is enriched to $\approx 2.0\\%$ of the diluent ($\approx 1.7\\times$ air's ratio).
+    /// - $\ce{CO2}$ is enriched to $\approx 0.1\\%$ of the diluent ($\ce{CO2}$ permeates readily).
     /// - $\ce{N2}$ fills the remainder.
     ///
     /// These values are indicative only. Use [`Membrane::from_analysis`] for

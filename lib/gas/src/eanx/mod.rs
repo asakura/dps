@@ -99,9 +99,9 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// # Errors
     ///
-    /// - [`InvalidEANxError::O2TooLow`] if `fo2 < 10 %`.
+    /// - [`InvalidEANxError::O2TooLow`] if `fo2 < 10%`.
     /// - [`InvalidEANxError::BlendCeilingExceeded`] if `fo2` is above the
-    ///   physical ceiling for `method` (PSA: ≈ 95.7 %).
+    ///   physical ceiling for `method` (PSA: ≈ 95.7%).
     ///
     /// ```no_run
     /// use dps_gas::{EANxBlend, Psa, InvalidEANxError};
@@ -208,7 +208,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// use dps_gas::EANx;
     /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// // 68 % diluent, split as air — N₂ ≈ 67.3 %
+    /// // 68% diluent, split as air — N₂ ≈ 67.3%
     /// assert!(ean32.fn2() > 0.0 && ean32.fn2() < 0.68);
     /// ```
     #[must_use]
@@ -216,7 +216,7 @@ impl<M: BlendMethod> EANxBlend<M> {
         self.components().n2()
     }
 
-    /// Ar fraction.
+    /// $\ce{Ar}$ fraction.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -243,7 +243,7 @@ impl<M: BlendMethod> EANxBlend<M> {
         self.components().co2()
     }
 
-    /// Trace-gas fraction (Ne, He, Kr, …).
+    /// Trace-gas fraction ($\ce{Ne}$, $\ce{He}$, $\ce{Kr}$, …).
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -287,15 +287,15 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// # Panics
     ///
-    /// Never: `EANxBlend` guarantees `fo2 >= 10 %` at construction.
+    /// Never: `EANxBlend` guarantees $\text{F}\ce{O2} \geq 10\\%$ at construction.
     #[must_use]
     #[expect(
         clippy::expect_used,
-        reason = "EANxBlend invariant: fo2 >= 10 % is checked at construction, so MOD::new never returns Err here"
+        reason = "EANxBlend invariant: fo2 >= 10% is checked at construction, so MOD::new never returns Err here"
     )]
     pub fn mod_at(self, ppo2_max: Bar) -> MOD {
         MOD::new(self.fo2, ppo2_max, self.env)
-            .expect("fo2 guaranteed >= 10 % at EANxBlend construction")
+            .expect("fo2 guaranteed >= 10% at EANxBlend construction")
     }
 
     /// Minimum Operating Depth for a given $\text{pp}\ce{O2}$ floor (hypoxia threshold).
@@ -307,7 +307,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// use dps_gas::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
-    /// // Hypoxic 10 % mix: minimum depth at ppO₂ 0.16 bar ≈ 5.84 m
+    /// // Hypoxic 10% mix: minimum depth at ppO₂ 0.16 bar ≈ 5.84 m
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
     /// assert_relative_eq!(h10.minimod_at(Bar::new(0.16)).depth(), Meters::new(5.84), epsilon = 0.01);
     ///
@@ -318,15 +318,15 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// # Panics
     ///
-    /// Never: `EANxBlend` guarantees `fo2 >= 10 %` at construction.
+    /// Never: `EANxBlend` guarantees $\text{F}\ce{O2} \geq 10\\%$ at construction.
     #[must_use]
     #[expect(
         clippy::expect_used,
-        reason = "EANxBlend invariant: fo2 >= 10 % is checked at construction, so MiniMOD::new never returns Err here"
+        reason = "EANxBlend invariant: fo2 >= 10% is checked at construction, so MiniMOD::new never returns Err here"
     )]
     pub fn minimod_at(self, ppo2_min: Bar) -> MiniMOD {
         MiniMOD::new(self.fo2, ppo2_min, self.env)
-            .expect("fo2 guaranteed >= 10 % at EANxBlend construction")
+            .expect("fo2 guaranteed >= 10% at EANxBlend construction")
     }
 
     /// Equivalent Narcotic Depth at a given actual depth.
@@ -401,7 +401,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Dense gas increases work of breathing and $\ce{CO2}$ retention risk at depth.
     ///
     /// Uses 1 atm (1.013 bar) as surface pressure and standard seawater density
-    /// (1025 kg/m³), giving ≈ 1.204 g/L for dry air at 20 °C.
+    /// ($\pu{1025 kg/m^3}$), giving $\approx \pu{1.204 g/L}$ for dry air at $\pu{20 ^\circ C}$.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -453,7 +453,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// Formula: $(\text{pp}\ce{O2} - \pu{0.5 bar})^{0.83}$ when $\text{pp}\ce{O2} > \pu{0.5 bar}$, else $0$.
     ///
-    /// Multiply by exposure time in minutes; daily limit is ≈ 850 OTU.
+    /// Multiply by exposure time in minutes; daily limit is $\approx 850\,\text{OTU}$.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -516,12 +516,12 @@ impl EANxBlend<PartialPressure> {
     /// The optimal $\ce{O2}$ fraction for a target depth and $\text{pp}\ce{O2}$ limit.
     ///
     /// Returns the highest $\text{F}\ce{O2}$ (as a partial-pressure nitrox mix) that keeps
-    /// $\text{pp}\ce{O2}$ at or below `ppo2_max` at `target_depth`, clamped to 100 % $\ce{O2}$.
+    /// $\text{pp}\ce{O2}$ at or below `ppo2_max` at `target_depth`, clamped to 100% $\ce{O2}$.
     ///
     /// # Errors
     ///
     /// Returns `Err(InvalidEANxError::O2TooLow)` if the required $\text{F}\ce{O2}$ would be
-    /// below the 10 % minimum (the target depth is beyond any breathable mix
+    /// below $\text{F}\ce{O2} \geq 10\\%$ (the target depth is beyond any breathable mix
     /// for that $\text{pp}\ce{O2}$ limit).
     ///
     /// ```
@@ -590,7 +590,7 @@ pub fn gas_name(fo2: Percent) -> impl fmt::Display {
 ///
 /// # Errors
 ///
-/// Returns [`InvalidEANxError::O2TooLow`] if `pct` is below 10 %.
+/// Returns [`InvalidEANxError::O2TooLow`] if `pct` is below $\text{F}\ce{O2} \geq 10\\%$.
 ///
 /// ```no_run
 /// use dps_gas::EANx;
@@ -617,7 +617,7 @@ impl TryFrom<Percent> for EANx {
 /// # Errors
 ///
 /// Returns [`InvalidEANxError`] if the string does not match any known format or
-/// the resulting $\ce{O2}$ fraction is outside the valid [`EANx`] range (≥ 10 %).
+/// the resulting $\ce{O2}$ fraction is outside the valid [`EANx`] range ($\text{F}\ce{O2} \geq 10\\%$).
 ///
 /// # Examples
 ///
@@ -975,7 +975,7 @@ mod tests {
 
         #[test]
         fn very_deep_returns_err() {
-            // At extreme depth, required fo2 would be below 10 % minimum
+            // At extreme depth, required fo2 would be below 10% minimum
             assert!(
                 EANx::best_mix(
                     Meters::new(200.0),

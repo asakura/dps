@@ -3,10 +3,10 @@
 //! Provides [`Psa`], a [`BlendMethod`](crate::BlendMethod) implementation for oxygen
 //! concentrators that use zeolite molecular sieves.
 //!
-//! PSA separates $\ce{O2}$ from air by adsorbing $\ce{N2}$ and $\ce{CO2}$ on the sieve while $\ce{O2}$, Ar, and
-//! noble traces pass through unretained. Because Ar co-concentrates with $\ce{O2}$ at a fixed
-//! ratio, a PSA mix carries more Ar than a partial-pressure mix at the same $\text{F}\ce{O2}$ and
-//! contains essentially no $\ce{CO2}$. The physical ceiling is $\text{F}\ce{O2}$ ≈ 95.7 %, the point at
+//! PSA separates $\ce{O2}$ from air by adsorbing $\ce{N2}$ and $\ce{CO2}$ on the sieve while $\ce{O2}$, $\ce{Ar}$, and
+//! noble traces pass through unretained. Because $\ce{Ar}$ co-concentrates with $\ce{O2}$ at a fixed
+//! ratio, a PSA mix carries more $\ce{Ar}$ than a partial-pressure mix at the same $\text{F}\ce{O2}$ and
+//! contains essentially no $\ce{CO2}$. The physical ceiling is $\text{F}\ce{O2} \approx 95.7\\%$, the point at
 //! which $\ce{N2}$ → 0.
 
 use super::{BlendMethod, sealed};
@@ -25,11 +25,11 @@ const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 /// Zeolite molecular sieves adsorb $\ce{N2}$ and $\ce{CO2}$ strongly; $\ce{O2}$, Ar, and noble
 /// traces pass through essentially unretained. As a result:
 ///
-/// - Ar and other noble traces scale with $\text{F}\ce{O2}$ (not with the diluent fraction).
+/// - $\ce{Ar}$ and other noble traces scale with $\text{F}\ce{O2}$ (not with the diluent fraction).
 /// - $\ce{CO2}$ is essentially absent from the output.
-/// - $\ce{N2}$ is the remainder once $\ce{O2}$, Ar, and traces are accounted for.
+/// - $\ce{N2}$ is the remainder once $\ce{O2}$, $\ce{Ar}$, and traces are accounted for.
 ///
-/// The practical ceiling is $\text{F}\ce{O2}$ ≈ 95.7 % (where $\ce{N2}$ → 0); [`EANxBlend::new`](crate::EANxBlend::new)
+/// The practical ceiling is $\text{F}\ce{O2} \approx 95.7\\%$ (where $\ce{N2}$ → 0); [`EANxBlend::new`](crate::EANxBlend::new)
 /// rejects values above this ceiling with
 /// [`InvalidEANxError::BlendCeilingExceeded`](crate::InvalidEANxError::BlendCeilingExceeded).
 ///
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn n2_approaches_zero_near_ceiling() {
-        // At FO₂ ≈ 0.95 (near the ~95.7 % ceiling) N₂ must be close to zero —
+        // At FO₂ ≈ 0.95 (near the ~95.7% ceiling) N₂ must be close to zero —
         // the zeolite has adsorbed almost all of the available N₂.
         let c = Psa.components(0.95);
 

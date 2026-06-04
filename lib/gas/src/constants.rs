@@ -9,8 +9,8 @@ pub const EAN_MIN_O2: Percent = Percent::literal(0.10);
 //
 // O₂, Ar, CO₂, and other traces are taken from NOAA/ICAO published values.
 // N₂ is derived as the exact remainder so all five fractions sum to exactly 1.0.
-// The resulting N₂ value (≈ 78.077 %) differs from the independently published
-// 78.084 % by ~0.007 %; this is within the rounding of the source data.
+// The resulting N₂ value (≈ 78.077%) differs from the independently published
+// 78.084% by ~0.007%; this is within the rounding of the source data.
 
 // The _RAW constants exist solely so that derived constants (AIR_N2, AIR_DILUENT,
 // AIR_NARCOTIC, PSA_*) can be computed in const context.  Ideally these would
@@ -22,7 +22,7 @@ pub const EAN_MIN_O2: Percent = Percent::literal(0.10);
 
 /// $\ce{O2}$ mole fraction in dry air ($\approx \pu{20.946 \\%}$).
 pub const AIR_O2_RAW: f64 = 0.209_46;
-/// Ar mole fraction in dry air ($\approx \pu{0.934 \\%}$).
+/// $\ce{Ar}$ mole fraction in dry air ($\approx \pu{0.934 \\%}$).
 pub const AIR_AR_RAW: f64 = 0.009_34;
 /// $\ce{CO2}$ mole fraction in dry air ($\approx \pu{0.0407 \\%}$).
 pub const AIR_CO2_RAW: f64 = 0.000_407;

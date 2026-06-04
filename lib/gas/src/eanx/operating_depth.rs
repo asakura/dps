@@ -45,7 +45,7 @@ impl TryFrom<MODShadow> for MOD {
     fn try_from(shadow: MODShadow) -> Result<Self, Self::Error> {
         if shadow.fo2 < EAN_MIN_O2 {
             return Err(format!(
-                "O₂ fraction {} is below the 10 % minimum",
+                "O₂ fraction {} is below the 10% minimum",
                 shadow.fo2
             ));
         }

@@ -40,13 +40,13 @@ pub trait BlendMethod: sealed::Sealed + Copy + fmt::Debug {
 
     /// Returns `true` if `fo2` is physically achievable with this blend method.
     ///
-    /// Defaults to `true`; overridden by [`Psa`] to enforce the ~95.7 % ceiling.
+    /// Defaults to `true`; overridden by [`Psa`] to enforce the $\approx 95.7\\%$ ceiling.
     ///
     /// ```no_run
     /// use dps_gas::{BlendMethod, PartialPressure, Psa};
     /// // PartialPressure has no physical ceiling
     /// assert!(PartialPressure.is_valid_fo2(0.99));
-    /// // Psa cannot produce mixes above ~95.7 % O₂
+    /// // Psa cannot produce mixes above ~95.7% O₂
     /// assert!(!Psa.is_valid_fo2(0.99));
     /// assert!(Psa.is_valid_fo2(0.40));
     /// ```
