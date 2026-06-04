@@ -756,7 +756,9 @@ dependencies = [
  "approx",
  "dps-units",
  "rstest",
+ "ryu",
  "serde",
+ "serde_json",
  "strum 0.28.0",
  "thiserror 2.0.18",
 ]
@@ -770,6 +772,7 @@ dependencies = [
  "dps-units",
  "rstest",
  "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 
@@ -779,6 +782,7 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "rstest",
+ "ryu",
  "serde",
  "thiserror 2.0.18",
 ]
