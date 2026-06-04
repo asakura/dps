@@ -13,12 +13,13 @@ use super::{Component, Result};
 use crate::{
     action::{Action, EditOp, Movement},
     config::Config,
-    gas::{EANx, MOD},
     registers::{RegisterName, RegisterStore, RegisterValue},
     theme::Theme,
     ui::{build_header_row, col_window_size, styled_table, trailing_constraints, window_start},
     units::{Bar, Meters, Percent},
 };
+
+use dps_gas::prelude::{EANx, MOD};
 
 use ratatui::{
     Frame,

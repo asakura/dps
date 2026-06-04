@@ -3,6 +3,13 @@
 //! Verifies that the optional `serde` feature correctly serialises and
 //! deserialises all public gas types without data loss.
 
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        reason = "Tests legitimately combine Result return types with panic-inducing assertions"
+    )
+)]
 #![cfg(feature = "serde")]
 
 use approx::assert_relative_eq;

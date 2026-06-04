@@ -11,7 +11,7 @@
 use super::{RegisterError, error::ParseError};
 
 use crate::environment::DiveEnvironment;
-use crate::gas::EANx;
+use dps_gas::prelude::EANx;
 
 use std::{fmt, str::FromStr};
 
@@ -97,8 +97,7 @@ mod tests {
     use super::{RegisterError, RegisterValue};
 
     use crate::environment::DiveEnvironment;
-    use crate::gas::EANx;
-    use crate::gas::InvalidEANxError;
+    use dps_gas::prelude::{EANx, InvalidEANxError};
     use crate::units::Percent;
 
     use rstest::rstest;

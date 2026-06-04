@@ -16,7 +16,6 @@
 // core modules to independent crates in `lib/`. Internal references within
 // this crate should eventually be updated to use `dps_units`, etc. directly.
 pub use dps_environment as environment;
-pub use dps_gas as gas;
 pub use dps_units as units;
 
 pub mod action;

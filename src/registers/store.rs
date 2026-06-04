@@ -321,7 +321,7 @@ impl RegisterStore {
 mod tests {
     use super::*;
 
-    use crate::gas::{EANx, InvalidEANxError};
+    use dps_gas::prelude::{EANx, InvalidEANxError};
     use crate::registers::{RegisterError, RegisterName, name::RegIndex};
     use crate::units::Percent;
 

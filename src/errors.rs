@@ -14,7 +14,7 @@ use std::env;
 pub enum Error {
     /// Gas domain error (blend validation, membrane fractions, …).
     #[error(transparent)]
-    Gas(#[from] dps_gas::GasError),
+    Gas(#[from] dps_gas::prelude::GasError),
     /// Configuration error (key parsing, file loading, …).
     #[error(transparent)]
     Config(#[from] crate::config::ConfigError),
