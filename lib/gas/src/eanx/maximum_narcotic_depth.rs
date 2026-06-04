@@ -25,7 +25,7 @@ use std::fmt;
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "MNDShadow"))]
 pub struct MND {
-    mnd: Meters,
+    depth: Meters,
     fo2: Percent,
     end_limit: Meters,
 }
@@ -33,7 +33,7 @@ pub struct MND {
 #[cfg(feature = "serde")]
 #[derive(::serde::Deserialize)]
 struct MNDShadow {
-    mnd: Meters,
+    depth: Meters,
     fo2: Percent,
     end_limit: Meters,
 }
@@ -42,7 +42,7 @@ struct MNDShadow {
 impl From<MNDShadow> for MND {
     fn from(shadow: MNDShadow) -> Self {
         Self {
-            mnd: shadow.mnd,
+            depth: shadow.depth,
             fo2: shadow.fo2,
             end_limit: shadow.end_limit,
         }
@@ -57,11 +57,11 @@ impl MND {
     /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
-    /// assert_relative_eq!(air.mnd_at(Meters::new(30.0)).mnd(), Meters::new(30.0), epsilon = 1e-9);
+    /// assert_relative_eq!(air.mnd_at(Meters::new(30.0)).depth(), Meters::new(30.0), epsilon = 1e-9);
     /// ```
     #[must_use]
-    pub const fn mnd(self) -> Meters {
-        self.mnd
+    pub const fn depth(self) -> Meters {
+        self.depth
     }
 
     /// The $\ce{O2}$ fraction of the gas that produced this `MND`.
@@ -90,7 +90,7 @@ impl MND {
         self.end_limit
     }
 
-    /// Full-detail formatter: `{gas name}  MND {mnd}  @ END {end_limit}`.
+    /// Full-detail formatter: `{gas name}  MND {depth}  @ END {end_limit}`.
     ///
     /// ```no_run
     /// use dps_gas::EANx;
@@ -119,10 +119,10 @@ impl MND {
 
         let end_abs = env.absolute_pressure(end_limit);
         let mnd_pressure = end_abs / (narcotic / f64::from(AIR_NARCOTIC));
-        let mnd = env.depth(mnd_pressure);
+        let depth = env.depth(mnd_pressure);
 
         Self {
-            mnd,
+            depth,
             fo2,
             end_limit,
         }
@@ -131,7 +131,7 @@ impl MND {
 
 impl fmt::Display for MND {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.mnd.fmt(f)
+        self.depth.fmt(f)
     }
 }
 
@@ -140,14 +140,14 @@ impl From<MND> for Meters {
     /// use dps_gas::EANx;
     /// use dps_units::{Meters, Percent};
     /// let m = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().mnd_at(Meters::new(30.0));
-    /// assert_eq!(Meters::from(m), m.mnd());
+    /// assert_eq!(Meters::from(m), m.depth());
     /// ```
     fn from(m: MND) -> Self {
-        m.mnd
+        m.depth
     }
 }
 
-/// Full-detail display: `{gas name}  MND {mnd}  @ END {end_limit}`.
+/// Full-detail display: `{gas name}  MND {depth}  @ END {end_limit}`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
@@ -187,7 +187,7 @@ impl approx::AbsDiffEq for MND {
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: f64) -> bool {
-        self.mnd.abs_diff_eq(&other.mnd, epsilon)
+        self.depth.abs_diff_eq(&other.depth, epsilon)
     }
 }
 
@@ -197,7 +197,7 @@ impl approx::RelativeEq for MND {
     }
 
     fn relative_eq(&self, other: &Self, epsilon: f64, max_relative: f64) -> bool {
-        self.mnd.relative_eq(&other.mnd, epsilon, max_relative)
+        self.depth.relative_eq(&other.depth, epsilon, max_relative)
     }
 }
 
@@ -232,10 +232,10 @@ mod tests {
         }
 
         #[test]
-        fn mnd_accessor_returns_meters() -> Result<(), InvalidEANxError> {
+        fn depth_accessor_returns_meters() -> Result<(), InvalidEANxError> {
             let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
-            assert_relative_eq!(m.mnd(), Meters::new(30.0), epsilon = 1e-9);
+            assert_relative_eq!(m.depth(), Meters::new(30.0), epsilon = 1e-9);
 
             Ok(())
         }
@@ -264,7 +264,7 @@ mod tests {
         fn from_gives_meters() -> Result<(), InvalidEANxError> {
             let m = ean(f64::from(AIR_O2))?.mnd_at(Meters::new(30.0));
 
-            assert_eq!(Meters::from(m), m.mnd());
+            assert_eq!(Meters::from(m), m.depth());
 
             Ok(())
         }
@@ -275,7 +275,7 @@ mod tests {
             let m = ean(0.32)?.mnd_at(limit);
 
             assert!(
-                m.mnd() > limit,
+                m.depth() > limit,
                 "EANx 32 can dive deeper than 30 m before reaching END 30 m"
             );
 
@@ -289,7 +289,7 @@ mod tests {
             let mnd = mix.mnd_at(end_limit);
 
             assert_relative_eq!(
-                mix.end_at(Meters::from(mnd)).end(),
+                mix.end_at(Meters::from(mnd)).depth(),
                 end_limit,
                 epsilon = 1e-6
             );
