@@ -1,3 +1,8 @@
+//! Serde roundtrip tests — only compiled when `--features serde` is active.
+//!
+//! Verifies that the optional `serde` feature correctly serialises and
+//! deserialises all public gas types without data loss.
+
 #![cfg_attr(
     test,
     expect(
@@ -7,16 +12,8 @@
 )]
 #![cfg(feature = "serde")]
 
-//! Serde roundtrip tests — only compiled when `--features serde` is active.
-//!
-//! Verifies that the optional `serde` feature correctly serialises and
-//! deserialises all public gas types without data loss.
-
 use approx::assert_relative_eq;
-use dps_gas::{
-    EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, GasComponents, MND, MNDSummary,
-    MOD, MODSummary, Membrane, MiniMOD, MiniMODSummary, PPO2, PartialPressure, Ppo2Summary, Psa,
-};
+use dps_gas::prelude::*;
 use dps_units::{Bar, Meters, Percent};
 use rstest::rstest;
 

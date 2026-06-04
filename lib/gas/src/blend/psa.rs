@@ -1,6 +1,6 @@
 //! Pressure-swing adsorption (PSA) blend method.
 //!
-//! Provides [`Psa`], a [`BlendMethod`](crate::BlendMethod) implementation for oxygen
+//! Provides [`Psa`], a [`BlendMethod`](crate::prelude::BlendMethod) implementation for oxygen
 //! concentrators that use zeolite molecular sieves.
 //!
 //! PSA separates $\ce{O2}$ from air by adsorbing $\ce{N2}$ and $\ce{CO2}$ on the sieve while $\ce{O2}$, $\ce{Ar}$, and
@@ -29,19 +29,19 @@ const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 /// - $\ce{CO2}$ is essentially absent from the output.
 /// - $\ce{N2}$ is the remainder once $\ce{O2}$, $\ce{Ar}$, and traces are accounted for.
 ///
-/// The practical ceiling is $\text{F}\ce{O2} \approx 95.7\\%$ (where $\ce{N2}$ → 0); [`EANxBlend::new`](crate::EANxBlend::new)
+/// The practical ceiling is $\text{F}\ce{O2} \approx 95.7\\%$ (where $\ce{N2}$ → 0); [`EANxBlend::new`](crate::prelude::EANxBlend::new)
 /// rejects values above this ceiling with
-/// [`InvalidEANxError::BlendCeilingExceeded`](crate::InvalidEANxError::BlendCeilingExceeded).
+/// [`InvalidEANxError::BlendCeilingExceeded`](crate::prelude::InvalidEANxError::BlendCeilingExceeded).
 ///
 /// ```no_run
-/// use dps_gas::{EANxBlend, Psa};
+/// use dps_gas::prelude::{EANxBlend, Psa};
 /// use dps_units::Percent;
 ///
 /// let ean32 = EANxBlend::new(Percent::new(0.32).unwrap(), Psa).unwrap();
 /// // PSA has no CO₂ in output
 /// assert_eq!(ean32.fco2(), 0.0);
 /// // Ar is higher than in PP-blended gas at the same FO₂
-/// let pp = dps_gas::EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
+/// let pp = dps_gas::prelude::EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// assert!(ean32.far() > pp.far());
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

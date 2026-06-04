@@ -14,7 +14,7 @@
 //!
 //! # Overview
 //!
-//! The central type is [`EANxBlend<M>`], parameterised by a [`BlendMethod`] that
+//! The central type is [`EANxBlend`](crate::prelude::EANxBlend), parameterised by a [`BlendMethod`](crate::prelude::BlendMethod) that
 //! determines the full gas composition ($\ce{N2}$, Ar, $\ce{CO2}$, trace gases) from the $\ce{O2}$
 //! fraction alone — or from measured gas-analysis data for membrane systems.
 //!
@@ -22,17 +22,17 @@
 //!
 //! | Type | Diluent | $\ce{Ar}$ | $\ce{CO2}$ |
 //! |---|---|---|---|
-//! | [`PartialPressure`] | air-derived | ≈ air ratio | ≈ air ratio |
-//! | [`Psa`] | $\ce{N2}$ stripped | co-concentrates with $\ce{O2}$ | stripped by zeolite |
-//! | [`Membrane`] | equipment-dependent | enriched vs air | enriched vs air |
+//! | [`PartialPressure`](crate::prelude::PartialPressure) | air-derived | ≈ air ratio | ≈ air ratio |
+//! | [`Psa`](crate::prelude::Psa) | $\ce{N2}$ stripped | co-concentrates with $\ce{O2}$ | stripped by zeolite |
+//! | [`Membrane`](crate::prelude::Membrane) | equipment-dependent | enriched vs air | enriched vs air |
 //!
-//! The [`EANx`] type alias covers the common partial-pressure case.
+//! The [`EANx`](crate::prelude::EANx) type alias covers the common partial-pressure case.
 //!
 //! # Example
 //!
 //! ```no_run
 //! use dps_environment::DiveEnvironment;
-//! use dps_gas::EANx;
+//! use dps_gas::prelude::*;
 //! use dps_units::{Bar, Meters, Percent};
 //!
 //! let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -51,24 +51,16 @@
 
 mod blend;
 mod components;
-pub mod constants;
+mod constants;
 mod eanx;
-pub mod error;
+mod error;
 
-pub use blend::{BlendMethod, InvalidMembraneFractionsError, Membrane, PartialPressure, Psa};
-pub use components::GasComponents;
-pub use constants::{
-    AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_NARCOTIC, AIR_O2, AIR_OTHER, EAN_MIN_O2,
-};
-pub use eanx::{
-    EAD, EADSummary, EANx, EANxBlend, EANxDetail, END, ENDSummary, InvalidEANxError, MND,
-    MNDSummary, MOD, MODSummary, MiniMOD, MiniMODSummary, PPO2, ParseEANxError, Ppo2Summary,
-};
-pub use error::Error as GasError;
+pub mod prelude;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::blend::{Membrane, Psa};
+    use crate::eanx::{EANx, EANxBlend, InvalidEANxError};
     use dps_units::{Meters, Percent};
 
     fn ean(fraction: f64) -> Result<EANx, InvalidEANxError> {

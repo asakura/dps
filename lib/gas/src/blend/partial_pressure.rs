@@ -9,7 +9,7 @@ use crate::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
 /// in the same ratios as in dry air regardless of the target $\ce{O2}$ fraction.
 ///
 /// ```no_run
-/// use dps_gas::{EANxBlend, PartialPressure};
+/// use dps_gas::prelude::{EANxBlend, PartialPressure};
 /// use dps_units::Percent;
 ///
 /// let ean32 = EANxBlend::new(Percent::new(0.32).unwrap(), PartialPressure).unwrap();

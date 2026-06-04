@@ -7,11 +7,11 @@ use std::fmt;
 
 /// Partial pressure of $\ce{O2}$ at a given depth.
 ///
-/// Produced by [`EANxBlend::ppo2_at`](crate::EANxBlend::ppo2_at). The blend method is erased at this
+/// Produced by [`EANxBlend::ppo2_at`](crate::prelude::EANxBlend::ppo2_at). The blend method is erased at this
 /// boundary because $\text{pp}\ce{O2}$ depends only on $\text{F}\ce{O2}$ and depth.
 ///
 /// ```no_run
-/// use dps_gas::EANx;
+/// use dps_gas::prelude::EANx;
 /// use dps_units::{Meters, Percent};
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// let p = ean32.ppo2_at(Meters::new(33.75));
@@ -50,7 +50,7 @@ impl PPO2 {
     /// The computed $\text{pp}\ce{O2}$ as a [`Bar`] value.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.ppo2_at(Meters::new(33.75)).pressure(), Bar::new(1.4));
@@ -63,7 +63,7 @@ impl PPO2 {
     /// The $\ce{O2}$ fraction of the gas that produced this `Ppo2`.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.ppo2_at(Meters::new(30.0)).fo2(), Percent::new(0.32).unwrap());
@@ -76,7 +76,7 @@ impl PPO2 {
     /// The depth at which this $\text{pp}\ce{O2}$ was evaluated.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.ppo2_at(Meters::new(30.0)).depth(), Meters::new(30.0));
@@ -89,7 +89,7 @@ impl PPO2 {
     /// Full-detail formatter: `{gas name}  ppO₂ {ppo2}  @ {depth}`.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(
@@ -116,7 +116,7 @@ impl fmt::Display for PPO2 {
 
 impl From<PPO2> for Bar {
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// let p = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().ppo2_at(Meters::new(30.0));
     /// assert_eq!(Bar::from(p), p.pressure());
@@ -184,7 +184,7 @@ impl approx::RelativeEq for PPO2 {
 mod tests {
     use super::*;
 
-    use crate::{EANx, eanx::InvalidEANxError};
+    use crate::eanx::{EANx, InvalidEANxError};
 
     use dps_environment::DiveEnvironment;
     use dps_units::{Bar, Meters, Percent};

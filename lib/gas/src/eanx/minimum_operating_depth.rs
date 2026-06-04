@@ -10,11 +10,11 @@ use std::fmt;
 
 /// Minimum Operating Depth for a hypoxic gas mix at a $\text{pp}\ce{O2}$ floor.
 ///
-/// Produced by [`EANxBlend::minimod_at`](crate::EANxBlend::minimod_at). The blend method is erased at this
+/// Produced by [`EANxBlend::minimod_at`](crate::prelude::EANxBlend::minimod_at). The blend method is erased at this
 /// boundary because `MiniMOD` depends only on $\text{F}\ce{O2}$ and `ppo2_min`.
 ///
 /// ```no_run
-/// use dps_gas::EANx;
+/// use dps_gas::prelude::EANx;
 /// use dps_units::{Bar, Percent};
 /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
 /// let m = h10.minimod_at(Bar::new(0.16));
@@ -62,7 +62,7 @@ impl MiniMOD {
     /// The minimum depth (0 m for normoxic mixes).
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
@@ -76,7 +76,7 @@ impl MiniMOD {
     /// The $\ce{O2}$ fraction of the gas that produced this `MiniMOD`.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
     /// assert_eq!(h10.minimod_at(Bar::new(0.16)).fo2(), Percent::new(0.10).unwrap());
@@ -89,7 +89,7 @@ impl MiniMOD {
     /// The $\text{pp}\ce{O2}$ floor used to compute this `MiniMOD`.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
     /// assert_eq!(h10.minimod_at(Bar::new(0.16)).ppo2_min(), Bar::new(0.16));
@@ -102,7 +102,7 @@ impl MiniMOD {
     /// Full-detail formatter: `{gas name}  MiniMOD {depth}  @ ppO₂ {ppo2_min}`.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
     /// assert_eq!(
@@ -175,7 +175,7 @@ impl fmt::Display for MiniMOD {
 
 impl From<MiniMOD> for Meters {
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// let m = EANx::try_from(Percent::new(0.10).unwrap()).unwrap().minimod_at(Bar::new(0.16));
     /// assert_eq!(Meters::from(m), m.depth());

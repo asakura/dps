@@ -10,11 +10,11 @@ use std::fmt;
 
 /// Maximum Operating Depth for a gas mix at a $\text{pp}\ce{O2}$ limit.
 ///
-/// Produced by [`EANxBlend::mod_at`](crate::EANxBlend::mod_at). The blend method is erased at this boundary
+/// Produced by [`EANxBlend::mod_at`](crate::prelude::EANxBlend::mod_at). The blend method is erased at this boundary
 /// because MOD depends only on $\text{F}\ce{O2}$ and `ppo2_max`.
 ///
 /// ```no_run
-/// use dps_gas::EANx;
+/// use dps_gas::prelude::EANx;
 /// use dps_units::{Bar, Percent};
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
 /// let m = ean32.mod_at(Bar::new(1.4));
@@ -62,7 +62,7 @@ impl MOD {
     /// The computed depth.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -76,7 +76,7 @@ impl MOD {
     /// The $\ce{O2}$ fraction of the gas that produced this MOD.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.mod_at(Bar::new(1.4)).fo2(), Percent::new(0.32).unwrap());
@@ -89,7 +89,7 @@ impl MOD {
     /// The $\text{pp}\ce{O2}$ limit used to compute this MOD.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(ean32.mod_at(Bar::new(1.4)).ppo2_max(), Bar::new(1.4));
@@ -102,7 +102,7 @@ impl MOD {
     /// Full-detail formatter: `{gas name}  MOD {depth}  @ ppO₂ {ppo2_max}`.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(
@@ -175,7 +175,7 @@ impl fmt::Display for MOD {
 
 impl From<MOD> for Meters {
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// let m = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().mod_at(Bar::new(1.4));
     /// assert_eq!(Meters::from(m), m.depth());

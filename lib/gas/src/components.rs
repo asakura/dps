@@ -1,7 +1,7 @@
 //! Full mole-fraction breakdown of a breathing gas.
 //!
 //! Provides [`GasComponents`], the five-component ($\ce{O2}$, $\ce{N2}$, $\ce{Ar}$, $\ce{CO2}$, and lumped traces)
-//! output of [`BlendMethod::components`](crate::BlendMethod::components).
+//! output of [`BlendMethod::components`](crate::prelude::BlendMethod::components).
 //!
 //! Instances are constructed exclusively inside the blend machinery and carry the
 //! invariant that all five fractions sum to 1.0. Physical properties — molar mass for
@@ -23,11 +23,11 @@ const MW_OTHER: f64 = 20.1797; // Neon — dominant trace noble gas by mole frac
 /// Invariant: `o2() + n2() + ar() + co2() + other() = 1.0`
 /// (within floating-point precision).
 ///
-/// Produced exclusively by [`EANxBlend::components`](crate::EANxBlend::components); the fields are private to
+/// Produced exclusively by [`EANxBlend::components`](crate::prelude::EANxBlend::components); the fields are private to
 /// prevent construction of invalid mixes outside the blend-method machinery.
 ///
 /// ```no_run
-/// use dps_gas::EANx;
+/// use dps_gas::prelude::EANx;
 /// use dps_units::Percent;
 ///
 /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
@@ -96,7 +96,7 @@ impl GasComponents {
     /// Oxygen fraction.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
@@ -110,7 +110,7 @@ impl GasComponents {
     /// Nitrogen fraction.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
     /// // N₂ is the dominant diluent in partial-pressure nitrox
@@ -124,7 +124,7 @@ impl GasComponents {
     /// Argon fraction.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
     /// // Ar is present as a trace component of air-derived diluent
@@ -138,7 +138,7 @@ impl GasComponents {
     /// Carbon dioxide fraction.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
     /// // CO₂ is present at air-trace concentrations (< 500 ppm)
@@ -152,7 +152,7 @@ impl GasComponents {
     /// Lumped trace-gas fraction: $\ce{Ne}$, $\ce{He}$, $\ce{CH4}$, $\ce{Kr}$, $\ce{H2}$, $\ce{N2O}$, $\ce{Xe}$, …
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
     /// assert!(c.other() >= 0.0 && c.other() < c.co2());
@@ -165,7 +165,7 @@ impl GasComponents {
     /// Sum of all component fractions; equals 1.0 for a valid mix.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
@@ -179,7 +179,7 @@ impl GasComponents {
     /// Mean molar mass in g/mol (used for gas density).
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// // Air molar mass ≈ 28.97 g/mol
     /// let c = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().components();
@@ -203,7 +203,7 @@ impl GasComponents {
     /// air-trace concentrations is negligible and excluded.
     ///
     /// ```no_run
-    /// use dps_gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// // Air narcotic fraction ≈ 0.7948
     /// let c = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().components();
@@ -219,7 +219,7 @@ impl GasComponents {
 mod tests {
     use super::*;
 
-    use crate::{EANx, eanx::InvalidEANxError};
+    use crate::eanx::{EANx, InvalidEANxError};
     use dps_units::Percent;
 
     use approx::assert_relative_eq;

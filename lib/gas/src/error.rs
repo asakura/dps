@@ -8,5 +8,5 @@ pub enum Error {
     InvalidEANx(#[from] crate::eanx::InvalidEANxError),
     /// Membrane diluent fraction validation failed.
     #[error(transparent)]
-    InvalidMembrane(#[from] super::InvalidMembraneFractionsError),
+    InvalidMembrane(#[from] crate::blend::InvalidMembraneFractionsError),
 }
