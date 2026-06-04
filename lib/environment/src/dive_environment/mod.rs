@@ -75,12 +75,12 @@ enum DiveEnvironmentTag {
 /// Dive environment parameters for depth↔pressure conversion.
 ///
 /// Encapsulates surface pressure (varies with altitude) and water density
-/// (varies with salinity and temperature). All [`dps_gas::EANxBlend`]
+/// (varies with salinity and temperature). All `dps_gas::EANxBlend`
 /// calculations use these values instead of fixed constants.
 ///
 /// Use [`DiveEnvironment::standard`] for typical sea-level saltwater diving,
 /// or one of the other constructors for altitude or freshwater environments.
-/// Attach to a blend with [`dps_gas::EANxBlend::with_environment`].
+/// Attach to a blend with `dps_gas::EANxBlend::with_environment`.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DiveEnvironment {

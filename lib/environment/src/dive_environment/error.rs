@@ -16,9 +16,9 @@
 
 use dps_units::{Bar, Celsius, Meters, MetersPerBar, PartsPerThousand};
 
-/// Error returned when a string cannot be parsed as a [`DiveEnvironment`].
+/// Error returned when a string cannot be parsed as a [`DiveEnvironment`](super::DiveEnvironment).
 ///
-/// Produced by [`DiveEnvironment::from_str`] when the input does not match any
+/// Produced by [`DiveEnvironment`](super::DiveEnvironment)'s [`FromStr`](std::str::FromStr) impl when the input does not match any
 /// format produced by [`Display`](std::fmt::Display).
 ///
 /// ```
@@ -49,7 +49,7 @@ pub enum ParseDiveEnvironmentError {
     UnrecognisedFormat(String),
 }
 
-/// Error returned by fallible [`DiveEnvironment`](super::DiveEnvironment) constructors and [`FromStr`](std::str::Str).
+/// Error returned by fallible [`DiveEnvironment`](super::DiveEnvironment) constructors and [`FromStr`](std::str::FromStr).
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 #[non_exhaustive]
 pub enum DiveEnvironmentError {
