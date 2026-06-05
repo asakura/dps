@@ -7,6 +7,29 @@
 - Every public function, method, and trait impl must have a doc comment with
   an `# Examples` section containing a runnable example.
 
+### Numeric expected values in doc examples
+
+Never write a numeric literal in an `assert_eq!` doc example from memory or
+estimation. Every concrete value — floating-point, integer, or string
+containing one — must be obtained by running the code first:
+
+```
+cargo test --doc 2>&1 | grep 'left\|right'
+```
+
+Use that output to copy the actual value into the assertion. A plausible-
+looking number that was not run is indistinguishable from a fabricated one and
+will silently mis-specify the behaviour.
+
+When the expected value is derived from a formula, add a brief inline comment
+showing the computation so a future reader can verify it without running the
+binary:
+
+```rust
+// 100_000 / (996.0 kg/m³ × 9.80665 m/s²)
+assert_eq!(env.water_density(), MetersPerBar::new(10.238_114_588_131_81));
+```
+
 ### KaTeX in doc comments
 
 Rustdoc renders `$...$` and `$$...$$` via KaTeX (see `rustdoc-katex.html`).

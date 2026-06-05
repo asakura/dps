@@ -571,7 +571,7 @@ impl DiveEnvironment {
     /// assert_eq!(env.to_clipboard_string(), "standard");
     ///
     /// let custom = DiveEnvironment::freshwater().with_surface_pressure(dps_units::Bar::new(0.95)).unwrap();
-    /// assert_eq!(custom.to_clipboard_string(), "surface_pressure=0.95,water_density=10.239239857502753");
+    /// assert_eq!(custom.to_clipboard_string(), "surface_pressure=0.95,water_density=10.23811458813181");
     /// ```
     #[must_use]
     pub fn to_clipboard_string(&self) -> String {
