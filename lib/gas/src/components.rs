@@ -178,7 +178,7 @@ impl GasComponents {
 
     /// Mean molar mass in $\pu{g/mol}$ (used for gas density).
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// // Air molar mass ≈ 28.97 g/mol
@@ -202,7 +202,7 @@ impl GasComponents {
     /// $\ce{O2}$ is treated as non-narcotic; $\ce{CO2}$ narcosis from inspired gas at
     /// air-trace concentrations is negligible and excluded.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// // Air narcotic fraction ≈ 0.7948

@@ -174,7 +174,7 @@ impl fmt::Display for MiniMOD {
 }
 
 impl From<MiniMOD> for Meters {
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// let m = EANx::try_from(Percent::new(0.10).unwrap()).unwrap().minimod_at(Bar::new(0.16));

@@ -261,7 +261,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// Formula: $\text{pp}\ce{O2} = \bigl(\text{depth} / \pu{9.948 m/bar} + \pu{1.013 bar}\bigr) \times \text{F}\ce{O2}$
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -304,7 +304,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Returns 0 m for mixes that are normoxic or hyperoxic at the surface.
     /// Formula: $\text{depth} = \bigl(\text{pp}\ce{O2}_{\text{min}} / \text{F}\ce{O2} - \pu{1.013 bar}\bigr) \times \pu{9.948 m/bar}$, clamped to 0.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -335,7 +335,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// The depth on air that produces the same narcotic load (NOAA model:
     /// $\ce{N2}$ + 1.5 × Ar are narcotic; $\ce{O2}$ and $\ce{CO2}$ are excluded).
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -357,7 +357,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// The deepest depth at which the narcotic load does not exceed the
     /// equivalent narcotic effect of air at `end_limit`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -379,7 +379,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// Formula: $\text{EAD} = \bigl((\text{depth} + 10) \times F_{\ce{N2}} / F_{\ce{N2},\text{air}}\bigr) - 10$
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -404,7 +404,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Uses 1 atm (1.013 bar) as surface pressure and standard seawater density
     /// ($\pu{1025 kg/m^3}$), giving $\approx \pu{1.204 g/L}$ for dry air at $\pu{20 ^\circ C}$.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// // Density doubles at the depth where absolute pressure = 2 × P_surface (≈ 10.1 m)
@@ -431,7 +431,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// - Returns `0.0 CNS%/min` for $\text{pp}\ce{O2} \leq \pu{0.5 bar}$ (below the CNS threshold).
     /// - Returns [`f64::INFINITY`] CNS%/min for $\text{pp}\ce{O2} > \pu{1.6 bar}$ (not recommended).
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{CnsRatePerMinute, Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -456,7 +456,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// Multiply by exposure time in minutes; daily limit is $\approx 850\,\text{OTU}$.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, OTUPerMinute, Percent};
     /// // Below 0.5 bar threshold: zero OTU

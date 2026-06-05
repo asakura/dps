@@ -10,7 +10,7 @@ use std::fmt;
 /// Produced by [`EANxBlend::ppo2_at`](crate::prelude::EANxBlend::ppo2_at). The blend method is erased at this
 /// boundary because $\text{pp}\ce{O2}$ depends only on $\text{F}\ce{O2}$ and depth.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::{Meters, Percent};
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -49,7 +49,7 @@ impl From<PPO2Shadow> for PPO2 {
 impl PPO2 {
     /// The computed $\text{pp}\ce{O2}$ as a [`Bar`] value.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -88,7 +88,7 @@ impl PPO2 {
 
     /// Full-detail formatter: `{gas name}  ppO₂ {ppo2}  @ {depth}`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
