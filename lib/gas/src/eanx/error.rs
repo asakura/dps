@@ -45,7 +45,7 @@ pub enum InvalidEANxError {
     /// $\text{F}\ce{O2}$ exceeds the physical ceiling for this blend method.
     ///
     /// For [`Psa`](crate::prelude::Psa) the ceiling is ≈ 95.7%: the point at which all $\ce{N2}$
-    /// would be depleted and the output is pure $\ce{O2}$ + Ar.
+    /// would be depleted and the output is pure $\ce{O2}$ + $\ce{Ar}$.
     #[error("O₂ fraction {0} exceeds the blend method ceiling")]
     BlendCeilingExceeded(Percent),
     /// The input string is not a recognised [`EANx`](crate::prelude::EANx) blend name.

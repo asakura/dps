@@ -6,7 +6,7 @@ use crate::constants::{AIR_DILUENT, AIR_OTHER};
 /// Membrane separator blending.
 ///
 /// Hollow-fibre membranes separate gases by differential permeability.
-/// The $\ce{N2}$/Ar/$\ce{CO2}$ ratios in the output depend on the specific membrane
+/// The $\ce{N2}$/$\ce{Ar}$/$\ce{CO2}$ ratios in the output depend on the specific membrane
 /// material and operating conditions and cannot be derived from $\text{F}\ce{O2}$ alone.
 ///
 /// Construct via [`Membrane::from_analysis`] using a measured gas analysis, or

@@ -11,7 +11,7 @@
 //! # Overview
 //!
 //! The central type is [`EANxBlend`](crate::prelude::EANxBlend), parameterised by a [`BlendMethod`](crate::prelude::BlendMethod) that
-//! determines the full gas composition ($\ce{N2}$, Ar, $\ce{CO2}$, trace gases) from the $\ce{O2}$
+//! determines the full gas composition ($\ce{N2}$, $\ce{Ar}$, $\ce{CO2}$, trace gases) from the $\ce{O2}$
 //! fraction alone — or from measured gas-analysis data for membrane systems.
 //!
 //! Three blend methods are provided:

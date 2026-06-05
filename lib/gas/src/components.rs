@@ -176,7 +176,7 @@ impl GasComponents {
         self.o2 + self.n2 + self.ar + self.co2 + self.other
     }
 
-    /// Mean molar mass in g/mol (used for gas density).
+    /// Mean molar mass in $\pu{g/mol}$ (used for gas density).
     ///
     /// ```no_run
     /// use dps_gas::prelude::EANx;

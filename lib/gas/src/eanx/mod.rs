@@ -28,7 +28,7 @@ use std::{fmt, str::FromStr};
 
 /// Enriched Air Nitrox, modelled by $\ce{O2}$ fraction and blending method.
 ///
-/// The blend method determines the full gas composition ($\ce{N2}$, Ar, $\ce{CO2}$, traces)
+/// The blend method determines the full gas composition ($\ce{N2}$, $\ce{Ar}$, $\ce{CO2}$, traces)
 /// from the $\ce{O2}$ fraction. See the [module documentation](crate) for a comparison
 /// of the three available methods.
 ///
@@ -102,7 +102,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// - [`InvalidEANxError::O2TooLow`] if `fo2 < 10%`.
     /// - [`InvalidEANxError::BlendCeilingExceeded`] if `fo2` is above the
-    ///   physical ceiling for `method` (PSA: ≈ 95.7%).
+    ///   physical ceiling for `method` (PSA: $\approx 95.7\\%$).
     ///
     /// ```
     /// use dps_gas::prelude::{EANxBlend, Psa, InvalidEANxError};
@@ -498,7 +498,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// Returns a display wrapper that prints extended gas information.
     ///
     /// The wrapper's [`Display`](std::fmt::Display) shows the gas name, blend
-    /// method, and the full component breakdown ($\ce{O2}$, $\ce{N2}$, Ar, $\ce{CO2}$, other).
+    /// method, and the full component breakdown ($\ce{O2}$, $\ce{N2}$, $\ce{Ar}$, $\ce{CO2}$, other).
     ///
     /// ```
     /// use dps_gas::prelude::EANx;

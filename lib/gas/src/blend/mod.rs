@@ -23,8 +23,8 @@ use std::fmt;
 /// | Type | Description |
 /// |------|-------------|
 /// | [`PartialPressure`] | Bank gases mixed by partial pressure — canonical nitrox blending |
-/// | [`Psa`] | Pressure-swing adsorption unit — adds residual Ar, caps $\ce{O2}$ at $\approx 95.7\\%$ |
-/// | [`Membrane`] | Hollow-fibre membrane unit — arbitrary Ar/N₂ residuals from bench analysis |
+/// | [`Psa`] | Pressure-swing adsorption unit — adds residual $\ce{Ar}$, caps $\ce{O2}$ at $\approx 95.7\\%$ |
+/// | [`Membrane`] | Hollow-fibre membrane unit — arbitrary $\ce{Ar}$/$\ce{N2}$ residuals from bench analysis |
 ///
 /// # Sealed trait
 ///
