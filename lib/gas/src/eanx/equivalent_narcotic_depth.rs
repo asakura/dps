@@ -106,7 +106,12 @@ impl END {
         ENDSummary(self)
     }
 
-    pub(super) fn new(fo2: Percent, narcotic: f64, actual_depth: Meters, env: DiveEnvironment) -> Self {
+    pub(super) fn new(
+        fo2: Percent,
+        narcotic: f64,
+        actual_depth: Meters,
+        env: DiveEnvironment,
+    ) -> Self {
         let abs = env.absolute_pressure(actual_depth);
         let end_pressure = abs * (narcotic / f64::from(AIR_NARCOTIC));
         let depth = env.depth(end_pressure);
@@ -195,8 +200,8 @@ impl approx::RelativeEq for END {
 mod tests {
     use super::*;
 
-    use crate::eanx::EANx;
     use crate::constants::{AIR_NARCOTIC, AIR_O2, AR_NARCOTIC_POTENCY};
+    use crate::eanx::EANx;
     use crate::eanx::InvalidEANxError;
 
     use dps_environment::DiveEnvironment;

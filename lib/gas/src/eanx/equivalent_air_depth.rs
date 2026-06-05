@@ -195,8 +195,8 @@ impl approx::RelativeEq for EAD {
 mod tests {
     use super::*;
 
-    use crate::eanx::EANx;
     use crate::constants::{AIR_N2, AIR_O2};
+    use crate::eanx::EANx;
     use crate::eanx::InvalidEANxError;
 
     use dps_environment::DiveEnvironment;

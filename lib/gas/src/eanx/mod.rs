@@ -953,7 +953,7 @@ mod tests {
             let depth = Meters::new(40.0);
             let fo2 = Percent::new(0.32)?;
             let ppo2 = f64::from((depth / env.water_density() + env.surface_pressure()) * fo2);
-            let expected = OTUPerMinute::new((ppo2 - 0.5_f64).powf(0.83));
+            let expected = OTUPerMinute::new(((ppo2 - 0.5_f64) / 0.5).powf(0.83));
 
             assert_relative_eq!(ean(0.32)?.otu_rate_at(depth), expected, epsilon = 1e-9);
 

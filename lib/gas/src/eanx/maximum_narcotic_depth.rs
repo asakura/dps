@@ -205,8 +205,8 @@ impl approx::RelativeEq for MND {
 mod tests {
     use super::*;
 
-    use crate::eanx::EANx;
     use crate::constants::AIR_O2;
+    use crate::eanx::EANx;
     use crate::eanx::InvalidEANxError;
 
     use dps_units::{Meters, Percent};
