@@ -20,8 +20,7 @@ const MW_OTHER: f64 = 20.1797; // Neon — dominant trace noble gas by mole frac
 
 /// Complete mole-fraction breakdown of a breathing gas.
 ///
-/// Invariant: `o2() + n2() + ar() + co2() + other() = 1.0`
-/// (within floating-point precision).
+/// Invariant: $\text{F}\ce{O2} + \text{F}\ce{N2} + \text{F}\ce{Ar} + \text{F}\ce{CO2} + F_{\text{other}} = 1.0$
 ///
 /// Produced exclusively by [`EANxBlend::components`](crate::prelude::EANxBlend::components); the fields are private to
 /// prevent construction of invalid mixes outside the blend-method machinery.
