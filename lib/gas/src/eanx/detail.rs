@@ -9,7 +9,7 @@ use std::fmt;
 /// Shows the gas name, blend method, and full component breakdown as mole
 /// fractions. Produced by [`EANxBlend::detail`].
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::Percent;
 ///

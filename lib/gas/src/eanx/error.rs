@@ -18,7 +18,7 @@ pub struct ParseEANxError;
 
 /// Error returned when an [`EANxBlend`](crate::prelude::EANxBlend) cannot be constructed.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::{EANxBlend, InvalidEANxError, PartialPressure, Psa};
 /// use dps_units::Percent;
 ///

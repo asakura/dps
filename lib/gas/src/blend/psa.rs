@@ -33,7 +33,7 @@ const PSA_OTHER_PER_O2: f64 = AIR_OTHER_RAW / AIR_O2_RAW;
 /// rejects values above this ceiling with
 /// [`InvalidEANxError::BlendCeilingExceeded`](crate::prelude::InvalidEANxError::BlendCeilingExceeded).
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::{EANxBlend, Psa};
 /// use dps_units::Percent;
 ///

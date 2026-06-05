@@ -12,7 +12,7 @@ use std::fmt;
 /// Produced by [`EANxBlend::end_at`](crate::prelude::EANxBlend::end_at). The blend method is erased at this
 /// boundary; only $\text{F}\ce{O2}$ (for the gas name) and the narcotic fraction matter.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::{Meters, Percent};
 /// // Air: END always equals actual depth
@@ -52,7 +52,7 @@ impl From<ENDShadow> for END {
 impl END {
     /// The equivalent narcotic depth.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -66,7 +66,7 @@ impl END {
 
     /// The $\ce{O2}$ fraction of the gas that produced this `END`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -79,7 +79,7 @@ impl END {
 
     /// The depth at which this END was evaluated.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -92,7 +92,7 @@ impl END {
 
     /// Full-detail formatter: `{gas name}  END {depth}  @ {actual_depth}`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
@@ -126,7 +126,7 @@ impl fmt::Display for END {
 }
 
 impl From<END> for Meters {
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let e = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().end_at(Meters::new(30.0));

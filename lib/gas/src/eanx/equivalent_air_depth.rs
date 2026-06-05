@@ -12,7 +12,7 @@ use std::fmt;
 /// Produced by [`EANxBlend::ead_at`](crate::prelude::EANxBlend::ead_at). The blend method is erased at this
 /// boundary; only $\text{F}\ce{O2}$ (for the gas name) and the $\ce{N2}$ fraction matter.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::{Meters, Percent};
 /// // Air: EAD always equals actual depth
@@ -52,7 +52,7 @@ impl From<EADShadow> for EAD {
 impl EAD {
     /// The equivalent air depth.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -66,7 +66,7 @@ impl EAD {
 
     /// The $\ce{O2}$ fraction of the gas that produced this `EAD`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -79,7 +79,7 @@ impl EAD {
 
     /// The depth at which this EAD was evaluated.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -92,7 +92,7 @@ impl EAD {
 
     /// Full-detail formatter: `{gas name}  EAD {depth}  @ {actual_depth}`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let air = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap();
@@ -126,7 +126,7 @@ impl fmt::Display for EAD {
 }
 
 impl From<EAD> for Meters {
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let e = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().ead_at(Meters::new(30.0));

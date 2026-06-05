@@ -62,7 +62,7 @@ impl PPO2 {
 
     /// The $\ce{O2}$ fraction of the gas that produced this `Ppo2`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -75,7 +75,7 @@ impl PPO2 {
 
     /// The depth at which this $\text{pp}\ce{O2}$ was evaluated.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -115,7 +115,7 @@ impl fmt::Display for PPO2 {
 }
 
 impl From<PPO2> for Bar {
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// let p = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().ppo2_at(Meters::new(30.0));

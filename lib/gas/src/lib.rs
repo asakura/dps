@@ -26,7 +26,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```
 //! use dps_environment::DiveEnvironment;
 //! use dps_gas::prelude::*;
 //! use dps_units::{Bar, Meters, Percent};

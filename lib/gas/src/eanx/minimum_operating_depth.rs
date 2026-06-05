@@ -13,7 +13,7 @@ use std::fmt;
 /// Produced by [`EANxBlend::minimod_at`](crate::prelude::EANxBlend::minimod_at). The blend method is erased at this
 /// boundary because `MiniMOD` depends only on $\text{F}\ce{O2}$ and `ppo2_min`.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::{Bar, Percent};
 /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
@@ -61,7 +61,7 @@ impl TryFrom<MiniMODShadow> for MiniMOD {
 impl MiniMOD {
     /// The minimum depth (0 m for normoxic mixes).
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -75,7 +75,7 @@ impl MiniMOD {
 
     /// The $\ce{O2}$ fraction of the gas that produced this `MiniMOD`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
@@ -88,7 +88,7 @@ impl MiniMOD {
 
     /// The $\text{pp}\ce{O2}$ floor used to compute this `MiniMOD`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
@@ -101,7 +101,7 @@ impl MiniMOD {
 
     /// Full-detail formatter: `{gas name}  MiniMOD {depth}  @ ppO₂ {ppo2_min}`.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();

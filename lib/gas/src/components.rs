@@ -26,7 +26,7 @@ const MW_OTHER: f64 = 20.1797; // Neon — dominant trace noble gas by mole frac
 /// Produced exclusively by [`EANxBlend::components`](crate::prelude::EANxBlend::components); the fields are private to
 /// prevent construction of invalid mixes outside the blend-method machinery.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::Percent;
 ///
@@ -95,7 +95,7 @@ impl GasComponents {
 
     /// Oxygen fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;
@@ -109,7 +109,7 @@ impl GasComponents {
 
     /// Nitrogen fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
@@ -123,7 +123,7 @@ impl GasComponents {
 
     /// Argon fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
@@ -137,7 +137,7 @@ impl GasComponents {
 
     /// Carbon dioxide fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
@@ -151,7 +151,7 @@ impl GasComponents {
 
     /// Lumped trace-gas fraction: $\ce{Ne}$, $\ce{He}$, $\ce{CH4}$, $\ce{Kr}$, $\ce{H2}$, $\ce{N2O}$, $\ce{Xe}$, …
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let c = EANx::try_from(Percent::new(0.32).unwrap()).unwrap().components();
@@ -164,7 +164,7 @@ impl GasComponents {
 
     /// Sum of all component fractions; equals 1.0 for a valid mix.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;

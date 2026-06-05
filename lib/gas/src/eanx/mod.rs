@@ -34,7 +34,7 @@ use std::{fmt, str::FromStr};
 ///
 /// Use the [`EANx`] type alias for the common partial-pressure case.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::{EANxBlend, Psa};
 /// use dps_units::{Bar, Meters, Percent};
 ///
@@ -84,7 +84,7 @@ impl<M: BlendMethod> TryFrom<EANxBlendShadow<M>> for EANxBlend<M> {
 /// percentage. The label is determined by rounding the $\ce{O2}$ fraction to the
 /// nearest whole percent.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::Percent;
 /// let try_ean = |f| EANx::try_from(Percent::new(f).unwrap()).unwrap();
@@ -104,7 +104,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// - [`InvalidEANxError::BlendCeilingExceeded`] if `fo2` is above the
     ///   physical ceiling for `method` (PSA: ≈ 95.7%).
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::{EANxBlend, Psa, InvalidEANxError};
     /// use dps_units::Percent;
     ///
@@ -177,7 +177,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// $\ce{O2}$ fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;
@@ -191,7 +191,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// Full gas composition derived from the blend method.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// # use approx::assert_relative_eq;
@@ -205,7 +205,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// $\ce{N2}$ fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -219,7 +219,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// $\ce{Ar}$ fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -233,7 +233,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// $\ce{CO2}$ fraction.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -246,7 +246,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// Trace-gas fraction ($\ce{Ne}$, $\ce{He}$, $\ce{Kr}$, …).
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -278,7 +278,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     ///
     /// Formula: $\text{MOD} = \bigl(\text{pp}\ce{O2}_{\text{max}} / \text{F}\ce{O2} - \pu{1.013 bar}\bigr) \times \pu{9.948 m/bar}$
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
@@ -480,7 +480,7 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// Short human-readable name for the blend method used to produce this mix.
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::{EANx, EANxBlend, Psa};
     /// use dps_units::Percent;
     ///
@@ -500,7 +500,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// The wrapper's [`Display`](std::fmt::Display) shows the gas name, blend
     /// method, and the full component breakdown ($\ce{O2}$, $\ce{N2}$, Ar, $\ce{CO2}$, other).
     ///
-    /// ```no_run
+    /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
     ///
@@ -593,7 +593,7 @@ pub fn gas_name(fo2: Percent) -> impl fmt::Display {
 ///
 /// Returns [`InvalidEANxError::O2TooLow`] if `pct` is below $\text{F}\ce{O2} \geq 10\\%$.
 ///
-/// ```no_run
+/// ```
 /// use dps_gas::prelude::EANx;
 /// use dps_units::Percent;
 /// assert!(EANx::try_from(Percent::new(0.32).unwrap()).is_ok());
