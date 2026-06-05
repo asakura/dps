@@ -290,12 +290,12 @@ mod tests {
     }
 
     #[test]
-    fn narcotic_fraction_equals_n2_plus_1_5_ar() -> Result<(), InvalidEANxError> {
+    fn narcotic_fraction_equals_n2_plus_potency_times_ar() -> Result<(), InvalidEANxError> {
         let air = air()?;
 
         assert_relative_eq!(
             air.narcotic(),
-            1.5f64.mul_add(air.ar(), air.n2()),
+            AR_NARCOTIC_POTENCY.mul_add(air.ar(), air.n2()),
             epsilon = 1e-12
         );
 
