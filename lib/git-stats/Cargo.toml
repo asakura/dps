@@ -20,7 +20,7 @@ workspace = true
 [dependencies]
 anstream = "1.0"
 anstyle = "1.0"
-catppuccin = "2.4"
+catppuccin = "2.8"
 thiserror = "2.0"
 
 [dependencies.clap]
@@ -34,13 +34,14 @@ features = ["revision", "blob-diff"]
 [dependencies.polars]
 version = "0.54"
 features = [
-    "lazy",
-    "rolling_window",
-    "temporal",
-    "fmt",
     "cum_agg",
     "dtype-date",
+    "fmt",
+    "lazy",
+    "rolling_window",
     "round_series",
+    "strings",
+    "temporal",
 ]
 
 [dev-dependencies]

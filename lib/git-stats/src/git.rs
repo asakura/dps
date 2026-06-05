@@ -116,7 +116,7 @@ pub fn collect_stats(args: &Args) -> Result<Vec<CommitStat>, Error> {
         }
 
         let author = commit.author().map_err(GitError::Decode)?;
-        let (date, hour) = format_time(author.time.seconds);
+        let (date, hour) = format_time(author.seconds());
 
         if !date_in_range(&date, args.since.as_deref(), args.until.as_deref()) {
             continue;
@@ -252,14 +252,10 @@ fn count_change_lines(
         .map_err(GitError::Object)?
         .unwrap_or_default();
 
-    let input = blob::intern::InternedInput::new(
-        blob::sources::byte_lines_with_terminator(&old_data),
-        blob::sources::byte_lines_with_terminator(&new_data),
-    );
+    let input = blob::InternedInput::new(old_data.as_slice(), new_data.as_slice());
+    let diff = blob::Diff::compute(blob::Algorithm::Myers, &input);
 
-    let sink = blob::diff(blob::Algorithm::Myers, &input, LineCounter::default());
-
-    Ok((sink.insertions, sink.deletions))
+    Ok((diff.count_additions(), diff.count_removals()))
 }
 
 /// Format a Unix timestamp (seconds since Unix epoch) into `(YYYY-MM-DD, hour)`.
@@ -338,26 +334,6 @@ pub fn date_in_range(date: &str, since: Option<&str>, until: Option<&str>) -> bo
     }
 
     true
-}
-
-/// A [`gix::diff::blob::Sink`] that counts inserted and deleted lines.
-#[derive(Debug, Default)]
-struct LineCounter {
-    insertions: u32,
-    deletions: u32,
-}
-
-impl gix::diff::blob::Sink for LineCounter {
-    type Out = Self;
-
-    fn process_change(&mut self, before: std::ops::Range<u32>, after: std::ops::Range<u32>) {
-        self.deletions += before.end - before.start;
-        self.insertions += after.end - after.start;
-    }
-
-    fn finish(self) -> Self::Out {
-        self
-    }
 }
 
 #[cfg(test)]

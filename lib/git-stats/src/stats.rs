@@ -160,7 +160,7 @@ pub fn build_frame(stats: &[CommitStat]) -> Result<DataFrame, Error> {
         .map_err(StatsError::Polars)?;
 
     with_cum
-        .with_column(Series::new("roll7".into(), roll7))
+        .with_column(Series::new("roll7".into(), roll7).into())
         .map_err(StatsError::Polars)?;
 
     // .copied() turns &&str → &str, which polars select requires.
