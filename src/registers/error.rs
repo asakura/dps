@@ -82,7 +82,7 @@ pub struct InvalidRegisterLetter(pub(super) char);
 ///
 /// ```
 /// use dps::registers::{RegisterName, RegisterStore, RegisterValue, YankRingTooSmall};
-/// use dps::gas::EANx;
+/// use dps_gas::prelude::EANx;
 /// use dps::units::Percent;
 ///
 /// let mut store = RegisterStore::default();

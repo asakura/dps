@@ -2,7 +2,7 @@
 //!
 //! ```
 //! use dps::registers::{RegisterName, RegisterStore, RegisterValue};
-//! use dps::gas::EANx;
+//! use dps_gas::prelude::EANx;
 //! use dps::units::Percent;
 //!
 //! let mut store = RegisterStore::default();
@@ -73,7 +73,7 @@ impl RegisterStore {
     ///
     /// ```
     /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
-    /// use dps::gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
@@ -137,7 +137,7 @@ impl RegisterStore {
     ///
     /// ```
     /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
-    /// use dps::gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
@@ -174,7 +174,7 @@ impl RegisterStore {
     ///
     /// ```
     /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
-    /// use dps::gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
@@ -214,7 +214,7 @@ impl RegisterStore {
     ///
     /// ```
     /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
-    /// use dps::gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
@@ -242,7 +242,7 @@ impl RegisterStore {
     ///
     /// ```
     /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
-    /// use dps::gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
@@ -292,7 +292,7 @@ impl RegisterStore {
     ///
     /// ```
     /// use dps::registers::{RegisterName, RegisterStore, RegisterValue};
-    /// use dps::gas::EANx;
+    /// use dps_gas::prelude::EANx;
     /// use dps::units::Percent;
     ///
     /// let mut store = RegisterStore::default();
@@ -321,9 +321,9 @@ impl RegisterStore {
 mod tests {
     use super::*;
 
-    use dps_gas::prelude::{EANx, InvalidEANxError};
     use crate::registers::{RegisterError, RegisterName, name::RegIndex};
     use crate::units::Percent;
+    use dps_gas::prelude::{EANx, InvalidEANxError};
 
     use rstest::{fixture, rstest};
 

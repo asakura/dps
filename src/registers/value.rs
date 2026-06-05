@@ -34,7 +34,7 @@ pub enum RegisterValue {
 /// ```
 /// use dps::registers::RegisterValue;
 /// use dps::environment::DiveEnvironment;
-/// use dps::gas::EANx;
+/// use dps_gas::prelude::EANx;
 /// use dps::units::Percent;
 ///
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -63,7 +63,7 @@ impl fmt::Display for RegisterValue {
 /// ```
 /// use dps::registers::RegisterValue;
 /// use dps::environment::DiveEnvironment;
-/// use dps::gas::EANx;
+/// use dps_gas::prelude::EANx;
 /// use dps::units::Percent;
 ///
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
@@ -97,8 +97,8 @@ mod tests {
     use super::{RegisterError, RegisterValue};
 
     use crate::environment::DiveEnvironment;
-    use dps_gas::prelude::{EANx, InvalidEANxError};
     use crate::units::Percent;
+    use dps_gas::prelude::{EANx, InvalidEANxError};
 
     use rstest::rstest;
 
