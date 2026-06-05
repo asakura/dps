@@ -1,0 +1,38 @@
+[package]
+name = "dps-git-stats"
+version = "0.1.0"
+edition = "2024"
+authors = ["Mikalai Seva"]
+description = "Per-day git commit statistics: insertions, deletions, churn, rolling averages"
+license = "MIT"
+repository = "https://github.com/asakura/dps"
+readme = "README.md"
+keywords = ["git", "statistics", "productivity", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "dps-git-stats"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+clap = { version = "4.6", features = ["derive", "cargo"] }
+gix = { version = "0.70", features = ["revision", "blob-diff"] }
+polars = { version = "0.46", features = [
+    "lazy",
+    "rolling_window",
+    "temporal",
+    "fmt",
+    "cum_agg",
+    "dtype-date",
+    "round_series",
+] }
+anstream = "0.6"
+anstyle = "1.0"
+catppuccin = "2.4"
+thiserror = "2.0"
+
+[dev-dependencies]
+rstest = "0.26"

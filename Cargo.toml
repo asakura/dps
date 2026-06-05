@@ -57,6 +57,7 @@ tempfile = "3.27"
 members = [
     "lib/environment",
     "lib/gas",
+    "lib/git-stats",
     "lib/units",
 ]
 
