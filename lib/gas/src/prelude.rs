@@ -13,7 +13,9 @@
 //! assert_eq!(ean32.to_string(), "EANx 32");
 //! ```
 
-pub use crate::blend::{BlendMethod, InvalidMembraneFractionsError, Membrane, PartialPressure, Psa};
+pub use crate::blend::{
+    BlendMethod, InvalidMembraneFractionsError, Membrane, PartialPressure, Psa,
+};
 pub use crate::components::GasComponents;
 pub use crate::constants::{
     AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_NARCOTIC, AIR_O2, AIR_OTHER, EAN_MIN_O2,
