@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: DeterminateSystems/nix-installer-action@v22
+
+
+      # Only `push` (merged/reviewed code) gets a push-capable Cachix token.
+      # `pull_request` runs may still read from the public cache, but cannot
+      # populate it - prevents a malicious PR (via cargo build scripts /
+      # proc-macros) from pushing a poisoned store path that later gets
+      # trusted by main's CI, release-binaries.yml, or `nix develop`.
+      - uses: cachix/cachix-action@v17
+        with:
+          name: dps
+          authToken: ${{ github.event_name == 'push' && secrets.CACHIX_AUTH_TOKEN || '' }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Run all cargo checks outside the sandbox to share the rust-cache
+      - name: cargo fmt
+        run: nix develop -c cargo fmt --check
+
+      - name: cargo clippy
+        run: nix develop -c cargo clippy --workspace --all-targets -- -D warnings
+
+      # Runs outside the sandbox (network + .git access) inside the pinned devShell.
+      - name: cargo test --workspace
+        run: nix develop -c cargo test --workspace
+
+      - name: cargo deny check
+        run: nix develop -c cargo deny check
