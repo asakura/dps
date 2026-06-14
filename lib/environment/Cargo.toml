@@ -17,25 +17,23 @@ doctest = false
 workspace = true
 
 [dependencies]
-dps-units = { path = "../units" }
-approx = "0.5"
-ryu = "1.0"
-thiserror = "2.0"
+dps-units.workspace = true
+approx.workspace = true
+ryu.workspace = true
+thiserror.workspace = true
 
 [dependencies.serde]
-version = "1.0"
-features = ["derive"]
+workspace = true
 optional = true
 
 [dependencies.strum]
-version = "0.28"
-features = ["derive"]
+workspace = true
 
 [dev-dependencies]
-dps-units = { path = "../units", features = ["approx"] }
-approx = "0.5"
-rstest = "0.26"
-serde_json = "1.0"
+dps-units = { workspace = true, features = ["approx"] }
+approx.workspace = true
+rstest.workspace = true
+serde_json.workspace = true
 
 [features]
 serde = ["dep:serde", "dps-units/serde"]

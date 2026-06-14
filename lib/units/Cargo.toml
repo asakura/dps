@@ -17,21 +17,20 @@ doctest = false
 workspace = true
 
 [dependencies]
-ryu = "1.0"
-thiserror = "2.0"
+ryu.workspace = true
+thiserror.workspace = true
 
 [dependencies.approx]
-version = "0.5"
+workspace = true
 optional = true
 
 [dependencies.serde]
-version = "1.0"
-features = ["derive"]
-optional = true 
+workspace = true
+optional = true
 
 [dev-dependencies]
-approx = "0.5"
-rstest = "0.26"
+approx.workspace = true
+rstest.workspace = true
 
 [features]
 approx = ["dep:approx"]
