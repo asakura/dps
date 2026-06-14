@@ -6,10 +6,7 @@ use vergen_gix::Gix;
 
 fn main() -> Result<()> {
     let build = Build::builder().build_date(true).build();
-    let gix = Gix::builder()
-        .describe(true, true, None)
-        .sha(true)
-        .build();
+    let gix = Gix::builder().describe(true, true, None).sha(true).build();
 
     Emitter::default()
         .add_instructions(&build)?
