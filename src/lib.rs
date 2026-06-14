@@ -21,7 +21,7 @@ pub use dps_units as units;
 pub mod action;
 pub mod app;
 /// End-to-end architecture: data-flow diagram, component lifecycle, and design decisions.
-pub mod architecture;
+// pub mod architecture;
 pub mod cli;
 pub mod components;
 pub mod config;
