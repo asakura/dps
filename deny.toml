@@ -1,0 +1,226 @@
+# cargo-deny configuration: https://embarkstudios.github.io/cargo-deny/
+#
+# Run locally with `nix develop -c cargo deny check` (or plain `cargo deny
+# check` if cargo-deny is installed). CI runs this as part of `ci.yml`.
+
+[graph]
+all-features = false
+no-default-features = false
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+
+# https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+[advisories]
+unsound = "all"
+unmaintained = "all"
+yanked = "warn"
+maximum-db-staleness = "P30D"
+unused-ignored-advisory = "warn"
+
+# `proc-macro-error2` is unmaintained (RUSTSEC-2026-0173). Pulled in
+# transitively via `merge` -> `merge_derive` as a build-time-only proc-macro
+# dependency with no runtime impact. Vetted as acceptable until
+# `merge_derive` migrates off it.
+ignore = ["RUSTSEC-2026-0173"]
+
+# https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
+[licenses]
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    # allowed, but no matching crates yet
+    # "CC0-1.0",
+    # "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.8
+include-dev = true
+unused-allowed-license = "warn"
+
+# `option-ext` (pulled in transitively via `directories` -> `dirs-sys`) is
+# MPL-2.0. It is used unmodified, so its weak/file-level copyleft does not
+# extend to this workspace's code.
+[[licenses.exceptions]]
+allow = ["MPL-2.0"]
+crate = "option-ext"
+
+# https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
+[bans]
+multiple-versions = "warn"
+multiple-versions-include-dev = true
+wildcards = "deny"
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+
+# Vetted duplicate versions: a transitive dependency is still pinned to an
+# older major/minor release while the rest of the graph has moved on. Each
+# entry skips that older version so `multiple-versions` stays quiet for this
+# known pair and would only fire again if a *third* version showed up.
+
+# 0.3.4 is pinned by `ahash` (via `serde-saphyr`); everything else (tempfile,
+# uuid, gix-tempfile) is on 0.4.2.
+[[bans.skip]]
+name = "getrandom"
+version = "0.3.4"
+
+# 0.14.5 is pinned by `dashmap` and 0.16.1 by `clru`/`kasuari` (all reached
+# via `gix-tempfile`/`gix-pack`/`ratatui-core`); `gix-hashtable` is on the
+# newest, 0.17.1.
+[[bans.skip]]
+name = "hashbrown"
+version = "0.14.5"
+
+[[bans.skip]]
+name = "hashbrown"
+version = "0.16.1"
+
+# 0.3.18 is pinned by `crossterm` (via `ratatui-crossterm`); dps and `gix`
+# (via `vergen-gix`) depend directly on 0.4.4.
+[[bans.skip]]
+name = "signal-hook"
+version = "0.3.18"
+
+[bans.build]
+include-workspace = false
+include-dependencies = true
+executables = "warn"
+interpreted = "warn"
+
+# CI/test/build-data scripts shipped inside dependency source tarballs.
+# Vetted as non-executed by our build; checksums catch upstream changes.
+[[bans.build.bypass]]
+name = "arboard"
+version = "3.6.1"
+allow = [
+    { path = "tools/run_with_leaks.sh", checksum = "1c9a7fb692150d646f4c7bc4936ee9f597b1c86815747305098ddb7378bf7230" },
+]
+
+[[bans.build.bypass]]
+name = "arc-swap"
+version = "1.9.1"
+allow = [
+    { path = "ci-check.sh", checksum = "f1ad7ffbb2e996c50633a9168cdd45760af03c4bb9aaf2a4d60b45f41f9413a8" },
+]
+
+[[bans.build.bypass]]
+name = "bytes"
+version = "1.11.1"
+allow = [
+    { path = "ci/miri.sh", checksum = "e74475e7aec647a490a1f491b5dac6a60e3c03926a7c7e1898fa3e7c626415c7" },
+    { path = "ci/panic-abort.sh", checksum = "aec2e5427117e533d7a9721a926eb6a9d72f264510066baf2c501357df2d936f" },
+    { path = "ci/test-stable.sh", checksum = "fb751f06f314f728c489b7a7854701f632e24de8d0540ea8cf3449c6a853ac3c" },
+    { path = "ci/tsan.sh", checksum = "466b86b19225dd26c756cf2252cb1973f87a145642c99364b462ed7ceb55c7dd" },
+]
+
+[[bans.build.bypass]]
+name = "color-eyre"
+version = "0.6.5"
+allow = [
+    { path = "scripts/fix_html_examples.py", checksum = "23e0061b883fef0e16057bb00b6e583db8aa6267676517e6f73dd381416ba68d" },
+]
+
+[[bans.build.bypass]]
+name = "console"
+version = "0.15.11"
+allow = [
+    { path = "scripts/wasmtime-wrapper.sh", checksum = "f7cbec1e6de7a456880c737ee264f2d010a40e6e80b4241e4099fb149389291a" },
+]
+
+[[bans.build.bypass]]
+name = "encoding_rs"
+version = "0.8.35"
+allow = [
+    { path = "generate-encoding-data.py", checksum = "6f34a845785f53425accf30759edc566873fcb0c2188648e07b09c898f39dddb" },
+]
+
+[[bans.build.bypass]]
+name = "gix"
+version = "0.84.0"
+allow = [
+    { path = "src/assets/init/hooks/applypatch-msg.sample", checksum = "1ae81b995a5c8c54582e1977084babed1e947a5a5c247ad29563142e432955ab" },
+    { path = "src/assets/init/hooks/commit-msg.sample", checksum = "b1451a4c89ee4406ba56f003a7e3d142e24a7452861fddddc23bfc77163c8650" },
+    { path = "src/assets/init/hooks/fsmonitor-watchman.sample", checksum = "99ed87d785ada3687b4d86b8d9aa562f3430ce7061834e5381166b6a35a0d495" },
+    { path = "src/assets/init/hooks/post-update.sample", checksum = "e6d88132de729f20c45f66c2df51cc2e223a4b8b1512a2ce1cfdd0033ee53e53" },
+    { path = "src/assets/init/hooks/pre-applypatch.sample", checksum = "4c9754cac1c73109e4113ffd76070ae528a42667a85135e87fb826d572d13a4c" },
+    { path = "src/assets/init/hooks/pre-commit.sample", checksum = "1dd0fb2a11956784eb184e72af2fd87feca9050903400f163b90d4db7f19ce78" },
+    { path = "src/assets/init/hooks/pre-merge-commit.sample", checksum = "fca192309544e8e23638bd0987be7a5d00e271599b55382c1c6a4812070da223" },
+    { path = "src/assets/init/hooks/pre-push.sample", checksum = "57a2bf01f65b4c57180e96cd31ff737bd2c25a15ad483cab012a88994120dfab" },
+    { path = "src/assets/init/hooks/pre-rebase.sample", checksum = "d7c629ddbaa5f984d21c97a14889599d2019230220d3459aa103648316500968" },
+    { path = "src/assets/init/hooks/prepare-commit-msg.sample", checksum = "f804b4efd22ef832b49506a815a6a6b1103b8f77b6d6556fc3756232727396d8" },
+]
+
+[[bans.build.bypass]]
+name = "serde-saphyr"
+version = "0.0.27"
+allow = [
+    { path = "miri.sh", checksum = "4d47e8fb248d217b474155ce96ba5bf179c19bd80546f9c6cdfe35bc3f0bc570" },
+]
+
+[[bans.build.bypass]]
+name = "sharded-slab"
+version = "0.1.7"
+allow = [
+    { path = "bin/loom.sh", checksum = "903241204befb0f1f6e7ea98e2a24244c98e8567595c03af42f65b78a4b231c1" },
+]
+
+[[bans.build.bypass]]
+name = "signal-hook"
+version = "0.3.18"
+allow = [
+    { path = "ci-check.sh", checksum = "65f6e254cca1adf4579998fa393521cef8bc5bfbfb79b9fb430e1814a5a7c091" },
+]
+
+[[bans.build.bypass]]
+name = "tracing"
+version = "0.1.44"
+allow = [
+    { path = "test-macros/bin/macro-results.sh", checksum = "86cc594cd5988829226e5558f97463c709820ee33b85355aadf06e61d6e242ec" },
+]
+
+[[bans.build.bypass]]
+name = "unicode-normalization"
+version = "0.1.25"
+allow = [
+    { path = "scripts/unicode.py", checksum = "eec3b3fc1c56197eb270ce787501bb65b8bf07a67f7236512d1939776b4cfe3e" },
+]
+
+[[bans.build.bypass]]
+name = "unicode-width"
+version = "0.2.2"
+allow = [
+    { path = "scripts/unicode.py", checksum = "c0d9718de758d5729cef3def36cf9fa2c853b53cffd28fc2471ae694db04ba77" },
+]
+
+[[bans.build.bypass]]
+name = "zerocopy"
+version = "0.8.52"
+allow = [
+    { path = "cargo.sh", checksum = "23b2eddb1e982dcc2228b573bb92a768e05e056e24f440d7efdf7fb1a747ac87" },
+    { path = "ci/check_all_toolchains_tested.sh", checksum = "979cece8aff80ff997bc317f9e48bb9f9a8c36486e7f23d7f1e869c75f03de85" },
+    { path = "ci/check_fmt.sh", checksum = "83e6654d1b6658c6d65c8b0beb4cbe7aaaa0cbf3cd4cc4d196d40b7c21f8d9eb" },
+    { path = "ci/check_msrv_is_minimal.sh", checksum = "b6adac6e751ef1dd5927090b30bb098a64e9c9c50e047562088b889e25c2d5fc" },
+    { path = "ci/check_readme.sh", checksum = "c23dc51696893e171018fb1cb86b7c606a2cd3ad4800c7a44f913a1451607c5e" },
+    { path = "ci/check_stale_stderr.sh", checksum = "61a25ca45e05e684c31af4f926c15c7d7f97945f90a744038ab45816799dc6d0" },
+    { path = "ci/check_versions.sh", checksum = "c2603621c4981c1400d946cd83b2d3af0ba7db2355779b55eab89ca2c821fe0d" },
+    { path = "ci/release_crate_version.sh", checksum = "e5f4b957eae4251f66a9497cc596533d767d97a841556c5c18425aa7259005eb" },
+]
+
+# https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+required-git-spec = "rev"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+unused-allowed-source = "warn"
