@@ -56,6 +56,7 @@ jobs:
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
+        continue-on-error: true
         with:
           title: "chore(cargo): update transitive dependencies in Cargo.lock"
           commit-message: "chore(cargo): update transitive dependencies in Cargo.lock"
