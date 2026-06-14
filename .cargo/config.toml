@@ -1,6 +1,3 @@
-[term]
-quiet = true
-
 [build]
 rustdocflags = ["--html-after-content", "rustdoc-katex.html"]
 
