@@ -1,5 +1,9 @@
 # DPS — Dive Planning System
 
+[![CI](https://github.com/asakura/inceptool/actions/workflows/ci.yml/badge.svg)](https://github.com/asakura/inceptool/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://asakura.github.io/inceptool/coverage.json)](https://asakura.github.io/inceptool/)
+[![cargo-deny](https://img.shields.io/endpoint?url=https://asakura.github.io/inceptool/cargo-deny.json)](https://asakura.github.io/inceptool/)
+
 A terminal UI application for scuba dive planning.
 
 ## ⚠️ Safety Disclaimer
