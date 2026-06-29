@@ -1014,7 +1014,7 @@ dependencies = [
 
 [[package]]
 name = "dps"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "approx",
@@ -1081,7 +1081,7 @@ dependencies = [
 
 [[package]]
 name = "dps-git-stats"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anstream",
  "anstyle",
