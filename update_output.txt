@@ -1,0 +1,82 @@
+    Updating crates.io index
+     Locking 66 packages to latest Rust 1.96.0 compatible versions
+    Updating anyhow v1.0.102 -> v1.0.103
+    Updating arc-swap v1.9.1 -> v1.9.2
+    Updating arrayvec v0.7.6 -> v0.7.7
+    Updating bon v3.9.2 -> v3.9.3
+    Updating bon-macros v3.9.2 -> v3.9.3
+    Updating bstr v1.12.1 -> v1.12.3
+    Updating bytes v1.11.1 -> v1.12.0
+    Updating cc v1.2.64 -> v1.2.65
+    Updating chacha20 v0.10.0 -> v0.10.1
+      Adding defmt v1.1.0
+      Adding defmt-macros v1.1.0
+      Adding defmt-parser v1.0.0
+    Updating getrandom v0.4.2 -> v0.4.3
+      Adding gix v0.85.0
+    Updating gix-attributes v0.33.1 -> v0.33.2
+      Adding gix-config v0.58.0
+    Updating gix-date v0.15.4 -> v0.15.5
+      Adding gix-diff v0.65.0
+      Adding gix-dir v0.27.0
+      Adding gix-discover v0.53.0
+      Adding gix-filter v0.32.0
+    Updating gix-hashtable v0.15.1 -> v0.15.2
+    Updating gix-imara-diff v0.2.2 -> v0.2.3
+      Adding gix-index v0.53.0
+      Adding gix-negotiate v0.33.0
+      Adding gix-object v0.62.0
+      Adding gix-odb v0.82.0
+      Adding gix-pack v0.72.0
+    Updating gix-packetline v0.21.4 -> v0.21.5
+      Adding gix-protocol v0.63.0
+      Adding gix-ref v0.65.0
+      Adding gix-refspec v0.43.0
+      Adding gix-revision v0.47.0
+      Adding gix-revwalk v0.33.0
+      Adding gix-status v0.32.0
+      Adding gix-submodule v0.32.0
+    Updating gix-tempfile v23.0.1 -> v23.0.2
+    Updating gix-transport v0.57.1 -> v0.57.2
+      Adding gix-traverse v0.59.0
+      Adding gix-worktree v0.54.0
+      Adding gix-worktree-state v0.32.0
+      Adding gix-worktree-stream v0.34.0
+    Updating h2 v0.4.14 -> v0.4.15
+    Removing id-arena v2.3.0
+    Updating jiff v0.2.28 -> v0.2.29
+    Updating jiff-static v0.2.28 -> v0.2.29
+    Updating js-sys v0.3.102 -> v0.3.103
+    Removing leb128fmt v0.1.0
+    Updating log v0.4.32 -> v0.4.33
+    Updating memmap2 v0.9.10 -> v0.9.11
+    Updating quinn v0.11.9 -> v0.11.11
+    Updating quinn-proto v0.11.14 -> v0.11.15
+    Updating quote v1.0.45 -> v1.0.46
+    Updating rustls v0.23.40 -> v0.23.41
+    Updating syn v2.0.117 -> v2.0.118
+    Updating time v0.3.49 -> v0.3.51
+    Updating time-macros v0.2.29 -> v0.2.30
+    Removing unicode-xid v0.2.6
+    Updating uuid v1.23.3 -> v1.23.4
+    Updating vergen v10.0.0 -> v10.0.1
+    Updating vergen-gix v10.0.0 -> v10.0.1
+    Updating vergen-lib v10.0.0 -> v10.0.1
+    Removing wasip3 v0.4.0+wasi-0.3.0-rc-2026-01-06
+    Updating wasm-bindgen v0.2.125 -> v0.2.126
+    Updating wasm-bindgen-futures v0.4.75 -> v0.4.76
+    Updating wasm-bindgen-macro v0.2.125 -> v0.2.126
+    Updating wasm-bindgen-macro-support v0.2.125 -> v0.2.126
+    Updating wasm-bindgen-shared v0.2.125 -> v0.2.126
+    Removing wasm-encoder v0.244.0
+    Removing wasm-metadata v0.244.0
+    Removing wasmparser v0.244.0
+    Updating web-sys v0.3.102 -> v0.3.103
+    Removing wit-bindgen v0.51.0
+    Removing wit-bindgen-core v0.51.0
+    Removing wit-bindgen-rust v0.51.0
+    Removing wit-bindgen-rust-macro v0.51.0
+    Removing wit-component v0.244.0
+    Removing wit-parser v0.244.0
+    Updating zlib-rs v0.6.3 -> v0.6.4
+note: pass `--verbose` to see 3 unchanged dependencies behind latest
