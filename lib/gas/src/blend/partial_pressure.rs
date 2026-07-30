@@ -15,8 +15,9 @@ use crate::constants::{AIR_AR, AIR_CO2, AIR_DILUENT, AIR_N2, AIR_OTHER};
 /// let ean32 = EANxBlend::new(Percent::new(0.32).unwrap(), PartialPressure).unwrap();
 /// let c = ean32.components();
 /// // N₂/Ar ratio equals the air ratio for any FO₂.
-/// let air_ratio = 0.78084_f64 / 0.00934;
-/// assert!((c.n2() / c.ar() - air_ratio).abs() < 0.01);
+/// // N₂ is derived as the exact remainder (≈ 78.077 %), not the published 78.084 %.
+/// let air_ratio = 0.780766_f64 / 0.00934;
+/// assert!((c.n2() / c.ar() - air_ratio).abs() < 1e-4);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
