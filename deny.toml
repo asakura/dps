@@ -25,13 +25,7 @@ unused-ignored-advisory = "warn"
 # transitively via `merge` -> `merge_derive` as a build-time-only proc-macro
 # dependency with no runtime impact. Vetted as acceptable until
 # `merge_derive` migrates off it.
-#
-# `memmap2` 0.9.10 has an unsound pointer-offset advisory (RUSTSEC-2026-0186),
-# fixed in 0.9.11. Reached only via `vergen-gix` (a build-dependency) through
-# gix's git-object-reading crates (gix-commitgraph, gix-odb, gix-pack,
-# gix-ref), so it runs at build time only and is never linked into the
-# shipped binary. Vetted as acceptable until `gix` bumps its `memmap2` bound.
-ignore = ["RUSTSEC-2026-0173", "RUSTSEC-2026-0186"]
+ignore = ["RUSTSEC-2026-0173"]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
@@ -81,8 +75,9 @@ external-default-features = "allow"
 name = "getrandom"
 version = "0.3.4"
 
-# 0.14.5 is pinned by `dashmap` and 0.16.1 by `clru`/`kasuari` (all reached
-# via `gix-tempfile`/`gix-pack`/`ratatui-core`); `gix-hashtable` is on the
+# 0.14.5 is pinned by `dashmap`, 0.15.5 by `gix-imara-diff` (via `gix-diff`),
+# and 0.16.1 by `clru`/`kasuari` (all reached via
+# `gix-tempfile`/`gix-pack`/`ratatui-core`); `gix-hashtable` is on the
 # newest, 0.17.1.
 [[bans.skip]]
 name = "hashbrown"
@@ -90,7 +85,17 @@ version = "0.14.5"
 
 [[bans.skip]]
 name = "hashbrown"
+version = "0.15.5"
+
+[[bans.skip]]
+name = "hashbrown"
 version = "0.16.1"
+
+# 0.1.5 is pinned by `hashbrown` 0.15.5 (via `gix-imara-diff`/`gix-diff`);
+# everything else (hashbrown 0.16.1, 0.17.1) is on 0.2.0.
+[[bans.skip]]
+name = "foldhash"
+version = "0.1.5"
 
 # 0.3.18 is pinned by `crossterm` (via `ratatui-crossterm`); dps and `gix`
 # (via `vergen-gix`) depend directly on 0.4.4.
@@ -124,16 +129,6 @@ name = "arc-swap"
 version = "1.9.1"
 allow = [
     { path = "ci-check.sh", checksum = "f1ad7ffbb2e996c50633a9168cdd45760af03c4bb9aaf2a4d60b45f41f9413a8" },
-]
-
-[[bans.build.bypass]]
-name = "bytes"
-version = "1.11.1"
-allow = [
-    { path = "ci/miri.sh", checksum = "e74475e7aec647a490a1f491b5dac6a60e3c03926a7c7e1898fa3e7c626415c7" },
-    { path = "ci/panic-abort.sh", checksum = "aec2e5427117e533d7a9721a926eb6a9d72f264510066baf2c501357df2d936f" },
-    { path = "ci/test-stable.sh", checksum = "fb751f06f314f728c489b7a7854701f632e24de8d0540ea8cf3449c6a853ac3c" },
-    { path = "ci/tsan.sh", checksum = "466b86b19225dd26c756cf2252cb1973f87a145642c99364b462ed7ceb55c7dd" },
 ]
 
 [[bans.build.bypass]]
@@ -171,6 +166,13 @@ allow = [
     { path = "src/assets/init/hooks/pre-push.sample", checksum = "57a2bf01f65b4c57180e96cd31ff737bd2c25a15ad483cab012a88994120dfab" },
     { path = "src/assets/init/hooks/pre-rebase.sample", checksum = "d7c629ddbaa5f984d21c97a14889599d2019230220d3459aa103648316500968" },
     { path = "src/assets/init/hooks/prepare-commit-msg.sample", checksum = "f804b4efd22ef832b49506a815a6a6b1103b8f77b6d6556fc3756232727396d8" },
+]
+
+[[bans.build.bypass]]
+name = "libc"
+version = "0.2.189"
+allow = [
+    { path = "etc/libc-util.py", checksum = "a99fdefe6354c28c52eeac9c1e851041b69dad25b8a3b521d4f57b761517c798" },
 ]
 
 [[bans.build.bypass]]
