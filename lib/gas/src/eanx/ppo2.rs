@@ -52,8 +52,14 @@ impl PPO2 {
     /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Meters, Percent};
+    /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// assert_eq!(ean32.ppo2_at(Meters::new(33.75)).pressure(), Bar::new(1.4));
+    /// // (33.75 / 9.9485 m/bar + 1.01325 bar) × 0.32
+    /// assert_relative_eq!(
+    ///     ean32.ppo2_at(Meters::new(33.75)).pressure(),
+    ///     Bar::new(1.4098361549999998),
+    ///     epsilon = 1e-9
+    /// );
     /// ```
     #[must_use]
     pub const fn pressure(self) -> Bar {

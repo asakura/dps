@@ -266,8 +266,12 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
-    /// // Air at 30 m: (30/10 + 1) × 0.21 = 0.84 bar
-    /// assert_relative_eq!(air.ppo2_at(Meters::new(30.0)).pressure(), Bar::new(0.84), epsilon = 1e-9);
+    /// // Air at 30 m: (30/9.9485 + 1.01325) × 0.21 ≈ 0.846 bar
+    /// assert_relative_eq!(
+    ///     air.ppo2_at(Meters::new(30.0)).pressure(),
+    ///     Bar::new(0.84604692375),
+    ///     epsilon = 1e-9
+    /// );
     /// ```
     #[must_use]
     pub fn ppo2_at(self, depth: Meters) -> PPO2 {
@@ -435,8 +439,8 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{CnsRatePerMinute, Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// // At MOD (33.75 m), ppO₂ = 1.4 bar → limit 150 min → rate ≈ 0.667 CNS%/min
-    /// let rate = ean32.cns_rate_at(Meters::new(33.75));
+    /// // At MOD (33.44 m), ppO₂ ≈ 1.4 bar → limit 150 min → rate ≈ 0.667 CNS%/min
+    /// let rate = ean32.cns_rate_at(Meters::new(33.44));
     /// assert!((f64::from(rate) - 100.0 / 150.0).abs() < 1e-9);
     /// ```
     #[must_use]
@@ -452,7 +456,8 @@ impl<M: BlendMethod> EANxBlend<M> {
 
     /// OTU (Oxygen Tolerance Unit) accumulation rate per minute at the given depth.
     ///
-    /// Formula: $(\text{pp}\ce{O2} - \pu{0.5 bar})^{0.83}$ when $\text{pp}\ce{O2} > \pu{0.5 bar}$, else $0$.
+    /// Formula: $\left(\dfrac{\text{pp}\ce{O2} - \pu{0.5 bar}}{\pu{0.5 bar}}\right)^{0.83}$ when
+    /// $\text{pp}\ce{O2} > \pu{0.5 bar}$, else $0$.
     ///
     /// Multiply by exposure time in minutes; daily limit is $\approx 850\,\text{OTU}$.
     ///
@@ -463,7 +468,7 @@ impl<M: BlendMethod> EANxBlend<M> {
     /// let air = EANx::try_from(Percent::new(0.21).unwrap()).unwrap();
     /// assert_eq!(air.otu_rate_at(Meters::new(0.0)), OTUPerMinute::new(0.0));
     ///
-    /// // EANx 32 at 40 m: ppO₂ = 1.6 bar → (1.6 − 0.5)^0.83 ≈ 0.918 OTU/min
+    /// // EANx 32 at 40 m: ppO₂ ≈ 1.61 bar → ((1.61 − 0.5) / 0.5)^0.83 ≈ 1.94 OTU/min
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert!(ean32.otu_rate_at(Meters::new(40.0)) > OTUPerMinute::new(0.0));
     /// ```
@@ -474,7 +479,7 @@ impl<M: BlendMethod> EANxBlend<M> {
         if ppo2 <= 0.5 {
             OTUPerMinute::new(0.0)
         } else {
-            OTUPerMinute::new((ppo2 - 0.5_f64).powf(0.83))
+            OTUPerMinute::new(((ppo2 - 0.5_f64) / 0.5).powf(0.83))
         }
     }
 

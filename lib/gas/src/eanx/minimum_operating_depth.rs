@@ -19,7 +19,8 @@ use std::fmt;
 /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
 /// let m = h10.minimod_at(Bar::new(0.16));
 /// assert_eq!(m.to_string(), "5.8 m");
-/// assert_eq!(m.summary().to_string(), "Hypoxic 10  MiniMOD 5.8 m  @ ppO₂ 0.16 bar");
+/// // Bar displays with one decimal: 0.16 → "0.2 bar".
+/// assert_eq!(m.summary().to_string(), "Hypoxic 10  MiniMOD 5.8 m  @ ppO₂ 0.2 bar");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -105,9 +106,10 @@ impl MiniMOD {
     /// use dps_gas::prelude::EANx;
     /// use dps_units::{Bar, Percent};
     /// let h10 = EANx::try_from(Percent::new(0.10).unwrap()).unwrap();
+    /// // Bar displays with one decimal: 0.16 → "0.2 bar".
     /// assert_eq!(
     ///     h10.minimod_at(Bar::new(0.16)).summary().to_string(),
-    ///     "Hypoxic 10  MiniMOD 5.8 m  @ ppO₂ 0.16 bar",
+    ///     "Hypoxic 10  MiniMOD 5.8 m  @ ppO₂ 0.2 bar",
     /// );
     /// ```
     #[must_use]
