@@ -404,6 +404,7 @@ mod tests {
     use crossterm::event::{KeyCode, KeyModifiers};
     use ratatui::Frame;
     use rstest::rstest;
+    use serial_test::serial;
 
     #[derive(Debug, thiserror::Error)]
     enum TestError {
@@ -714,6 +715,7 @@ mod tests {
         use super::*;
 
         #[test]
+        #[serial(tui)]
         fn quit_sets_should_quit() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
@@ -727,6 +729,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(tui)]
         fn suspend_sets_should_suspend() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
@@ -740,6 +743,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(tui)]
         fn resume_clears_should_suspend() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
@@ -754,6 +758,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(tui)]
         fn tick_leaves_flags_unchanged() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
@@ -768,6 +773,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(tui)]
         fn processes_all_queued_actions_in_one_call() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;
@@ -782,6 +788,7 @@ mod tests {
         }
 
         #[test]
+        #[serial(tui)]
         fn component_returned_action_is_reenqueued_and_processed() -> Result<(), AppError> {
             let mut app = default_app();
             let mut tui = Tui::new()?;

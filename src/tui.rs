@@ -569,6 +569,7 @@ mod tests {
 
     use approx::assert_relative_eq;
     use crossterm::event::{KeyCode, KeyEventState, KeyModifiers, MouseEventKind};
+    use serial_test::serial;
 
     use core::assert_matches;
 
@@ -590,12 +591,14 @@ mod tests {
         use super::*;
 
         #[test]
+        #[serial(tui)]
         fn succeeds_without_tty() {
             // Terminal::new does not require a real TTY; only enter() does.
             assert!(Tui::new().is_ok());
         }
 
         #[test]
+        #[serial(tui)]
         fn default_rates() {
             let tui = Tui::default();
 
@@ -611,30 +614,35 @@ mod tests {
         use super::*;
 
         #[test]
+        #[serial(tui)]
         fn tick_rate_sets_value() {
             let tui = Tui::default().tick_rate(10.0);
             assert_relative_eq!(tui.tick_rate, 10.0);
         }
 
         #[test]
+        #[serial(tui)]
         fn frame_rate_sets_value() {
             let tui = Tui::default().frame_rate(30.0);
             assert_relative_eq!(tui.frame_rate, 30.0);
         }
 
         #[test]
+        #[serial(tui)]
         fn mouse_sets_value() {
             let tui = Tui::default().mouse(true);
             assert!(tui.mouse);
         }
 
         #[test]
+        #[serial(tui)]
         fn paste_sets_value() {
             let tui = Tui::default().paste(true);
             assert!(tui.paste);
         }
 
         #[test]
+        #[serial(tui)]
         fn builder_chain() {
             let tui = Tui::default()
                 .tick_rate(10.0)
@@ -654,6 +662,7 @@ mod tests {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        #[serial(tui)]
         async fn returns_ok_and_task_finishes() {
             let mut tui = Tui::default();
 
@@ -668,6 +677,7 @@ mod tests {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        #[serial(tui)]
         async fn idempotent_on_already_stopped_tui() {
             let mut tui = Tui::default();
 
@@ -682,6 +692,7 @@ mod tests {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        #[serial(tui)]
         async fn sends_init_event() -> Result<()> {
             let mut tui = Tui::default();
 
@@ -697,6 +708,7 @@ mod tests {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        #[serial(tui)]
         async fn injected_events_are_received() -> Result<()> {
             let mut tui = Tui::default();
 
@@ -726,6 +738,7 @@ mod tests {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        #[serial(tui)]
         async fn task_finishes_after_cancel() {
             let mut tui = Tui::default();
 
@@ -741,6 +754,7 @@ mod tests {
         }
 
         #[tokio::test(flavor = "multi_thread")]
+        #[serial(tui)]
         async fn does_not_emit_closed() -> Result<()> {
             let mut tui = Tui::default();
 
@@ -774,6 +788,7 @@ mod tests {
         use super::*;
 
         #[tokio::test(flavor = "multi_thread")]
+        #[serial(tui)]
         async fn compiles_and_returns_result() -> Result<()> {
             let mut tui = Tui::new()?;
 
