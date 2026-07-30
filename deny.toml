@@ -159,7 +159,7 @@ allow = [
 
 [[bans.build.bypass]]
 name = "gix"
-version = "0.84.0"
+version = "0.85.0"
 allow = [
     { path = "src/assets/init/hooks/applypatch-msg.sample", checksum = "1ae81b995a5c8c54582e1977084babed1e947a5a5c247ad29563142e432955ab" },
     { path = "src/assets/init/hooks/commit-msg.sample", checksum = "b1451a4c89ee4406ba56f003a7e3d142e24a7452861fddddc23bfc77163c8650" },
@@ -175,7 +175,7 @@ allow = [
 
 [[bans.build.bypass]]
 name = "serde-saphyr"
-version = "0.0.28"
+version = "0.0.29"
 allow = [
     { path = "miri.sh", checksum = "4d47e8fb248d217b474155ce96ba5bf179c19bd80546f9c6cdfe35bc3f0bc570" },
 ]
