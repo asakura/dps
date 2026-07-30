@@ -105,13 +105,13 @@
             cargo-llvm-cov
             cargo-nextest
             git-cliff
-            nixfmt-rfc-style
+            nixfmt
             shfmt
             shellcheck
           ];
         };
 
-        formatter = pkgs.nixfmt-rfc-style;
+        formatter = pkgs.nixfmt;
       }
     );
 }
