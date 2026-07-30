@@ -14,9 +14,9 @@ use std::fmt;
 /// use dps_gas::prelude::EANx;
 /// use dps_units::{Meters, Percent};
 /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-/// let p = ean32.ppo2_at(Meters::new(33.75));
+/// let p = ean32.ppo2_at(Meters::new(33.44));
 /// assert_eq!(p.to_string(), "1.4 bar");
-/// assert_eq!(p.summary().to_string(), "EANx 32  ppO₂ 1.4 bar  @ 33.8 m");
+/// assert_eq!(p.summary().to_string(), "EANx 32  ppO₂ 1.4 bar  @ 33.4 m");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -54,10 +54,10 @@ impl PPO2 {
     /// use dps_units::{Bar, Meters, Percent};
     /// # use approx::assert_relative_eq;
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
-    /// // (33.75 / 9.9485 m/bar + 1.01325 bar) × 0.32
+    /// // (33.44 / 9.9485 m/bar + 1.01325 bar) × 0.32
     /// assert_relative_eq!(
-    ///     ean32.ppo2_at(Meters::new(33.75)).pressure(),
-    ///     Bar::new(1.4098361549999998),
+    ///     ean32.ppo2_at(Meters::new(33.44)).pressure(),
+    ///     Bar::new(1.39986475328),
     ///     epsilon = 1e-9
     /// );
     /// ```
@@ -99,8 +99,8 @@ impl PPO2 {
     /// use dps_units::{Meters, Percent};
     /// let ean32 = EANx::try_from(Percent::new(0.32).unwrap()).unwrap();
     /// assert_eq!(
-    ///     ean32.ppo2_at(Meters::new(33.75)).summary().to_string(),
-    ///     "EANx 32  ppO₂ 1.4 bar  @ 33.8 m",
+    ///     ean32.ppo2_at(Meters::new(33.44)).summary().to_string(),
+    ///     "EANx 32  ppO₂ 1.4 bar  @ 33.4 m",
     /// );
     /// ```
     #[must_use]
