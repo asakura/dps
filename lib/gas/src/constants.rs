@@ -56,6 +56,7 @@ pub const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW);
 
 /// Relative narcotic potency of Argon vs Nitrogen ($2.33$).
 pub const AR_NARCOTIC_POTENCY: f64 = 2.33;
+/// Equivalent narcotic fraction of standard dry air ($\ce{N2} + 2.33 \times \ce{Ar} \approx 0.8025$).
 pub const AIR_NARCOTIC: Percent = Percent::literal(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW);
 
 // Gas density
