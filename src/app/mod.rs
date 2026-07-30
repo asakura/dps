@@ -718,7 +718,7 @@ mod tests {
         #[serial(tui)]
         fn quit_sets_should_quit() -> Result<(), AppError> {
             let mut app = default_app();
-            let mut tui = Tui::new()?;
+            let mut tui = Tui::new_for_test()?;
 
             app.action_tx.send(Action::Quit)?;
             app.handle_actions(&mut tui)?;
@@ -732,7 +732,7 @@ mod tests {
         #[serial(tui)]
         fn suspend_sets_should_suspend() -> Result<(), AppError> {
             let mut app = default_app();
-            let mut tui = Tui::new()?;
+            let mut tui = Tui::new_for_test()?;
 
             app.action_tx.send(Action::Suspend)?;
             app.handle_actions(&mut tui)?;
@@ -746,7 +746,7 @@ mod tests {
         #[serial(tui)]
         fn resume_clears_should_suspend() -> Result<(), AppError> {
             let mut app = default_app();
-            let mut tui = Tui::new()?;
+            let mut tui = Tui::new_for_test()?;
 
             app.should_suspend = true;
             app.action_tx.send(Action::Resume)?;
@@ -761,7 +761,7 @@ mod tests {
         #[serial(tui)]
         fn tick_leaves_flags_unchanged() -> Result<(), AppError> {
             let mut app = default_app();
-            let mut tui = Tui::new()?;
+            let mut tui = Tui::new_for_test()?;
 
             app.action_tx.send(Action::Tick)?;
             app.handle_actions(&mut tui)?;
@@ -776,7 +776,7 @@ mod tests {
         #[serial(tui)]
         fn processes_all_queued_actions_in_one_call() -> Result<(), AppError> {
             let mut app = default_app();
-            let mut tui = Tui::new()?;
+            let mut tui = Tui::new_for_test()?;
 
             app.action_tx.send(Action::Suspend)?;
             app.action_tx.send(Action::Resume)?;
@@ -791,7 +791,7 @@ mod tests {
         #[serial(tui)]
         fn component_returned_action_is_reenqueued_and_processed() -> Result<(), AppError> {
             let mut app = default_app();
-            let mut tui = Tui::new()?;
+            let mut tui = Tui::new_for_test()?;
 
             // On first Tick, spy returns Quit once; Quit is re-enqueued and processed.
             app.components

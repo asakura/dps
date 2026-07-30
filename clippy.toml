@@ -28,4 +28,5 @@ doc-valid-idents = [
     "WebSocket",
     "OAuth",
     "JWT",      # JSON Web Token
+    "GitHub",
 ]

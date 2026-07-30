@@ -11,7 +11,7 @@ use crossterm::{
     },
 };
 use futures::{FutureExt, StreamExt};
-use ratatui::{Terminal, backend::CrosstermBackend as Backend};
+use ratatui::{Terminal, TerminalOptions, Viewport, backend::CrosstermBackend as Backend};
 use serde::{Deserialize, Serialize};
 use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -138,10 +138,47 @@ impl Tui {
     /// [`enter`]: Tui::enter
     /// [`draw`]: ratatui::Terminal::draw
     pub fn new() -> std::io::Result<Self> {
+        Self::with_viewport(Viewport::Fullscreen)
+    }
+
+    /// Builds a [`Tui`] with a fixed-size viewport so construction never
+    /// queries the real terminal for its dimensions.
+    ///
+    /// [`Viewport::Fullscreen`] (used by [`new`]) asks the backend for the
+    /// terminal size. On GitHub Actions runners stdout has no controlling
+    /// TTY, so that query falls through to crossterm spawning `tput`, which
+    /// can fail outright (`tput` missing from `PATH`) or transiently
+    /// (`EAGAIN` from `fork` under heavy parallel test load). Tests that
+    /// don't render anything don't need real dimensions, so they use this
+    /// instead.
+    ///
+    /// This keeps the same concrete `CrosstermBackend<Stdout>` rather than
+    /// injecting a [`ratatui::backend::TestBackend`]. `self.terminal` is only
+    /// ever reached through [`Deref`]/[`DerefMut`], and no test calls a
+    /// `Terminal` method through it — the fix only needs to skip the
+    /// construction-time size query, not fake out rendering. A generic
+    /// `Tui<B>` would also be a footgun: [`enter`]/[`exit`]/[`resume`] write
+    /// escape codes to the real `stdout()` directly, independent of
+    /// `self.terminal`, so a `Tui<TestBackend>` would still mutate the real
+    /// terminal if those were ever called on it.
+    ///
+    /// [`new`]: Tui::new
+    /// [`enter`]: Tui::enter
+    /// [`exit`]: Tui::exit
+    /// [`resume`]: Tui::resume
+    #[cfg(test)]
+    pub(crate) fn new_for_test() -> std::io::Result<Self> {
+        Self::with_viewport(Viewport::Fixed(ratatui::layout::Rect::new(0, 0, 80, 24)))
+    }
+
+    fn with_viewport(viewport: Viewport) -> std::io::Result<Self> {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         Ok(Self {
-            terminal: ratatui::Terminal::new(Backend::new(stdout()))?,
+            terminal: ratatui::Terminal::with_options(
+                Backend::new(stdout()),
+                TerminalOptions { viewport },
+            )?,
             task: None,
             cancellation_token: CancellationToken::new(),
             event_rx,
@@ -594,19 +631,21 @@ mod tests {
         #[serial(tui)]
         fn succeeds_without_tty() {
             // Terminal::new does not require a real TTY; only enter() does.
-            assert!(Tui::new().is_ok());
+            assert!(Tui::new_for_test().is_ok());
         }
 
         #[test]
         #[serial(tui)]
-        fn default_rates() {
-            let tui = Tui::default();
+        fn default_rates() -> Result<()> {
+            let tui = Tui::new_for_test()?;
 
             assert_relative_eq!(tui.tick_rate, 4.0);
             assert_relative_eq!(tui.frame_rate, 60.0);
 
             assert!(!tui.mouse);
             assert!(!tui.paste);
+
+            Ok(())
         }
     }
 
@@ -615,36 +654,40 @@ mod tests {
 
         #[test]
         #[serial(tui)]
-        fn tick_rate_sets_value() {
-            let tui = Tui::default().tick_rate(10.0);
+        fn tick_rate_sets_value() -> Result<()> {
+            let tui = Tui::new_for_test()?.tick_rate(10.0);
             assert_relative_eq!(tui.tick_rate, 10.0);
+            Ok(())
         }
 
         #[test]
         #[serial(tui)]
-        fn frame_rate_sets_value() {
-            let tui = Tui::default().frame_rate(30.0);
+        fn frame_rate_sets_value() -> Result<()> {
+            let tui = Tui::new_for_test()?.frame_rate(30.0);
             assert_relative_eq!(tui.frame_rate, 30.0);
+            Ok(())
         }
 
         #[test]
         #[serial(tui)]
-        fn mouse_sets_value() {
-            let tui = Tui::default().mouse(true);
+        fn mouse_sets_value() -> Result<()> {
+            let tui = Tui::new_for_test()?.mouse(true);
             assert!(tui.mouse);
+            Ok(())
         }
 
         #[test]
         #[serial(tui)]
-        fn paste_sets_value() {
-            let tui = Tui::default().paste(true);
+        fn paste_sets_value() -> Result<()> {
+            let tui = Tui::new_for_test()?.paste(true);
             assert!(tui.paste);
+            Ok(())
         }
 
         #[test]
         #[serial(tui)]
-        fn builder_chain() {
-            let tui = Tui::default()
+        fn builder_chain() -> Result<()> {
+            let tui = Tui::new_for_test()?
                 .tick_rate(10.0)
                 .frame_rate(30.0)
                 .mouse(true)
@@ -655,6 +698,8 @@ mod tests {
 
             assert!(tui.mouse);
             assert!(tui.paste);
+
+            Ok(())
         }
     }
 
@@ -663,8 +708,8 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         #[serial(tui)]
-        async fn returns_ok_and_task_finishes() {
-            let mut tui = Tui::default();
+        async fn returns_ok_and_task_finishes() -> Result<()> {
+            let mut tui = Tui::new_for_test()?;
 
             tui.start();
 
@@ -674,17 +719,21 @@ mod tests {
                     .as_ref()
                     .is_none_or(tokio::task::JoinHandle::is_finished)
             );
+
+            Ok(())
         }
 
         #[tokio::test(flavor = "multi_thread")]
         #[serial(tui)]
-        async fn idempotent_on_already_stopped_tui() {
-            let mut tui = Tui::default();
+        async fn idempotent_on_already_stopped_tui() -> Result<()> {
+            let mut tui = Tui::new_for_test()?;
 
             tui.start();
 
             assert!(tui.stop().is_ok());
             assert!(tui.stop().is_ok());
+
+            Ok(())
         }
     }
 
@@ -694,7 +743,7 @@ mod tests {
         #[tokio::test(flavor = "multi_thread")]
         #[serial(tui)]
         async fn sends_init_event() -> Result<()> {
-            let mut tui = Tui::default();
+            let mut tui = Tui::new_for_test()?;
 
             tui.start();
 
@@ -710,7 +759,7 @@ mod tests {
         #[tokio::test(flavor = "multi_thread")]
         #[serial(tui)]
         async fn injected_events_are_received() -> Result<()> {
-            let mut tui = Tui::default();
+            let mut tui = Tui::new_for_test()?;
 
             tui.start();
             tui.event_tx().send(Event::Quit)?;
@@ -739,8 +788,8 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         #[serial(tui)]
-        async fn task_finishes_after_cancel() {
-            let mut tui = Tui::default();
+        async fn task_finishes_after_cancel() -> Result<()> {
+            let mut tui = Tui::new_for_test()?;
 
             tui.start();
             tui.cancel();
@@ -751,12 +800,14 @@ mod tests {
                     .as_ref()
                     .is_none_or(tokio::task::JoinHandle::is_finished)
             );
+
+            Ok(())
         }
 
         #[tokio::test(flavor = "multi_thread")]
         #[serial(tui)]
         async fn does_not_emit_closed() -> Result<()> {
-            let mut tui = Tui::default();
+            let mut tui = Tui::new_for_test()?;
 
             tui.start();
 
@@ -790,7 +841,7 @@ mod tests {
         #[tokio::test(flavor = "multi_thread")]
         #[serial(tui)]
         async fn compiles_and_returns_result() -> Result<()> {
-            let mut tui = Tui::new()?;
+            let mut tui = Tui::new_for_test()?;
 
             // enter() requires a real TTY, so resume() will err in CI; we only
             // assert it doesn't panic.
