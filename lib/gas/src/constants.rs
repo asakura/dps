@@ -54,9 +54,8 @@ pub const AIR_DILUENT: Percent = Percent::literal(1.0 - AIR_O2_RAW);
 // partial pressure. CO₂ narcosis from inspired gas at air-trace concentrations
 // is negligible and excluded.
 
-/// Relative narcotic potency of Argon vs Nitrogen ($1.5$).
-pub const AR_NARCOTIC_POTENCY: f64 = 1.5;
-/// Equivalent narcotic fraction of standard dry air ($\ce{N2} + 1.5 \times \ce{Ar}$).
+/// Relative narcotic potency of Argon vs Nitrogen ($2.33$).
+pub const AR_NARCOTIC_POTENCY: f64 = 2.33;
 pub const AIR_NARCOTIC: Percent = Percent::literal(AIR_N2_RAW + AR_NARCOTIC_POTENCY * AIR_AR_RAW);
 
 // Gas density

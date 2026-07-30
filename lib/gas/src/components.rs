@@ -196,7 +196,7 @@ impl GasComponents {
         )
     }
 
-    /// Narcotic fraction under the NOAA model: $\ce{N2} + 1.5 \times \ce{Ar}$.
+    /// Narcotic fraction under the NOAA model: $\ce{N2} + 2.33 \times \ce{Ar}$.
     ///
     /// $\ce{O2}$ is treated as non-narcotic; $\ce{CO2}$ narcosis from inspired gas at
     /// air-trace concentrations is negligible and excluded.
@@ -204,9 +204,9 @@ impl GasComponents {
     /// ```
     /// use dps_gas::prelude::EANx;
     /// use dps_units::Percent;
-    /// // Air narcotic fraction ≈ 0.7948
+    /// // Air narcotic fraction (N₂ + 2.33 × Ar) ≈ 0.8025
     /// let c = EANx::try_from(Percent::new(0.20946).unwrap()).unwrap().components();
-    /// assert!((c.narcotic() - 0.7948).abs() < 0.001);
+    /// assert!((c.narcotic() - 0.8025).abs() < 0.001);
     /// ```
     #[must_use]
     pub const fn narcotic(self) -> f64 {
