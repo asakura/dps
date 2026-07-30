@@ -25,7 +25,13 @@ unused-ignored-advisory = "warn"
 # transitively via `merge` -> `merge_derive` as a build-time-only proc-macro
 # dependency with no runtime impact. Vetted as acceptable until
 # `merge_derive` migrates off it.
-ignore = ["RUSTSEC-2026-0173"]
+#
+# `memmap2` 0.9.10 has an unsound pointer-offset advisory (RUSTSEC-2026-0186),
+# fixed in 0.9.11. Reached only via `vergen-gix` (a build-dependency) through
+# gix's git-object-reading crates (gix-commitgraph, gix-odb, gix-pack,
+# gix-ref), so it runs at build time only and is never linked into the
+# shipped binary. Vetted as acceptable until `gix` bumps its `memmap2` bound.
+ignore = ["RUSTSEC-2026-0173", "RUSTSEC-2026-0186"]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
@@ -91,6 +97,12 @@ version = "0.16.1"
 [[bans.skip]]
 name = "signal-hook"
 version = "0.3.18"
+
+# 3.0.3 is pinned by `serial_test_derive` (dev-only, via `serial_test`);
+# everything else is on 2.0.117.
+[[bans.skip]]
+name = "syn"
+version = "3.0.3"
 
 [bans.build]
 include-workspace = false
@@ -163,7 +175,7 @@ allow = [
 
 [[bans.build.bypass]]
 name = "serde-saphyr"
-version = "0.0.27"
+version = "0.0.28"
 allow = [
     { path = "miri.sh", checksum = "4d47e8fb248d217b474155ce96ba5bf179c19bd80546f9c6cdfe35bc3f0bc570" },
 ]
