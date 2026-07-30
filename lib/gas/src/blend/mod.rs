@@ -42,6 +42,8 @@ use std::fmt;
 pub trait BlendMethod: sealed::Sealed + Copy + fmt::Debug {
     /// Full gas composition for a mix with the given $\ce{O2}$ fraction.
     ///
+    /// Physical Model: Blend-specific gas composition model.
+    ///
     /// ```
     /// use dps_gas::prelude::{BlendMethod, PartialPressure};
     /// # use approx::assert_relative_eq;
