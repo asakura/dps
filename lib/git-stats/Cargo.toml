@@ -1,6 +1,6 @@
 [package]
 name = "dps-git-stats"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["Mikalai Seva"]
 description = "Per-day git commit statistics: insertions, deletions, churn, rolling averages"
