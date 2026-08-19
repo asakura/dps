@@ -1,6 +1,6 @@
 [package]
 name = "dps-gas"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["Mikalai Seva"]
 description = "Gas mix types and blending models for dive planning"
