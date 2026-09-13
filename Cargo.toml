@@ -96,7 +96,7 @@ polars = { version = "0.55", features = [
     "temporal",
 ] }
 ratatui = "0.30"
-rstest = "0.26"
+rstest = "0.27"
 ryu = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde-saphyr = "1.0"
