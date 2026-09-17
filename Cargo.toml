@@ -64,9 +64,9 @@ members = [
 
 [workspace.dependencies]
 # Internal crates
-dps-environment = { path = "lib/environment", version = "0.1.0" }
-dps-gas = { path = "lib/gas", version = "0.1.1" }
-dps-units = { path = "lib/units", version = "0.1.0" }
+dps-environment = { path = "lib/environment", version = "0.1.1" }
+dps-gas = { path = "lib/gas", version = "0.1.2" }
+dps-units = { path = "lib/units", version = "0.1.1" }
 
 # External crates
 anstream = "1.0"

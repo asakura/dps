@@ -1121,7 +1121,7 @@ dependencies = [
 
 [[package]]
 name = "dps-environment"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "dps-units",
@@ -1135,7 +1135,7 @@ dependencies = [
 
 [[package]]
 name = "dps-gas"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "approx",
  "dps-environment",
@@ -1148,7 +1148,7 @@ dependencies = [
 
 [[package]]
 name = "dps-git-stats"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1162,7 +1162,7 @@ dependencies = [
 
 [[package]]
 name = "dps-units"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "approx",
  "rstest",
