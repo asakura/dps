@@ -146,7 +146,7 @@ mod errors {
                 .err()
                 .ok_or("expected Err")?;
 
-            assert!(!err.to_string().is_empty());
+            assert_ne!(err.to_string(), "");
             assert_matches!(err, DiveEnvironmentError::SurfacePressureNotPositive(_));
 
             Ok(())
@@ -159,7 +159,7 @@ mod errors {
                 .err()
                 .ok_or("expected Err")?;
 
-            assert!(!err.to_string().is_empty());
+            assert_ne!(err.to_string(), "");
             assert_matches!(err, DiveEnvironmentError::WaterDensityNotPositive(_));
 
             Ok(())
@@ -171,7 +171,7 @@ mod errors {
                 .err()
                 .ok_or("expected Err")?;
 
-            assert!(!err.to_string().is_empty());
+            assert_ne!(err.to_string(), "");
             assert_matches!(err, DiveEnvironmentError::AltitudeOutOfRange(_));
 
             Ok(())
@@ -183,7 +183,7 @@ mod errors {
                 .err()
                 .ok_or("expected Err")?;
 
-            assert!(!err.to_string().is_empty());
+            assert_ne!(err.to_string(), "");
             assert_matches!(err, DiveEnvironmentError::SalinityOutOfRange(_));
 
             Ok(())
@@ -199,7 +199,7 @@ mod errors {
             .err()
             .ok_or("expected Err")?;
 
-            assert!(!err.to_string().is_empty());
+            assert_ne!(err.to_string(), "");
             assert_matches!(err, DiveEnvironmentError::TemperatureOutOfRange(_));
 
             Ok(())
@@ -227,7 +227,7 @@ mod errors {
                 .err()
                 .ok_or("expected Err")?;
 
-            assert!(!err.to_string().is_empty());
+            assert_ne!(err.to_string(), "");
             assert_matches!(
                 err,
                 DiveEnvironmentError::Parse(ParseDiveEnvironmentError::UnrecognisedFormat(_))
