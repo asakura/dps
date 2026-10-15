@@ -511,7 +511,7 @@ mod tests {
 
         #[rstest]
         fn empty_input() {
-            assert!(hour_distribution(&[]).is_empty());
+            assert_eq!(hour_distribution(&[]), [] as [(u32, u32); 0]);
         }
 
         #[rstest]
