@@ -605,7 +605,7 @@ mod tests {
 
             app.handle_events(None)?;
 
-            assert!(drain(&mut app).is_empty());
+            assert_eq!(drain(&mut app), [] as [Action; 0]);
 
             Ok(())
         }
@@ -616,7 +616,7 @@ mod tests {
 
             app.handle_events(Some(Event::Key(press(KeyCode::Char('z')))))?;
 
-            assert!(drain(&mut app).is_empty());
+            assert_eq!(drain(&mut app), [] as [Action; 0]);
 
             Ok(())
         }
@@ -676,7 +676,7 @@ mod tests {
             )])?);
 
             app.handle_key_event(press(KeyCode::Char('g')))?;
-            assert!(drain(&mut app).is_empty());
+            assert_eq!(drain(&mut app), [] as [Action; 0]);
 
             app.handle_key_event(press(KeyCode::Char('g')))?;
             assert_eq!(drain(&mut app), vec![Action::Move(Movement::GotoTop)]);
@@ -690,7 +690,7 @@ mod tests {
 
             app.handle_key_event(press(KeyCode::Char('q')))?;
 
-            assert!(drain(&mut app).is_empty());
+            assert_eq!(drain(&mut app), [] as [Action; 0]);
 
             Ok(())
         }
@@ -705,7 +705,7 @@ mod tests {
             app.handle_key_event(press(KeyCode::Char('g')))?; // prefix
             app.handle_key_event(press(KeyCode::Char('x')))?; // breaks chord — no binding
 
-            assert!(drain(&mut app).is_empty());
+            assert_eq!(drain(&mut app), [] as [Action; 0]);
 
             Ok(())
         }
