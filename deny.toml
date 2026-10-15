@@ -91,12 +91,6 @@ version = "0.15.5"
 name = "hashbrown"
 version = "0.16.1"
 
-# 0.1.5 is pinned by `hashbrown` 0.15.5 (via `gix-imara-diff`/`gix-diff`);
-# everything else (hashbrown 0.16.1, 0.17.1) is on 0.2.0.
-[[bans.skip]]
-name = "foldhash"
-version = "0.1.5"
-
 # 0.3.18 is pinned by `crossterm` (via `ratatui-crossterm`); dps and `gix`
 # (via `vergen-gix`) depend directly on 0.4.4.
 [[bans.skip]]
