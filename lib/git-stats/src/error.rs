@@ -16,27 +16,27 @@
 pub enum GitError {
     /// `gix` failed to open the repository.
     #[error("failed to open repository: {0}")]
-    Open(#[from] gix::open::Error),
+    Open(gix::Error),
 
     /// Setting up the revision walk failed.
     #[error("revision walk setup failed: {0}")]
-    Walk(#[from] gix::revision::walk::Error),
+    Walk(gix::Error),
 
     /// Iterating commits during the revision walk failed.
     #[error("commit iteration failed: {0}")]
-    WalkIter(#[from] gix::revision::walk::iter::Error),
+    WalkIter(gix::Error),
 
     /// Reading a single object from the ODB failed.
     #[error("failed to read object: {0}")]
-    Object(#[from] gix::object::find::existing::Error),
+    Object(gix::Error),
 
     /// Decoding a commit's fields (author, tree id, …) failed.
     #[error("failed to decode commit: {0}")]
-    Decode(#[from] gix::objs::decode::Error),
+    Decode(gix::Error),
 
     /// HEAD reference could not be resolved.
     #[error("could not resolve HEAD: {0}")]
-    Head(#[from] gix::reference::head_commit::Error),
+    Head(gix::Error),
 
     /// A revision specifier could not be parsed.
     #[error("could not parse revision '{0}'")]

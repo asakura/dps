@@ -115,7 +115,7 @@ pub fn collect_stats(args: &Args) -> Result<Vec<CommitStat>, Error> {
             continue; // skip merge commits
         }
 
-        let author = commit.author().map_err(GitError::Decode)?;
+        let author = commit.author().map_err(|e| GitError::Decode(e.into()))?;
         let (date, hour) = format_time(author.seconds());
 
         if !date_in_range(&date, args.since.as_deref(), args.until.as_deref()) {
