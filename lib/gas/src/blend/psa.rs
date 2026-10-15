@@ -1,6 +1,6 @@
 //! Pressure-swing adsorption (PSA) blend method.
 //!
-//! Provides [`Psa`], a [`BlendMethod`](crate::prelude::BlendMethod) implementation for oxygen
+//! Provides [`Psa`], a [`BlendMethod`] implementation for oxygen
 //! concentrators that use zeolite molecular sieves.
 //!
 //! PSA separates $\ce{O2}$ from air by adsorbing $\ce{N2}$ and $\ce{CO2}$ on the sieve while $\ce{O2}$, $\ce{Ar}$, and

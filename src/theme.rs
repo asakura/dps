@@ -245,7 +245,7 @@ impl Theme {
     /// Constructs a theme from pre-resolved colours.
     ///
     /// This is the single construction path for config-driven themes; call sites
-    /// live in [`crate::config::theme`]. Hard-coded themes use [`Theme::default`].
+    /// live in `crate::config::theme`. Hard-coded themes use [`Theme::default`].
     #[expect(
         clippy::too_many_arguments,
         reason = "one argument per semantic colour slot"

@@ -1,5 +1,5 @@
-//! [`FromStr`](std::str::FromStr) implementation and [`ParseDiveEnvironmentError`] for
-//! [`DiveEnvironment`](super::DiveEnvironment).
+//! [`FromStr`] implementation and [`ParseDiveEnvironmentError`] for
+//! [`DiveEnvironment`].
 //!
 //! ```
 //! use dps_environment::DiveEnvironment;

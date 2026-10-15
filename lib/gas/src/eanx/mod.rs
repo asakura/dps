@@ -644,7 +644,7 @@ impl Default for EANx {
 /// Accepts the formats produced by [`Display`](std::fmt::Display):
 /// `"Air"`, `"EANx N"`, `"Hypoxic N"`, `"O₂ N%"`, `"Pure O₂"`, and the
 /// fallback `"N%"` / `"N.d%"` percentage format from
-/// [`Percent`](dps_units::Percent)'s own display.
+/// [`Percent`]'s own display.
 ///
 /// # Errors
 ///
