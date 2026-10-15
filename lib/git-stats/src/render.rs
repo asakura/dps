@@ -497,7 +497,7 @@ mod tests {
                 .render_no_data(&mut buf)
                 .map_err(|_| "render_no_data failed")?;
 
-            assert!(!buf.is_empty());
+            assert_ne!(buf, [] as [u8; 0]);
 
             Ok(())
         }
