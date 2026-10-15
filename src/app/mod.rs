@@ -318,7 +318,7 @@ impl App {
     /// | `Tick` | No infrastructure effect; forwarded to components. |
     /// | `Quit` | Sets `should_quit`; the caller checks this flag after returning. |
     /// | `Suspend` / `Resume` | Toggles `should_suspend`. |
-    /// | `ClearScreen` | Calls [`Tui::clear`]. |
+    /// | `ClearScreen` | Calls [`Terminal::clear`](ratatui::Terminal::clear) via [`Tui`]'s `Deref`. |
     /// | `Resize(w, h)` | Delegates to [`handle_resize`]. |
     /// | `Render` | Delegates to [`render`]. |
     ///

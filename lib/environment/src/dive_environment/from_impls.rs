@@ -1,5 +1,5 @@
 //! [`From`] conversions from [`Ocean`] and [`Lake`] into
-//! [`DiveEnvironment`](super::DiveEnvironment).
+//! [`DiveEnvironment`].
 //!
 //! ```
 //! use dps_environment::{DiveEnvironment, Ocean};

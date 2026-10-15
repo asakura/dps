@@ -20,7 +20,7 @@ use crate::keymap::{map::ModeMap, mode::Mode};
 
 /// Read-only mode-indexed keybinding registry.
 ///
-/// Constructed via [`KeyBindingsBuilder`]; immutable thereafter.
+/// Constructed via [`KeyBindingsBuilder`](crate::keymap::KeyBindingsBuilder); immutable thereafter.
 /// Stored as a flat boxed slice sorted by [`Mode`] for compact memory.
 #[derive(Clone, Debug, Default)]
 pub struct KeyBindings(Box<[(Mode, ModeMap)]>);

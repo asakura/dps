@@ -1,4 +1,4 @@
-//! [`Display`](std::fmt::Display) implementation for [`DiveEnvironment`](super::DiveEnvironment).
+//! [`fmt::Display`] implementation for [`DiveEnvironment`].
 //!
 //! ```
 //! use dps_environment::DiveEnvironment;

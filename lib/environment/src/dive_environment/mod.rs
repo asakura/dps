@@ -14,7 +14,7 @@
 //!   environments without error handling.
 //! - **Fallible constructors** — [`DiveEnvironment::new`], [`DiveEnvironment::at_altitude`],
 //!   [`DiveEnvironment::with_salinity`], and friends: validate their inputs and return
-//!   [`DiveEnvironmentError`](crate::DiveEnvironmentError) for out-of-range values.
+//!   [`DiveEnvironmentError`] for out-of-range values.
 //! - **Builder refinements** — [`DiveEnvironment::with_altitude`],
 //!   [`DiveEnvironment::with_surface_pressure`], [`DiveEnvironment::with_water_density`]:
 //!   modify one field on an existing environment.

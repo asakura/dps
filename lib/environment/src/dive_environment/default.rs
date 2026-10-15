@@ -1,4 +1,4 @@
-//! [`Default`] implementation for [`DiveEnvironment`](super::DiveEnvironment).
+//! [`Default`] implementation for [`DiveEnvironment`].
 //!
 //! ```
 //! use dps_environment::DiveEnvironment;
