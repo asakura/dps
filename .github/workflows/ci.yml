@@ -16,7 +16,7 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
 
@@ -31,7 +31,7 @@ jobs:
           name: dps
           authToken: ${{ github.event_name == 'push' && secrets.CACHIX_AUTH_TOKEN || '' }}
 
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
 
       # Run all cargo checks outside the sandbox to share the rust-cache
       - name: cargo fmt
