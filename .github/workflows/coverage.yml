@@ -26,7 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+      - uses: asakura/actions/.github/actions/setup-nix@32fd43107b80ca9d29152b5d32d4bb61e8723527 # v1.0.0
+        with:
+          github-token: ${{ github.token }}
 
       - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
