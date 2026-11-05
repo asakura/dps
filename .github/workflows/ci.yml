@@ -22,18 +22,6 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-
-      # Only `push` (merged/reviewed code) gets a push-capable Cachix token.
-      # `pull_request` runs may still read from the public cache, but cannot
-      # populate it - prevents a malicious PR (via cargo build scripts /
-      # proc-macros) from pushing a poisoned store path that later gets
-      # trusted by main's CI, release-binaries.yml, or `nix develop`.
-      # pin-comment: no vX.Y.Z tag upstream
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: dps
-          authToken: ${{ github.event_name == 'push' && secrets.CACHIX_AUTH_TOKEN || '' }}
-
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
 
       # Run all cargo checks outside the sandbox to share the rust-cache

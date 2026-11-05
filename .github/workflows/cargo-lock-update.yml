@@ -19,11 +19,6 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-      # pin-comment: no vX.Y.Z tag upstream
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: dps
-
       - name: Run cargo update and check what changed
         id: cargo_update
         run: |
