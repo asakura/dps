@@ -30,12 +30,6 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-      # pin-comment: no vX.Y.Z tag upstream
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: dps
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
 
       # Run the workspace test suite once under coverage instrumentation,
