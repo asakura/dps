@@ -21,11 +21,7 @@ yanked = "warn"
 maximum-db-staleness = "P30D"
 unused-ignored-advisory = "warn"
 
-# `proc-macro-error2` is unmaintained (RUSTSEC-2026-0173). Pulled in
-# transitively via `merge` -> `merge_derive` as a build-time-only proc-macro
-# dependency with no runtime impact. Vetted as acceptable until
-# `merge_derive` migrates off it.
-ignore = ["RUSTSEC-2026-0173"]
+ignore = []
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
