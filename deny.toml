@@ -21,18 +21,10 @@ yanked = "warn"
 maximum-db-staleness = "P30D"
 unused-ignored-advisory = "warn"
 
-# Everything below is reached only through `dps-git-stats` (via
-# `polars` and `gix`), not the `dps` binary's own code paths. Vetted as
-# acceptable until upstream bumps or replaces the affected crates.
+# Reached only through `vergen-gix` (build-time git metadata in build.rs),
+# not the `dps` binary's own code paths. Vetted as acceptable until upstream
+# bumps or replaces the affected crates.
 ignore = [
-    # Unmaintained, pulled in by `polars-utils` / `polars-arrow`.
-    { id = "RUSTSEC-2025-0141", reason = "bincode unmaintained; transitive via polars-utils" },
-    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; transitive via polars-arrow/chrono-tz" },
-    { id = "RUSTSEC-2026-0555", reason = "chrono-tz unmaintained; transitive via polars-arrow" },
-    # Unmaintained / DoS in `object_store` deps (polars cloud IO layer).
-    { id = "RUSTSEC-2026-0542", reason = "humantime unmaintained; transitive via object_store" },
-    { id = "RUSTSEC-2026-0194", reason = "quick-xml quadratic attr check; transitive via object_store" },
-    { id = "RUSTSEC-2026-0195", reason = "quick-xml NsReader alloc DoS; transitive via object_store" },
     # `heapless` 0.8.0 unsoundness, pulled in by `faster-hex` 0.10 (via
     # `gix-hash`).
     { id = "RUSTSEC-2026-0574", reason = "heapless unsound; transitive via faster-hex/gix-hash" },
@@ -57,8 +49,6 @@ allow = [
     "BSL-1.0",
     # allowed, but no matching crates yet
     # "CC0-1.0",
-    # ISC: `ring`, `untrusted`, `rustls-webpki` (via `object_store`/`reqwest`).
-    "ISC",
     "MIT",
     "Unicode-3.0",
     "Unlicense",
@@ -75,12 +65,6 @@ unused-allowed-license = "warn"
 allow = ["MPL-2.0"]
 crate = "option-ext"
 
-# `uluru` (pulled in via `gix` -> `gix-pack`, from `dps-git-stats`) is
-# MPL-2.0. Same reasoning as `option-ext`: used unmodified.
-[[licenses.exceptions]]
-allow = ["MPL-2.0"]
-crate = "uluru"
-
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 multiple-versions = "warn"
@@ -95,17 +79,11 @@ external-default-features = "allow"
 # entry skips that older version so `multiple-versions` stays quiet for this
 # known pair and would only fire again if a *third* version showed up.
 
-# 0.14.5 is pinned by `dashmap`, 0.15.5 by `gix-imara-diff` (via `gix-diff`),
-# and 0.16.1 by `clru`/`kasuari` (all reached via
-# `gix-tempfile`/`gix-pack`/`ratatui-core`); `gix-hashtable` is on the
-# newest, 0.17.2.
+# 0.14.5 is pinned by `dashmap` and 0.16.1 by `clru` (via
+# `gix-tempfile`/`gix-pack`); `gix-hashtable` is on the newest, 0.17.2.
 [[bans.skip]]
 name = "hashbrown"
 version = "0.14.5"
-
-[[bans.skip]]
-name = "hashbrown"
-version = "0.15.5"
 
 [[bans.skip]]
 name = "hashbrown"
@@ -123,58 +101,19 @@ version = "0.3.18"
 name = "syn"
 version = "3.0.3"
 
-# 0.22.1 is pinned by `object_store`/`reqwest`/`polars-parquet`;
-# `hyper-util` and `serde-saphyr` are on 0.23.1.
-[[bans.skip]]
-name = "base64"
-version = "0.22.1"
-
 # 0.10.1 is pinned by `gix-hash`; `gix-packetline` is on 2.0.0.
 [[bans.skip]]
 name = "faster-hex"
 version = "0.10.1"
 
-# 0.1.5 is pinned by `hashbrown` 0.15.5; newer `hashbrown` and
-# `polars-utils` are on 0.2.0.
-[[bans.skip]]
-name = "foldhash"
-version = "0.1.5"
-
-# 0.2.17 is pinned by `ring`; everything else (tempfile, uuid, rand,
-# gix-utils, polars-core) is on 0.4.3.
+# 0.3.4 is pinned by `tempfile` (dev-only); `gix-utils` and `uuid` are on
+# 0.4.3.
 [[bans.skip]]
 name = "getrandom"
-version = "0.2.17"
+version = "0.3.4"
 
-# 0.44.1 / 0.18.1 are used by most of `gix` 0.90; `gix-mailmap` 0.36.2
-# already moved to `gix-actor` 0.45 / `gix-date` 0.19. Resolves on the next
-# coordinated `gix` release.
-[[bans.skip]]
-name = "gix-actor"
-version = "0.44.1"
-
-[[bans.skip]]
-name = "gix-date"
-version = "0.18.1"
-
-# 0.14.0 is pinned by `ratatui-*`, `unicode-truncate`, `object_store`;
-# `catppuccin` is on 0.15.0.
-[[bans.skip]]
-name = "itertools"
-version = "0.14.0"
-
-# 0.2.x is pulled in by `gix-date` 0.18.1, 1.x by `gix-date` 0.19.0
-# (see `gix-date` above).
-[[bans.skip]]
-name = "jiff"
-version = "0.2.46"
-
-[[bans.skip]]
-name = "jiff-core"
-version = "0.1.8"
-
-# 0.12.x / 0.9.x / 0.4.x are used by most of the graph (crossterm,
-# polars, gix, dashmap, ...); `gix-parallel`/`gix-prompt` moved to
+# 0.12.x / 0.9.x / 0.4.x are used by most of the graph (crossterm, gix,
+# dashmap, ...); `gix-parallel`/`gix-prompt` moved to
 # `parking_lot` 0.13.
 [[bans.skip]]
 name = "lock_api"
@@ -192,16 +131,6 @@ version = "0.9.12"
 [[bans.skip]]
 name = "miniz_oxide"
 version = "0.8.9"
-
-# 0.39.1 is pinned by `ar_archive_writer`; `backtrace` is on 0.40.0.
-[[bans.skip]]
-name = "object"
-version = "0.39.1"
-
-# 0.38.4 is pinned by `human-panic`; `polars-utils` is on 0.39.6.
-[[bans.skip]]
-name = "sysinfo"
-version = "0.38.4"
 
 [bans.build]
 include-workspace = false
@@ -223,23 +152,6 @@ name = "arc-swap"
 version = "1.9.1"
 allow = [
     { path = "ci-check.sh", checksum = "f1ad7ffbb2e996c50633a9168cdd45760af03c4bb9aaf2a4d60b45f41f9413a8" },
-]
-
-[[bans.build.bypass]]
-name = "blake3"
-version = "1.8.7"
-allow = [
-    { path = ".github/workflows/build_b3sum.py", checksum = "92a71b05b250751d2dc30c8b19b96902df554ec74fb4420ad601e8225ef2ff6e" },
-    { path = ".github/workflows/upload_github_release_asset.py", checksum = "4e3cec6aa141b7baec6a5ad476c4d996cf91cdcf91b3ebc286116d345d452001" },
-    { path = "c/test.py", checksum = "3b466433c2022d821cdc784687bb7e9927e41e8064a6815f6ae16d8b0279ed41" },
-]
-
-[[bans.build.bypass]]
-name = "bytesize"
-version = "2.7.0"
-allow = [
-    { path = "scripts/bump-changelogs", checksum = "ed37d8d8c8472c0122cc3cf02fb1d507c69e736cce777057d00ce7770a3188d1" },
-    { path = "scripts/update-release-notes", checksum = "8e2043d68d3ad46751b0661af5bd9ed7a13cbf535c302d0db4226eec977e67ff" },
 ]
 
 [[bans.build.bypass]]
@@ -274,105 +186,12 @@ allow = [
     { path = "src/assets/init/hooks/prepare-commit-msg.sample", checksum = "f804b4efd22ef832b49506a815a6a6b1103b8f77b6d6556fc3756232727396d8" },
 ]
 
-# `lz4-sys` (via `polars`): upstream liblz4 test/packaging scripts. build.rs
-# compiles the C sources with `cc` and never invokes them.
-[[bans.build.bypass]]
-name = "lz4-sys"
-version = "1.11.1+lz4-1.10.0"
-allow = [
-    { path = "liblz4/build/meson/GetLz4LibraryVersion.py", checksum = "07e29b20bbe36d92e19a9b12492645b353fe0b255c0d0f2481d7db5e0b6b44fa" },
-    { path = "liblz4/contrib/debian/rules", checksum = "947dff0b3c6be7f7e6f8a316d11794d68e5ba9beb96893a4a4fc556376c01109" },
-    { path = "liblz4/contrib/gen_manual/gen-lz4-manual.sh", checksum = "7a888d6f86b4c61f830396a3421e18a9c47786a782d923a0f1f9b0d9dae0ff75" },
-    { path = "liblz4/ossfuzz/ossfuzz.sh", checksum = "31138e44b71510cc1a942e128facd1911cf9c20c6a3c610316e9d830700fb13a" },
-    { path = "liblz4/ossfuzz/travisoss.sh", checksum = "bb5c86548ba064366499e334b2a845ee2074179876a10374e7492c9f4cb0e06d" },
-    { path = "liblz4/tests/check_liblz4_version.sh", checksum = "e47a787d307711a2e1dd39bc04aa3ceeab0dbe5ec390e4b56891543706b6d0fb" },
-    { path = "liblz4/tests/test-lz4-abi.py", checksum = "aaf306f9902e293d4c756d9ef1de2bb68dd254312136b7e0f069a29d302d9bcd" },
-    { path = "liblz4/tests/test-lz4-basic.sh", checksum = "b8d7ba818315a8669c5996ed66c6b44d651fd9d23a5e0691efa9e5cc2ae6d528" },
-    { path = "liblz4/tests/test-lz4-contentSize.sh", checksum = "6004277857d437379f858651fdc3debf0758c3c41168077da183aecc8604167a" },
-    { path = "liblz4/tests/test-lz4-dict.sh", checksum = "2daa93e9c380933793616760b3d2c1c6cc4f32a3fc76302b96be429c73937d87" },
-    { path = "liblz4/tests/test-lz4-fast-hugefile.sh", checksum = "01b9924b5e2b4a0bcc56e28b7a677c750a21b27acb28715ac377f2fd6facdb4e" },
-    { path = "liblz4/tests/test-lz4-frame-concatenation.sh", checksum = "4b9184b3fe9bba488a7bc2709f4555c3befc83412d453bad47bf5b5853d5f30d" },
-    { path = "liblz4/tests/test-lz4-list.py", checksum = "8b1492a9ce36b612f979ec2bf9e9813b4ef78cf8234ef16f424686e7db602a27" },
-    { path = "liblz4/tests/test-lz4-multiple-legacy.sh", checksum = "ac081caecc1a6f807d9ff507fbaa678281c6cac78c9e7968c985ec76e41c6cd4" },
-    { path = "liblz4/tests/test-lz4-multiple.sh", checksum = "3f70ecf7801f4fc9ba29cca094118ab907e387c01e0209bf7afeda6297298eaa" },
-    { path = "liblz4/tests/test-lz4-opt-parser.sh", checksum = "7a8196f8753bf2572eb2665a149dc892894dc10461ad9b4f0ac1517c0d1f4d21" },
-    { path = "liblz4/tests/test-lz4-skippable.sh", checksum = "cf65c010400f37147f7de8921328c80f48f6f98c00cfa6522f0c9b2089baf0f4" },
-    { path = "liblz4/tests/test-lz4-sparse.sh", checksum = "7f790027646768ae8968ab78f13a8d187c71bce6d591f5f36758f4053da2b7b4" },
-    { path = "liblz4/tests/test-lz4-speed.py", checksum = "1a4e6d0aa1e54c809cf69547dfbd7bca20d0792e5bf54b0651d279f271de5d1e" },
-    { path = "liblz4/tests/test-lz4-testmode.sh", checksum = "dd4c1a0a2431b02fd4385e241f7115467b26f5d825fc3440c55133a5293f821b" },
-    { path = "liblz4/tests/test-lz4-versions.py", checksum = "55bc0eae86cf1cd1200563bf236ffc49514c8d99493fef5d6562f772e5b219ac" },
-    { path = "liblz4/tests/test-lz4hc-hugefile.sh", checksum = "d91f4b3199377453b034e5ef7857abac0bbda0f4b566b797dac6a6ecc11bc165" },
-    { path = "liblz4/tests/test_custom_block_sizes.sh", checksum = "8466f9a3cf99bf29085ad6cbf8f28b3cae90ed2bf7acc456e4cd5ecdc7f91130" },
-    { path = "liblz4/tests/test_install.sh", checksum = "772b9013a80289806af837968afda5055531a5456e9ecba056ba82ec67a222d1" },
-    { path = "liblz4/tests/unicode_lint.sh", checksum = "db8249c743951146f1b76746344a86bf08eec17c307700244a2f17340981ba69" },
-]
-
-[[bans.build.bypass]]
-name = "now"
-version = "0.1.3"
-allow = [
-    { path = ".cargo-husky/hooks/pre-commit", checksum = "66f071376797f56bea2bb15a6e9979b0472b43a7bab386b1dcdb6d82850ec18a" },
-]
-
 [[bans.build.bypass]]
 name = "parking_lot"
 version = "0.13.0"
 allow = [
     { path = ".github/semver-checks/cargo-semver-checks", checksum = "e1789d28c3d11598fd9ec8068e3b11ffc4c9535c7c81bda4f2bb9da8e2df9b3e" },
     { path = "ci/miri.sh", checksum = "58ca757258500c2fc7753b290a604a893efcf4736bd4da6a8ba7fa2c5e875dfc" },
-]
-
-[[bans.build.bypass]]
-name = "polars-arrow-format"
-version = "0.2.1"
-allow = [
-    { path = "generate.sh", checksum = "afd8cc2b4177a07dfe22429e3ce64cc552ad3feab3e0d034212c9341f50f3419" },
-]
-
-# `ring` (via `object_store`/`reqwest`/`rustls`): perlasm generators. build.rs
-# only runs them when a `.git` dir exists; packaged builds use `pregenerated/`.
-[[bans.build.bypass]]
-name = "ring"
-version = "0.17.14"
-allow = [
-    { path = "crypto/chacha/asm/chacha-armv4.pl", checksum = "25100401cfe20d6f39cf71a3f3ffe54b5a2d2b93828f84a104c0599d1c30c9c4" },
-    { path = "crypto/chacha/asm/chacha-armv8.pl", checksum = "05fe6547dab17296cb7e0b8b9253a860a39c7c931569ab22cd420e0083505fe6" },
-    { path = "crypto/chacha/asm/chacha-x86.pl", checksum = "c3b133032416211ffddd63485636ada3ee9783d2a41deb39da59f6cb09b9feab" },
-    { path = "crypto/chacha/asm/chacha-x86_64.pl", checksum = "24e536daad8464a6daea17de527b02f9c3ebe1f09356dd5e48cfdfa04abb955a" },
-    { path = "crypto/cipher/asm/chacha20_poly1305_armv8.pl", checksum = "a7f58ba7d3dd189fe2f1acde2357d62fce89f311509c7a058ead468cd6796de4" },
-    { path = "crypto/cipher/asm/chacha20_poly1305_x86_64.pl", checksum = "48f2a06a297d3575a760d01e219b0b8d8f8733c1e7b6d2aa6e7949cc12c1a9ae" },
-    { path = "crypto/fipsmodule/aes/asm/aes-gcm-avx2-x86_64.pl", checksum = "981415091853018d18144f6b3f3459e5ecf5cddd962d2706f1c7391a48fa6722" },
-    { path = "crypto/fipsmodule/aes/asm/aesni-gcm-x86_64.pl", checksum = "e85c2ddf728eb6253562f24d2db6fb305ed7808110f18949cdcd597e6c52c532" },
-    { path = "crypto/fipsmodule/aes/asm/aesni-x86.pl", checksum = "c08d6b755f541256190730274fde1d8634165760856bf05d1a0300f7f1313e91" },
-    { path = "crypto/fipsmodule/aes/asm/aesni-x86_64.pl", checksum = "74e331f10e9e97ae998a1929cacd7f6653b4826158a9269a82d5780ccfad72c8" },
-    { path = "crypto/fipsmodule/aes/asm/aesv8-armx.pl", checksum = "989b4086b368c8df4085dc433d020e463a9c24716e59b473fdbcc751d8357e21" },
-    { path = "crypto/fipsmodule/aes/asm/aesv8-gcm-armv8.pl", checksum = "e2f7e1a1147f711255e974f5942be63139da27db8da0706b0e7bfe23e4ef4c48" },
-    { path = "crypto/fipsmodule/aes/asm/bsaes-armv7.pl", checksum = "b262de8ca1d88c83de3319a926c637ae51781d530b710904bafd3ad360f52929" },
-    { path = "crypto/fipsmodule/aes/asm/ghash-armv4.pl", checksum = "d1a0f8100031e2c6babc97eacc8b05cb076952a2d63d07487ceebbb8ce176e18" },
-    { path = "crypto/fipsmodule/aes/asm/ghash-neon-armv8.pl", checksum = "6530524ab8c968cfc2867355cda5021da30ebd256e229e52b8936419a1f968d5" },
-    { path = "crypto/fipsmodule/aes/asm/ghash-x86.pl", checksum = "4487fc642997d6741981381da74f7e72cbf9297682e5b7ada9bb57cc1101f786" },
-    { path = "crypto/fipsmodule/aes/asm/ghash-x86_64.pl", checksum = "889157ff342fae29cec2e84f5d767e8c2e39910626a113ede4ffb526cd757f04" },
-    { path = "crypto/fipsmodule/aes/asm/ghashv8-armx.pl", checksum = "081ec51966fee94ee0bd5710e82a581c5b131deec40347d79587a6db9ae8c6a8" },
-    { path = "crypto/fipsmodule/aes/asm/vpaes-armv7.pl", checksum = "0cccfba4deebf93ae317c4e14c2986ec8abac58e4a8557924248eebaa975139e" },
-    { path = "crypto/fipsmodule/aes/asm/vpaes-armv8.pl", checksum = "7c0e738f4166f38f39bb709ca0bde1a3cec009708646c7c94971dce28b3fa9c9" },
-    { path = "crypto/fipsmodule/aes/asm/vpaes-x86.pl", checksum = "ef5252558dc5b23b7550800f53ab3d7c508f2a4fe71c717c5b35b05a971ec3d6" },
-    { path = "crypto/fipsmodule/aes/asm/vpaes-x86_64.pl", checksum = "b54f198a0faac2cc144f98a6c14019fe6d58d897124c7d69aebb2535a0102de9" },
-    { path = "crypto/fipsmodule/bn/asm/armv4-mont.pl", checksum = "2cb2a0a84c4281a9dda17945b94e76b5a9656dc2df6d8c2c1e62be7ff59e3b12" },
-    { path = "crypto/fipsmodule/bn/asm/armv8-mont.pl", checksum = "8993f64606360cbc1b688a1ec3ffd7011464ea78823a126df10e29bd94adaf13" },
-    { path = "crypto/fipsmodule/bn/asm/x86-mont.pl", checksum = "3a7085a9c8de3d7fd684de75d397e1aa4b74ca0386e9bc4d353626e06b6be3ab" },
-    { path = "crypto/fipsmodule/bn/asm/x86_64-mont.pl", checksum = "14cd1cb9fa1dd08473afa943e90ce98a43fbb4a9323d3101871f6724fb6b27ac" },
-    { path = "crypto/fipsmodule/bn/asm/x86_64-mont5.pl", checksum = "c0529d1a7faefd26c065601d5cfdc081c314c04294fd2c69589696681edf867c" },
-    { path = "crypto/fipsmodule/ec/asm/p256-armv8-asm.pl", checksum = "029ce13a55ccf289f3cb58271ab6e1602f4b68ec244c3cbe739cc0858944ad50" },
-    { path = "crypto/fipsmodule/ec/asm/p256-x86_64-asm.pl", checksum = "454c278064dbae0f718bb2e415efee97e31a38958776623574632961b24e34ca" },
-    { path = "crypto/fipsmodule/sha/asm/sha256-armv4.pl", checksum = "1a9cc7c77921fb44912bf6e946d002a59a66ead474d0dc8b2bc581492dd941c5" },
-    { path = "crypto/fipsmodule/sha/asm/sha512-armv4.pl", checksum = "d900f16d6ecc4187a5a5ee35f1e7cf932ca5fe934ddeb4e0e55a8a05ff8393b7" },
-    { path = "crypto/fipsmodule/sha/asm/sha512-armv8.pl", checksum = "3db10ef65179656aa709cdab607ca3c5a2f5244d33071984385eb5990f7b404e" },
-    { path = "crypto/fipsmodule/sha/asm/sha512-x86_64.pl", checksum = "ab4c2e2cd6425b26d7df080bf363e938242016bfc929e523aa3318c6d352a098" },
-    { path = "crypto/perlasm/arm-xlate.pl", checksum = "18c99bd9639d132b091bd360af7a1cfc57148b46cabcc7d20224c68a35d432bf" },
-    { path = "crypto/perlasm/x86_64-xlate.pl", checksum = "783d46f1a12d150a60d51b44e3c1141b19ff65268f8d85e9bb4a44cdf32b9caa" },
-    { path = "crypto/perlasm/x86asm.pl", checksum = "99a3123e5135486546b36cf32c8e91f3635451cb9d926acdc6ac4d82aa652ed5" },
-    { path = "crypto/perlasm/x86gas.pl", checksum = "48bd5fb1f764137fe58dac82e86b8876bc9bdfd041ff53b5706ba2ad46bf6d80" },
-    { path = "crypto/perlasm/x86nasm.pl", checksum = "15383baac0a53850322e304b8f2ff9f210bed8c0d080ae938d329d71ed93d71e" },
 ]
 
 [[bans.build.bypass]]
@@ -401,15 +220,6 @@ name = "unicode-normalization"
 version = "0.1.26"
 allow = [
     { path = "scripts/unicode.py", checksum = "9077055015a6645b5bd44bd7752c88dddf1acee929537d037f2aff002af9c514" },
-]
-
-[[bans.build.bypass]]
-name = "untrusted"
-version = "0.9.0"
-allow = [
-    { path = "mk/cargo.sh", checksum = "766c00df2767ac0998000e9b55d076b6dbbeb05ecf4c4d9b317df8551fae1bbe" },
-    { path = "mk/install-build-tools.sh", checksum = "90ec3cce41b1660b5103a37803e537ff167bae17badaca2d89f492116555919d" },
-    { path = "mk/runner", checksum = "471602c60f4243f87ebf952f8e69c07dfa29d8c69f2ef3885a4c61a2d6bf3b33" },
 ]
 
 [[bans.build.bypass]]
